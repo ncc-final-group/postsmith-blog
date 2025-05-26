@@ -17,29 +17,29 @@ const menuItems: MenuItem[] = [
     key: 'write',
     label: '글쓰기',
     subItems: [
-      { label: '글 관리', route: 'usermanage/posts' },
-      { label: '페이지 관리', route: 'usermanage/pages' },
-      { label: '카테고리 관리', route: 'usermanage/categories' },
-      { label: '공지 관리', route: 'usermanage/notices' },
+      { label: '글 관리', route: '/posts' },
+      { label: '페이지 관리', route: '/pages' },
+      { label: '카테고리 관리', route: '/categories' },
+      { label: '공지 관리', route: '/notices' },
     ],
   },
   {
     key: 'comments',
     label: '댓글 방명록 관리',
     subItems: [
-      { label: '댓글 관리', route: 'usermanage/comments' },
-      { label: '방명록 관리', route: 'usermanage/guestbook' },
+      { label: '댓글 관리', route: '/comments' },
+      { label: '방명록 관리', route: '/guestbook' },
     ],
   },
   {
     key: 'stats',
     label: '통계',
-    subItems: [{ label: '방문 통계', route: 'usermanage/stats/visits' }],
+    subItems: [{ label: '방문 통계', route: '/stats/visits' }],
   },
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: 'usermanage/customize/skin' }],
+    subItems: [{ label: '스킨', route: '/customize/skin' }],
   },
   {
     key: 'plugins',
@@ -51,8 +51,8 @@ const menuItems: MenuItem[] = [
     key: 'admin',
     label: '관리',
     subItems: [
-      { label: '블로그', route: 'usermanage/admin/blog' },
-      { label: '팀 블로그', route: 'usermanage/admin/team' },
+      { label: '블로그', route: '/admin/blog' },
+      { label: '팀 블로그', route: '/admin/team' },
     ],
   },
 ];

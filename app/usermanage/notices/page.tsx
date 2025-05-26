@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Settings, Trash2 } from 'lucide-react';
+import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 // Types
@@ -38,6 +38,7 @@ export default function BoardSitePage() {
         hasIcon: true,
         viewCount: 42,
         commentCount: 1,
+        privacy: 'public',
       },
       {
         id: 2,
@@ -48,6 +49,7 @@ export default function BoardSitePage() {
         hasIcon: false,
         viewCount: 156,
         commentCount: 3,
+        privacy: 'private',
       },
     ],
     totalCount: 2,
@@ -120,10 +122,6 @@ export default function BoardSitePage() {
     alert(`통계 보기: ${post.title}`);
   };
 
-  const handleSortChange = (newSort: SortType) => {
-    setSortOrder(newSort);
-  };
-
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= boardData.totalPages) {
       setIsLoading(true);
@@ -151,7 +149,7 @@ export default function BoardSitePage() {
       <div className="max-w-6xl">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
-            글 관리
+            공지 관리
             <span className="ml-1 rounded-full bg-gray-100 text-sm font-normal text-gray-500">{boardData.totalCount}</span>
           </h1>
           <button
@@ -159,7 +157,7 @@ export default function BoardSitePage() {
             className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white"
           >
             <Edit className="h-4 w-4" />
-            글쓰기
+            공지글 작성
           </button>
         </div>
       </div>
@@ -181,17 +179,6 @@ export default function BoardSitePage() {
 
           {/* Sort & Search */}
           <div className="ml-auto flex items-center gap-3">
-            <select
-              value={sortOrder}
-              onChange={(e) => handleSortChange(e.target.value as SortType)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="latest">최신순</option>
-              <option value="oldest">오래된순</option>
-              <option value="title">제목순</option>
-              <option value="author">작성자순</option>
-            </select>
-
             <div className="relative">
               <input
                 type="text"
@@ -244,15 +231,11 @@ export default function BoardSitePage() {
                       )}
                       <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
                       {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
-
-                      {post.commentCount ? <span className="text-sm font-medium text-blue-600">[{post.commentCount}]</span> : 0}
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="font-medium text-orange-600">{post.category}</span>
                       <span>{post.author}</span>
                       <span>{formatDate(post.createdAt)}</span>
-                      {post.viewCount && <span>조회 {post.viewCount}</span>}
                     </div>
                   </div>
 
