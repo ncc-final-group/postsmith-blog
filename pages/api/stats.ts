@@ -20,8 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     res.status(200).json(last365Days);
-  } catch (error) {
-    console.error('Stats API Error:', error);
+  } catch {
     res.status(500).json({ message: 'Internal server error' });
   }
 } 
