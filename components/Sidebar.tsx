@@ -17,29 +17,29 @@ const menuItems: MenuItem[] = [
     key: 'write',
     label: '글쓰기',
     subItems: [
-      { label: '글 관리', route: 'usermanage/posts' },
-      { label: '페이지 관리', route: 'usermanage/pages' },
-      { label: '카테고리 관리', route: 'usermanage/categories' },
-      { label: '공지 관리', route: 'usermanage/notices' },
+      { label: '글 관리', route: '/posts' },
+      { label: '페이지 관리', route: '/pages' },
+      { label: '카테고리 관리', route: '/categories' },
+      { label: '공지 관리', route: '/notices' },
     ],
   },
   {
     key: 'comments',
     label: '댓글 방명록 관리',
     subItems: [
-      { label: '댓글 관리', route: 'usermanage/comments' },
-      { label: '방명록 관리', route: 'usermanage/guestbook' },
+      { label: '댓글 관리', route: '/comments' },
+      { label: '방명록 관리', route: '/guestbook' },
     ],
   },
   {
     key: 'stats',
     label: '통계',
-    subItems: [{ label: '방문 통계', route: 'usermanage/stats/visits' }],
+    subItems: [{ label: '방문 통계', route: '/stats/visits' }],
   },
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: 'usermanage/customize/skin' }],
+    subItems: [{ label: '스킨', route: '/customize/skin' }],
   },
   {
     key: 'plugins',
@@ -51,8 +51,8 @@ const menuItems: MenuItem[] = [
     key: 'admin',
     label: '관리',
     subItems: [
-      { label: '블로그', route: 'usermanage/admin/blog' },
-      { label: '팀 블로그', route: 'usermanage/admin/team' },
+      { label: '블로그', route: '/admin/blog' },
+      { label: '팀 블로그', route: '/admin/team' },
     ],
   },
 ];
@@ -101,9 +101,7 @@ export default function Sidebar() {
           {menuItems.map((item) => (
             <div key={item.key} className="border-b border-solid border-gray-200">
               <div
-                className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors ${
-                  expandedMenu === item.key ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
+                className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors ${expandedMenu === item.key ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
                 onClick={() => toggleMenu(item.key)}
               >
                 <span>{item.label}</span>
@@ -118,10 +116,7 @@ export default function Sidebar() {
 
                     return (
                       <li key={index}>
-                        <Link
-                          href={fullRoute}
-                          className={`block py-2 pl-7 hover:bg-gray-100 ${isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}
-                        >
+                        <Link href={fullRoute} className={`block py-2 pl-7 hover:bg-gray-100 ${isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}>
                           {subItem.label}
                         </Link>
                       </li>

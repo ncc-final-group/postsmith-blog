@@ -20,7 +20,7 @@ const eslintConfig = [
       'linebreak-style': 'off',
       'no-underscore-dangle': 'off',
       'dot-notation': 'off',
-      'max-len': ['warn', { code: 150, ignoreComments: true }],
+      'max-len': ['warn', { code: 180, ignoreComments: true }],
       indent: ['warn', 2],
       'no-plusplus': 'off',
       'object-curly-newline': ['error', { multiline: true }],

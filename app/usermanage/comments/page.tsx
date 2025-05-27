@@ -1,25 +1,24 @@
 'use client';
 
 import clsx from 'clsx';
-import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { BarChart2, Captions, ChevronLeft, ChevronRight, Edit, Search, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 // Types
-interface Post {
+interface Comments {
   id: number;
   title: string;
-  category: string;
   author: string;
   createdAt: string;
   hasIcon?: boolean;
-  isNotice?: boolean;
-  commentCount?: number;
-  viewCount?: number;
+  content?: string;
   privacy?: 'public' | 'private';
+  viewCount?: number;
+  isNotice?: boolean;
 }
 
 interface BoardData {
-  posts: Post[];
+  comments: Comments[];
   totalCount: number;
   currentPage: number;
   totalPages: number;
@@ -29,26 +28,22 @@ type SortType = 'latest' | 'oldest' | 'title' | 'author';
 
 export default function BoardSitePage() {
   const [boardData, setBoardData] = useState<BoardData>({
-    posts: [
+    comments: [
       {
         id: 1,
         title: 'ㅁㄴㅇ',
-        category: '카테고리 없음',
         author: '인생누비',
         createdAt: '2025-05-08T15:21:00Z',
         hasIcon: true,
-        viewCount: 42,
-        commentCount: 1,
+        content: '글 진짜 너무 못 쓰시네요 ㅠㅠ',
       },
       {
         id: 2,
         title: '환영합니다!',
-        category: '카테고리 없음',
         author: '인생누비',
         createdAt: '2023-09-14T09:36:00Z',
         hasIcon: false,
-        viewCount: 156,
-        commentCount: 3,
+        content: '알빠 쓰레빠?',
       },
     ],
     totalCount: 2,
@@ -58,75 +53,69 @@ export default function BoardSitePage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
-  const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
+  const [selectedComments, setSelectedComments] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
-  const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
+  const [hoveredCommentId, setHoveredCommentId] = useState<number | null>(null);
 
-  function formatDate(dateString: string) {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(
       2,
       '0',
     )} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  }
+  };
 
-  function getPageNumbers(): number[] {
+  const getPageNumbers = (): number[] => {
     const { currentPage, totalPages } = boardData;
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
     return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
-  }
+  };
 
-  function handleCreatePost() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
-  }
-
-  function handlePostClick(post: Post) {}
-
-  function handleSelectOne(postId: number) {
-    setSelectedPosts((prev) => {
-      const newSelectedPosts = new Set(prev);
-      if (newSelectedPosts.has(postId)) {
-        newSelectedPosts.delete(postId);
+  const handleSelectOne = (commentId: number) => {
+    setSelectedComments((prev) => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(commentId)) {
+        newSelected.delete(commentId);
       } else {
-        newSelectedPosts.add(postId);
+        newSelected.add(commentId);
       }
-      return newSelectedPosts;
+      return newSelected;
     });
-  }
+  };
 
-  function handleSelectAll() {
-    const allSelected = selectedPosts.size === boardData.posts.length;
+  const handleSelectAll = () => {
+    const allSelected = selectedComments.size === boardData.comments.length;
     if (allSelected) {
-      setSelectedPosts(new Set());
+      setSelectedComments(new Set());
     } else {
-      const allIds = boardData.posts.map((post) => post.id);
-      setSelectedPosts(new Set(allIds));
+      const allIds = boardData.comments.map((c) => c.id);
+      setSelectedComments(new Set(allIds));
     }
-  }
+  };
 
-  function handleEditPost(post: Post) {
-    alert(`수정: ${post.title}`);
-  }
+  const handleEditPost = (comment: Comments) => {
+    alert(`수정: ${comment.title}`);
+  };
 
-  function handleDeletePost(post: Post) {
-    if (confirm(`정말 삭제하시겠습니까? (${post.title})`)) {
+  const handleDeletePost = (comment: Comments) => {
+    if (confirm(`정말 삭제하시겠습니까? (${comment.title})`)) {
       setBoardData((prev) => ({
         ...prev,
-        posts: prev.posts.filter((p) => p.id !== post.id),
+        comments: prev.comments.filter((c) => c.id !== comment.id),
       }));
     }
-  }
+  };
 
-  function handleViewStats(post: Post) {
-    alert(`통계 보기: ${post.title}`);
-  }
+  const handleViewStats = (comment: Comments) => {
+    alert(`통계 보기: ${comment.title}`);
+  };
 
-  function handleSortChange(newSort: SortType) {
+  const handleSortChange = (newSort: SortType) => {
     setSortOrder(newSort);
-  }
+  };
 
-  function handlePageChange(page: number) {
+  const handlePageChange = (page: number) => {
     if (page >= 1 && page <= boardData.totalPages) {
       setIsLoading(true);
       setTimeout(() => {
@@ -137,34 +126,28 @@ export default function BoardSitePage() {
         }));
       }, 500);
     }
-  }
+  };
 
-  function handlePrivacyChange(e: React.ChangeEvent<HTMLSelectElement>, post: Post) {
+  const handlePrivacyChange = (e: React.ChangeEvent<HTMLSelectElement>, comment: Comments) => {
     const newPrivacy = e.target.value as 'public' | 'private';
     setBoardData((prev) => ({
       ...prev,
-      posts: prev.posts.map((p) => (p.id === post.id ? { ...p, privacy: newPrivacy } : p)),
+      comments: prev.comments.map((c) => (c.id === comment.id ? { ...c, privacy: newPrivacy } : c)),
     }));
-  }
+  };
+
+  const handlePostClick = (comment: Comments) => {
+    alert(`게시글 클릭: ${comment.title}`);
+  };
 
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
-            글 관리
+            댓글 관리
             <span className="ml-1 rounded-full bg-gray-100 text-sm font-normal text-gray-500">{boardData.totalCount}</span>
           </h1>
-          <button
-            onClick={handleCreatePost}
-            className={clsx(
-              'flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2',
-              'text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white',
-            )}
-          >
-            <Edit className="h-4 w-4" />
-            글쓰기
-          </button>
         </div>
       </div>
 
@@ -173,7 +156,7 @@ export default function BoardSitePage() {
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={selectedPosts.size === boardData.posts.length && boardData.posts.length > 0}
+              checked={selectedComments.size === boardData.comments.length && boardData.comments.length > 0}
               onChange={handleSelectAll}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
             />
@@ -181,20 +164,6 @@ export default function BoardSitePage() {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <select
-              value={sortOrder}
-              onChange={(e) => handleSortChange(e.target.value as SortType)}
-              className={clsx(
-                'rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700',
-                'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
-              )}
-            >
-              <option value="latest">최신순</option>
-              <option value="oldest">오래된순</option>
-              <option value="title">제목순</option>
-              <option value="author">작성자순</option>
-            </select>
-
             <div className="relative">
               <input
                 type="text"
@@ -219,52 +188,52 @@ export default function BoardSitePage() {
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
               <p className="mt-2 text-sm text-gray-500">로딩 중...</p>
             </div>
-          ) : boardData.posts.length === 0 ? (
+          ) : boardData.comments.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p>게시글이 없습니다.</p>
             </div>
           ) : (
-            boardData.posts.map((post, index) => (
+            boardData.comments.map((comment, index) => (
               <div
-                key={post.id}
+                key={comment.id}
                 className={`relative cursor-pointer border-b border-gray-200 p-4 transition-colors duration-150 hover:bg-gray-100 ${
-                  index === boardData.posts.length - 1 ? 'border-b-0' : ''
-                } ${post.isNotice ? 'border-blue-100 bg-blue-50' : ''}`}
-                onClick={() => handlePostClick(post)}
-                onMouseEnter={() => setHoveredPostId(post.id)}
-                onMouseLeave={() => setHoveredPostId(null)}
+                  index === boardData.comments.length - 1 ? 'border-b-0' : ''
+                } ${comment.isNotice ? 'border-blue-100 bg-blue-50' : ''}`}
+                onClick={() => handlePostClick(comment)}
+                onMouseEnter={() => setHoveredCommentId(comment.id)}
+                onMouseLeave={() => setHoveredCommentId(null)}
               >
                 <div className="flex items-center gap-4">
                   <input
                     type="checkbox"
-                    checked={selectedPosts.has(post.id)}
-                    onChange={() => handleSelectOne(post.id)}
+                    checked={selectedComments.has(comment.id)}
+                    onChange={() => handleSelectOne(comment.id)}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                   />
 
                   <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      {post.isNotice && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>}
-                      <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
-                      {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
-
-                      {post.commentCount ? <span className="text-sm font-medium text-blue-600">[{post.commentCount}]</span> : 0}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <span className="text-orange-600">{comment.author}</span>
+                      <span>{formatDate(comment.createdAt)}</span>
+                      {comment.viewCount && <span>조회 {comment.viewCount}</span>}
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="font-medium text-orange-600">{post.category}</span>
-                      <span>{post.author}</span>
-                      <span>{formatDate(post.createdAt)}</span>
-                      {post.viewCount && <span>조회 {post.viewCount}</span>}
+                    <div className="mt-2 mb-3 flex items-center gap-2">
+                      <h3 className="relative truncate text-sm font-light text-black">{comment.content}</h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Captions className="h-4 w-4 text-gray-300" />
+                      <p className="truncate text-xs text-gray-700">{comment.title}</p>
                     </div>
                   </div>
 
-                  {hoveredPostId === post.id && (
+                  {hoveredCommentId === comment.id && (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEditPost(post);
+                          handleEditPost(comment);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="수정"
@@ -274,7 +243,7 @@ export default function BoardSitePage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeletePost(post);
+                          handleDeletePost(comment);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="삭제"
@@ -284,7 +253,7 @@ export default function BoardSitePage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleViewStats(post);
+                          handleViewStats(comment);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="통계"
@@ -296,8 +265,8 @@ export default function BoardSitePage() {
                           'rounded border border-gray-300 px-2 py-1 text-sm text-gray-700',
                           'hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none',
                         )}
-                        value={post.privacy || 'public'}
-                        onChange={(e) => handlePrivacyChange(e, post)}
+                        value={comment.privacy || 'public'}
+                        onChange={(e) => handlePrivacyChange(e, comment)}
                         onClick={(e) => e.stopPropagation()}
                         title="공개/비공개 설정"
                       >
