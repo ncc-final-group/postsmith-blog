@@ -101,9 +101,7 @@ export default function Sidebar() {
           {menuItems.map((item) => (
             <div key={item.key} className="border-b border-solid border-gray-200">
               <div
-                className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors ${
-                  expandedMenu === item.key ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
+                className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors ${expandedMenu === item.key ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
                 onClick={() => toggleMenu(item.key)}
               >
                 <span>{item.label}</span>
@@ -118,10 +116,7 @@ export default function Sidebar() {
 
                     return (
                       <li key={index}>
-                        <Link
-                          href={fullRoute}
-                          className={`block py-2 pl-7 hover:bg-gray-100 ${isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}
-                        >
+                        <Link href={fullRoute} className={`block py-2 pl-7 hover:bg-gray-100 ${isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}>
                           {subItem.label}
                         </Link>
                       </li>

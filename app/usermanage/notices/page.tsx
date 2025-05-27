@@ -1,5 +1,6 @@
 'use client';
 
+import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -145,7 +146,6 @@ export default function BoardSitePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <div className="max-w-6xl">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
@@ -154,19 +154,18 @@ export default function BoardSitePage() {
           </h1>
           <button
             onClick={handleCreatePost}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white"
+            className={clsx(
+              'flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700',
+              'transition-colors duration-200 hover:bg-blue-500 hover:text-white',
+            )}
           >
             <Edit className="h-4 w-4" />
             공지글 작성
           </button>
         </div>
       </div>
-
-      {/* Main Content */}
       <div className="max-w-6xl pt-1">
-        {/* Search and Filter */}
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
-          {/* Select All */}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -176,8 +175,6 @@ export default function BoardSitePage() {
             />
             <span className="text-sm text-gray-600">전체선택</span>
           </div>
-
-          {/* Sort & Search */}
           <div className="ml-auto flex items-center gap-3">
             <div className="relative">
               <input
@@ -185,7 +182,10 @@ export default function BoardSitePage() {
                 placeholder="검색어를 입력하세요"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-48 rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className={clsx(
+                  'w-48 rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm text-gray-700',
+                  'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
+                )}
               />
               <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded p-1 hover:bg-gray-100">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -193,8 +193,6 @@ export default function BoardSitePage() {
             </div>
           </div>
         </div>
-
-        {/* Posts List */}
         <div className="overflow-hidden rounded-lg border border-gray-300 bg-white">
           {isLoading ? (
             <div className="p-8 text-center">
@@ -226,9 +224,7 @@ export default function BoardSitePage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
-                      {post.isNotice && (
-                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>
-                      )}
+                      {post.isNotice && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>}
                       <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
                       {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
                     </div>
@@ -272,7 +268,10 @@ export default function BoardSitePage() {
                         <BarChart2 className="h-5 w-5 text-gray-600" />
                       </button>
                       <select
-                        className="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none"
+                        className={clsx(
+                          'rounded border border-gray-300 px-2 py-1 text-sm text-gray-700',
+                          'hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none',
+                        )}
                         value={post.privacy || 'public'}
                         onChange={(e) => handlePrivacyChange(e, post)}
                         onClick={(e) => e.stopPropagation()}
@@ -288,8 +287,6 @@ export default function BoardSitePage() {
             ))
           )}
         </div>
-
-        {/* Pagination */}
         <nav aria-label="Page navigation" className="mt-6 flex items-center justify-center gap-1">
           <button
             onClick={() => handlePageChange(boardData.currentPage - 1)}

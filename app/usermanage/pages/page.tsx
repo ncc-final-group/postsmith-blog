@@ -1,5 +1,6 @@
 'use client';
 
+import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -154,7 +155,10 @@ export default function BoardSitePage() {
           </h1>
           <button
             onClick={handleCreatePost}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white"
+            className={clsx(
+              'flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2',
+              'text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white',
+            )}
           >
             <Edit className="h-4 w-4" />
             페이지 작성
@@ -185,7 +189,10 @@ export default function BoardSitePage() {
                 placeholder="검색어를 입력하세요"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-48 rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className={clsx(
+                  'w-48 rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm text-gray-700',
+                  'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
+                )}
               />
               <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded p-1 hover:bg-gray-100">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -226,9 +233,7 @@ export default function BoardSitePage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
-                      {post.isNotice && (
-                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>
-                      )}
+                      {post.isNotice && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>}
                       <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
                       {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
                     </div>
@@ -273,7 +278,10 @@ export default function BoardSitePage() {
                         <BarChart2 className="h-5 w-5 text-gray-600" />
                       </button>
                       <select
-                        className="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none"
+                        className={clsx(
+                          'rounded border border-gray-300 px-2 py-1 text-sm text-gray-700',
+                          'hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none',
+                        )}
                         value={post.privacy || 'public'}
                         onChange={(e) => handlePrivacyChange(e, post)}
                         onClick={(e) => e.stopPropagation()}
@@ -289,8 +297,6 @@ export default function BoardSitePage() {
             ))
           )}
         </div>
-
-        {/* Pagination */}
         <nav aria-label="Page navigation" className="mt-6 flex items-center justify-center gap-1">
           <button
             onClick={() => handlePageChange(boardData.currentPage - 1)}
@@ -310,7 +316,6 @@ export default function BoardSitePage() {
               {pageNum}
             </button>
           ))}
-
           <button
             onClick={() => handlePageChange(boardData.currentPage + 1)}
             disabled={boardData.currentPage === boardData.totalPages}
