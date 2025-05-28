@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from "react";
 import { DragDropContext, Draggable, Droppable,DropResult } from '@hello-pangea/dnd';
+import React, { useState } from "react";
 
 
 // 타입 정의
@@ -336,8 +336,12 @@ export default function CategoriesPage() {
       <h3 className="font-bold text-2xl mb-4 tracking-tight">카테고리 관리</h3>
 
       <div className="mb-5">
-        <button className="mr-2 text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-blue-50 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) => [cat.id, true])))}>전체 펼치기</button>
-        <button className="text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-100 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) => [cat.id, false])))}>전체 닫기</button>
+        <button className="mr-2 text-xs border border-gray-300 px-3 py-1.5 rounded
+        hover:bg-blue-50 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) =>
+          [cat.id, true])))}>전체 펼치기</button>
+        <button className="text-xs border border-gray-300 px-3 py-1.5 rounded
+        hover:bg-gray-100 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) =>
+          [cat.id, false])))}>전체 닫기</button>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
@@ -350,7 +354,9 @@ export default function CategoriesPage() {
                   return (
                     <Draggable key={getItemKey("cat", cat.id)} draggableId={getItemKey("cat", cat.id)} index={idx}>
                       {(provided, snapshot) => (
-                        <li ref={provided.innerRef} {...provided.draggableProps} className={`border rounded-lg bg-white group shadow ring-2 ${snapshot.isDragging ? "ring-blue-200" : "ring-transparent"} transition`}>
+                        <li ref={provided.innerRef} {...provided.draggableProps}
+                            className={`border rounded-lg bg-white group shadow ring-2 ${snapshot.isDragging ? 
+                              "ring-blue-200" : "ring-transparent"} transition`}>
                           {/* -------- 메인 카테고리 ------- */}
                           <div className="flex items-center gap-2 pl-2 py-3 relative">
                             {/* 펼침/접힘 */}
@@ -379,7 +385,8 @@ export default function CategoriesPage() {
                               <button className="text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleSetting(cat.id)}>설정</button>
                               {/* 카테고리 이동 */}
                               {categories.length > 1 && (
-                                <button className="text-xs text-yellow-700 ml-2 px-2 py-1 rounded border border-yellow-100 hover:bg-yellow-50" onClick={() => openDemoteModal(cat.id)}>하위로 이동</button>
+                                <button className="text-xs text-yellow-700 ml-2 px-2 py-1 rounded border
+                                border-yellow-100 hover:bg-yellow-50" onClick={() => openDemoteModal(cat.id)}>하위로 이동</button>
                               )}
                             </div>
                           </div>
@@ -394,7 +401,9 @@ export default function CategoriesPage() {
                   return (
                     <Draggable key={getItemKey("sub", cat.id, sub.id)} draggableId={getItemKey("sub", cat.id, sub.id)} index={idx}>
                       {(provided, snapshot) => (
-                        <li ref={provided.innerRef} {...provided.draggableProps} className={`ml-8 border-l-4 border-gray-300 rounded bg-gray-50 py-2 px-4 group ring-2 ${snapshot.isDragging ? "ring-blue-200" : "ring-transparent"} transition`}>
+                        <li ref={provided.innerRef} {...provided.draggableProps} className={`ml-8 border-l-4 
+                        border-gray-300 rounded bg-gray-50 py-2 px-4 group ring-2 ${snapshot.isDragging ? 
+                          "ring-blue-200" : "ring-transparent"} transition`}>
                           {/* -------- 서브카테고리 -------- */}
                           <div className="flex items-center gap-2">
                             <span {...provided.dragHandleProps} className="cursor-move text-gray-400 select-none mr-4">☰</span>
@@ -405,7 +414,8 @@ export default function CategoriesPage() {
                               <button className="text-xs text-blue-500 px-2 py-1 rounded hover:bg-blue-50" onClick={() => handleAddSub(cat.id)}>서브추가</button>
                               <button className="text-xs text-gray-800 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleEdit(cat.id, sub.id)}>수정</button>
                               <button className="text-xs text-red-500 px-2 py-1 rounded hover:bg-red-50" onClick={() => handleDelete(cat.id, sub.id)}>삭제</button>
-                              <button className="text-xs text-yellow-700 px-2 py-1 rounded border border-yellow-100 hover:bg-yellow-50" onClick={() => handlePromoteSubToMain(cat.id, sub.id)}>최상위로</button>
+                              <button className="text-xs text-yellow-700 px-2 py-1 rounded border
+                              border-yellow-100 hover:bg-yellow-50" onClick={() => handlePromoteSubToMain(cat.id, sub.id)}>최상위로</button>
                               <button className="text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleSetting(cat.id, sub.id)}>설정</button>
                             </div>
                           </div>
