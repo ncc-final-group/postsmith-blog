@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return {
         date: date.toISOString().split('T')[0],
         views: Math.floor(Math.random() * 100), // 임시로 랜덤 데이터 생성
-        visitors: Math.floor(Math.random() * 50) // 방문자수는 조회수보다 적게 설정
+        visitors: Math.floor(Math.random() * 50), // 방문자수는 조회수보다 적게 설정
       };
     });
 
@@ -23,4 +23,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch {
     res.status(500).json({ message: 'Internal server error' });
   }
-} 
+}

@@ -1,29 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip
-} from 'chart.js';
+import { CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js';
 import crosshairPlugin from 'chartjs-plugin-crosshair';
 import { Line } from 'react-chartjs-2';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  crosshairPlugin
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, crosshairPlugin);
 
 interface StatsData {
   date: string;
@@ -114,7 +96,7 @@ export default function StatsChart() {
       }, {});
 
       return {
-        labels: last30Days.map(date => {
+        labels: last30Days.map((date) => {
           const currentDate = new Date(date);
           const day = currentDate.getDate();
           const month = currentDate.getMonth() + 1;
@@ -124,8 +106,8 @@ export default function StatsChart() {
           }
           return `${day}`;
         }),
-        data: last30Days.map(date => (dailyData[date]?.[statType] || 0)),
-        monthLabels
+        data: last30Days.map((date) => dailyData[date]?.[statType] || 0),
+        monthLabels,
       };
     } else if (period === 'weekly') {
       // 최근 15주 데이터
@@ -140,7 +122,7 @@ export default function StatsChart() {
       }, {});
 
       const weeks = Object.keys(weeklyData).slice(-15);
-      
+
       // 월이 바뀌는 지점 찾기
       const monthLabels = weeks.reduce((acc: { [key: string]: number }, week, index) => {
         const date = new Date();
@@ -169,8 +151,8 @@ export default function StatsChart() {
           }
           return date;
         }),
-        data: weeks.map(week => weeklyData[week][statType]),
-        monthLabels
+        data: weeks.map((week) => weeklyData[week][statType]),
+        monthLabels,
       };
     } else {
       // 최근 12개월 데이터
@@ -185,7 +167,7 @@ export default function StatsChart() {
       }, {});
 
       const months = Object.keys(monthlyData).slice(-12);
-      
+
       // 연도가 바뀌는 지점 찾기
       const baseDate = new Date();
       const yearLabels = months.reduce((acc: { [key: string]: number }, month, index) => {
@@ -199,8 +181,8 @@ export default function StatsChart() {
 
       return {
         labels: months,
-        data: months.map(month => monthlyData[month][statType]),
-        yearLabels
+        data: months.map((month) => monthlyData[month][statType]),
+        yearLabels,
       };
     }
   };
@@ -208,7 +190,7 @@ export default function StatsChart() {
   const processedData = processDataByPeriod();
 
   const chartData = {
-    labels: processedData.labels.map(label => Array.isArray(label) ? label[0] : label),
+    labels: processedData.labels.map((label) => (Array.isArray(label) ? label[0] : label)),
     datasets: [
       {
         data: processedData.data,
@@ -224,7 +206,7 @@ export default function StatsChart() {
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2,
         tension: 0.1,
-        fill: false
+        fill: false,
       },
     ],
   };
@@ -236,22 +218,22 @@ export default function StatsChart() {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function (context: any) {
             return `${statType === 'views' ? '조회수' : '방문자수'}: ${context.parsed.y}`;
-          }
+          },
         },
         intersect: false,
-        mode: 'index' as const
+        mode: 'index' as const,
       },
       crosshair: {
         line: {
           color: 'rgba(75, 192, 192, 0.6)',
           width: 1,
-          dashPattern: [5, 5]
+          dashPattern: [5, 5],
         },
         sync: { enabled: true },
-        zoom: { enabled: false }
-      }
+        zoom: { enabled: false },
+      },
     },
     scales: {
       x: {
@@ -260,7 +242,7 @@ export default function StatsChart() {
           drawOnChartArea: true,
         },
         ticks: {
-          callback: function(this: { getLabelForValue: (value: any) => string }, value: any, index: number): string | string[] {
+          callback: function (this: { getLabelForValue: (value: any) => string }, value: any, index: number): string | string[] {
             if (period === 'daily') {
               const label = processedData.labels[index];
               return Array.isArray(label) ? label : label;
@@ -283,25 +265,25 @@ export default function StatsChart() {
           },
           maxRotation: 0,
           minRotation: 0,
-          padding: 10
-        }
+          padding: 10,
+        },
       },
-      y: { beginAtZero: true }
+      y: { beginAtZero: true },
     },
     interaction: {
       mode: 'index' as const,
-      intersect: false
+      intersect: false,
     },
     hover: {
       mode: 'index' as const,
       intersect: false,
-      animationDuration: 0
-    }
+      animationDuration: 0,
+    },
   };
 
-  const buttonStyle = "px-4 py-2 text-sm font-medium rounded-md transition-colors";
-  const activeButtonStyle = "bg-teal-500 text-white";
-  const inactiveButtonStyle = "bg-gray-100 text-gray-700 hover:bg-gray-200";
+  const buttonStyle = 'px-4 py-2 text-sm font-medium rounded-md transition-colors';
+  const activeButtonStyle = 'bg-teal-500 text-white';
+  const inactiveButtonStyle = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
 
   const getTodayDate = () => {
     const today = new Date();
@@ -314,43 +296,26 @@ export default function StatsChart() {
   };
 
   return (
-    <div className="w-full h-full">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-lg font-medium text-gray-700">
-          {getTodayDate()}
-        </div>
+    <div className="h-full w-full">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-lg font-medium text-gray-700">{getTodayDate()}</div>
         <div className="flex space-x-6">
           <div className="space-x-2">
-            <button
-              className={`${buttonStyle} ${period === 'daily' ? activeButtonStyle : inactiveButtonStyle}`}
-              onClick={() => setPeriod('daily')}
-            >
+            <button className={`${buttonStyle} ${period === 'daily' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('daily')}>
               일간
             </button>
-            <button
-              className={`${buttonStyle} ${period === 'weekly' ? activeButtonStyle : inactiveButtonStyle}`}
-              onClick={() => setPeriod('weekly')}
-            >
+            <button className={`${buttonStyle} ${period === 'weekly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('weekly')}>
               주간
             </button>
-            <button
-              className={`${buttonStyle} ${period === 'monthly' ? activeButtonStyle : inactiveButtonStyle}`}
-              onClick={() => setPeriod('monthly')}
-            >
+            <button className={`${buttonStyle} ${period === 'monthly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('monthly')}>
               월간
             </button>
           </div>
           <div className="space-x-2">
-            <button
-              className={`${buttonStyle} ${statType === 'views' ? activeButtonStyle : inactiveButtonStyle}`}
-              onClick={() => setStatType('views')}
-            >
+            <button className={`${buttonStyle} ${statType === 'views' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('views')}>
               조회수
             </button>
-            <button
-              className={`${buttonStyle} ${statType === 'visitors' ? activeButtonStyle : inactiveButtonStyle}`}
-              onClick={() => setStatType('visitors')}
-            >
+            <button className={`${buttonStyle} ${statType === 'visitors' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('visitors')}>
               방문자수
             </button>
           </div>
@@ -361,4 +326,4 @@ export default function StatsChart() {
       </div>
     </div>
   );
-} 
+}

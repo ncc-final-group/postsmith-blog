@@ -191,10 +191,10 @@ export default function BoardSitePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={clsx(
                   'w-48 rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm text-gray-700',
-                  'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
+                  'hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
                 )}
               />
-              <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded p-1 hover:bg-gray-100">
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 transform rounded p-1 hover:bg-gray-100">
                 <Search className="h-4 w-4 text-gray-400" />
               </button>
             </div>
@@ -235,7 +235,7 @@ export default function BoardSitePage() {
                     <div className="mb-1 flex items-center gap-2">
                       {post.isNotice && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>}
                       <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
-                      {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
+                      {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute right-9 top-8 h-4 w-4 text-gray-400" />}
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -280,7 +280,7 @@ export default function BoardSitePage() {
                       <select
                         className={clsx(
                           'rounded border border-gray-300 px-2 py-1 text-sm text-gray-700',
-                          'hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none',
+                          'hover:border-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-200',
                         )}
                         value={post.privacy || 'public'}
                         onChange={(e) => handlePrivacyChange(e, post)}
