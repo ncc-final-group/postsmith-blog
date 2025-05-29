@@ -1,4 +1,4 @@
-import SkinList, { Skin } from '../../../../components/SkinList';
+import SkinList, { Skin } from '@components/SkinList';
 
 const skins: Skin[] = [
   { id: 'odyssey', name: 'Odyssey', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca' },

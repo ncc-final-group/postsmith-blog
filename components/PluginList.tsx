@@ -126,7 +126,7 @@ function PluginList({ plugins, activePluginIds: initialActivePluginIds }: Plugin
             >
               {/* 상단 이미지 영역 (50%) */}
               <div className="relative h-1/2 min-h-[50%] w-full flex-shrink-0 flex-grow-0" style={{ height: '50%' }}>
-                {isActive && <span className="absolute left-2 top-2 z-10 rounded bg-red-500 px-2 py-0.5 text-xs font-bold text-white">사용중</span>}
+                {isActive && <span className="absolute top-2 left-2 z-10 rounded bg-red-500 px-2 py-0.5 text-xs font-bold text-white">사용중</span>}
                 {plugin.iconUrl ? (
                   <Image src={plugin.iconUrl} alt={plugin.name} width={384} height={240} className="rounded border bg-gray-100 object-contain" />
                 ) : (

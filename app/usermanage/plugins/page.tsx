@@ -1,4 +1,4 @@
-import PluginList, { Plugin } from '../../../components/PluginList';
+import PluginList, { Plugin } from '@components/PluginList';
 
 const plugins: Plugin[] = [
   { id: 'daum', name: 'Daum 검색창', description: '블로그에 Daum 검색창을 추가합니다.', color: '#ffe066', iconUrl: undefined },

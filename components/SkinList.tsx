@@ -63,7 +63,7 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId }: SkinListProps) {
                         <button className="z-20 rounded bg-gray-800 px-3 py-1 text-sm font-semibold text-white shadow">미리보기</button>
                         {!isActive && (
                           <button
-                            className="z-20 rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="z-20 rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white shadow focus:ring-2 focus:ring-blue-400 focus:outline-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveSkinId(skin.id);

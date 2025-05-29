@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-import StatsChart from '../../../../components/StatsChart';
-import StatsSummary from '../../../../components/StatsSummary';
+import StatsChart from '@components/StatsChart';
+import StatsSummary from '@components/StatsSummary';
 
 export default function StatsPage() {
   return (

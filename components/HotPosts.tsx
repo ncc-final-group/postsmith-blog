@@ -28,7 +28,7 @@ export default function HotPosts({ posts }: HotPostsProps) {
                   alt={post.title}
                   fill
                   className="object-cover"
-                  sizes="100vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   priority={true} // optional: use this only if the image is critical for page load
                 />
               </div>
