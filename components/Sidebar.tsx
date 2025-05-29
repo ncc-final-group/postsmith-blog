@@ -75,7 +75,7 @@ export default function Sidebar() {
       <div className="mb-1 w-53 flex-col justify-center">
         <div className="flex h-54 items-center justify-center border border-gray-300 bg-gray-200">
           <figure className="relative h-54 w-40">
-            <Image fill objectFit="contain" src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={''} />
+            <Image fill style={{ objectFit: 'contain' }} priority={true} src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={''} />
           </figure>
         </div>
         <div className="flex h-18 flex-col border border-t-0 border-gray-300 bg-white px-5 py-3">
