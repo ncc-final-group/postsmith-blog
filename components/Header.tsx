@@ -13,15 +13,15 @@ export default function Header() {
           </Link>
 
           <nav className="hidden gap-6 text-gray-700 md:flex">
-            <Link href="/posts">홈</Link>
-            <Link href="/about">피드</Link>
-            <Link href="/contact">스킨</Link>
+            <Link href="/">홈</Link>
+            <Link href="/">피드</Link>
+            <Link href="/">스킨</Link>
           </nav>
         </div>
 
         {/* 오른쪽: 로그인 버튼 */}
         <div className="hidden md:block">
-          <Link href="/login" className="rounded-full bg-black px-4 py-2 text-white">
+          <Link href="/" className="rounded-full bg-black px-4 py-2 text-white">
             로그인
           </Link>
         </div>
