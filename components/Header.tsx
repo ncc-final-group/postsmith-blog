@@ -9,7 +9,7 @@ export default function Header() {
       <div className="flex flex-shrink-0 items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center text-xl font-bold text-black">
-            <Image src="/logo.png" alt="Logo" width={144} height={74} className="mr-2 inline-block" />
+            <Image src="/logo.png" alt="Logo" width={144} height={72} className="mr-2 inline-block" />
           </Link>
 
           <nav className="hidden gap-6 text-gray-700 md:flex">

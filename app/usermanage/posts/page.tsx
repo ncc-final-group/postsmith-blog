@@ -192,7 +192,7 @@ export default function BoardSitePage() {
               <option value="latest">최신순</option>
               <option value="oldest">오래된순</option>
               <option value="title">제목순</option>
-              <option value="author">작성자순</option>
+              <option value="private">비공개</option>
             </select>
 
             <div className="relative">
