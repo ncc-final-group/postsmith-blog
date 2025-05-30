@@ -147,6 +147,34 @@ export default function BoardSitePage() {
     }));
   }
 
+
+
+  function handleBulkAction(action: string) {
+    if (selectedPosts.size === 0) {
+      alert('먼저 게시글을 선택하세요.');
+      return;
+    }
+
+    if (action === 'delete') {
+      if (!confirm('선택된 게시글을 삭제하시겠습니까?')) return;
+
+      setBoardData((prev) => ({
+        ...prev,
+        posts: prev.posts.filter((post) => !selectedPosts.has(post.id)),
+      }));
+      setSelectedPosts(new Set());
+    } else if (action === 'makePublic' || action === 'makePrivate') {
+      const newPrivacy = action === 'makePublic' ? 'public' : 'private';
+
+      setBoardData((prev) => ({
+        ...prev,
+        posts: prev.posts.map((post) =>
+          selectedPosts.has(post.id) ? { ...post, privacy: newPrivacy } : post,
+        ),
+      }));
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl">
@@ -178,7 +206,24 @@ export default function BoardSitePage() {
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-sm text-gray-600">전체선택</span>
+
+            <select
+              defaultValue=""
+              onChange={(e) => handleBulkAction(e.target.value)}
+              className={clsx(
+                'rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700',
+                'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
+              )}
+            >
+              <option value="" disabled>
+                변경
+              </option>
+              <option value="makePublic">공개</option>
+              <option value="makePrivate">비공개</option>
+              <option value="delete">삭제</option>
+            </select>
           </div>
+
 
           <div className="ml-auto flex items-center gap-3">
             <select

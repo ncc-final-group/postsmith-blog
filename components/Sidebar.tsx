@@ -31,11 +31,6 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    key: 'stats',
-    label: '통계',
-    subItems: [{ label: '방문 통계', route: '/stats/visits' }],
-  },
-  {
     key: 'customize',
     label: '꾸미기',
     subItems: [{ label: '스킨', route: '/customize/skin' }],
@@ -90,7 +85,7 @@ export default function Sidebar() {
 
       <div className="flex flex-col border border-gray-300">
         <div className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-5">
-          <Link href="/usermanage/home" className="flex items-center text-sm font-medium space-x-1">
+          <Link href="/usermanage/stats/visits" className="flex items-center text-sm font-medium space-x-1">
             <House className='text-gray-400 w-5 y-5' />
             <span>블로그 관리홈</span>
           </Link>
