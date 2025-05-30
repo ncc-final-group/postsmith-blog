@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "lintfix": "next lint --fix",
+    "check": "prettier --check .",
     "format": "prettier --write .",
-    "prebuild": "npm run format && npm run lintfix",
-    "prestart": "npm run build"
+    "fixall": "npm run format && npm run lintfix",
+    "buildtest": "npm run check && npm run lint && npm run build"
   },
   "dependencies": {
     "chart.js": "^4.4.9",
