@@ -7,6 +7,7 @@ import { ListItemNode, ListNode } from "@lexical/list";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
+import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { createEditor } from "lexical";
 import React, { useState } from "react";
 
@@ -20,6 +21,10 @@ const theme = {
     bold: "font-bold",
     italic: "italic",
     underline: "underline",
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+    justify: "text-justify"
   },
 };
 
@@ -42,7 +47,8 @@ export default function EditPage() {
       TableNode,
       TableCellNode,
       TableRowNode,
-      LinkNode
+      LinkNode,
+      HorizontalRuleNode
     ],
     onError: (error: Error) => {
       throw error;
