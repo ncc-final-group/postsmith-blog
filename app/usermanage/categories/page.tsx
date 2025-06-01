@@ -1,8 +1,12 @@
+/* eslint-disable indent */
 'use client';
 
-import { DragDropContext, Draggable, Droppable,DropResult } from '@hello-pangea/dnd';
-import React, { useState } from "react";
+import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
+import clsx from 'clsx';
+import React, { useState } from 'react';
 
+import './dragging.css';
+import { CategoryMoveModal } from '@app/usermanage/categories/CategoryMoveModal';
 
 // 타입 정의
 type SubCategory = {
@@ -24,307 +28,462 @@ type Category = {
 const initialCategories: Category[] = [
   {
     id: 1,
-    name: "카테고리1",
+    name: '카테고리1',
     postCount: 3,
-    type: "일반",
+    type: '일반',
     sub: [
-      { id: 101, name: "서브1", postCount: 1, type: "일반" },
-      { id: 102, name: "서브2", postCount: 2, type: "일반" },
+      { id: 101, name: '서브1', postCount: 1, type: '일반' },
+      { id: 102, name: '서브2', postCount: 2, type: '일반' },
     ],
   },
   {
     id: 2,
-    name: "카테고리2",
+    name: '카테고리2',
     postCount: 0,
-    type: "일반",
+    type: '일반',
     sub: [],
   },
 ];
 
 // ======== 이동 타깃 선택 모달 ===========
-interface CategorySelectModalProps {
-  open: boolean;
-  title: string;
-  categories: Category[];
-  excludeId: number | undefined; // 자기자신 제외
-  onSelect: (targetId: number) => void;
-  onClose: () => void;
+function getItemKey(type: 'cat' | 'sub', catId: number, subId?: number) {
+  return type === 'cat' ? `cat-${catId}` : `sub-${catId}-${subId}`;
 }
 
-function CategorySelectModal({
-  open,
-  title,
-  categories,
-  excludeId,
-  onSelect,
-  onClose
-}: CategorySelectModalProps) {
-  if (!open) return null;
-
+// === 드래그 끝났을 때 처리 ===
+const CategoryItem = ({ title, type, postCount, isMain = false }: { title: string; type: string; postCount: number; isMain?: boolean }) => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-[325px]">
-        <h4 className="font-semibold text-base mb-4">{title}</h4>
-        <div className="max-h-56 overflow-y-auto">
-          <ul>
-            {categories.filter(cat => cat.id !== excludeId).map(cat => (
-              <li key={cat.id}>
-                <button
-                  className="w-full text-left px-3 py-2 my-1 rounded hover:bg-blue-50 transition"
-                  onClick={() => onSelect(cat.id)}
-                >{cat.name}</button>
-              </li>
-            ))}
-          </ul>
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center">
+        {/* 전체 컨테이너는 300px 유지 */}
+        <div className="w-[300px]">
+          {/* 실제 텍스트는 더 작은 공간으로 제한 */}
+          <div className="w-[200px]">
+            <div className="truncate" title={title}>
+              <span className={clsx(isMain ? 'text-lg font-semibold' : 'font-medium')}>{title}</span>
+            </div>
+          </div>
         </div>
-        <button
-          className="w-full mt-4 px-3 py-1 border rounded text-gray-600 hover:bg-gray-100"
-          onClick={onClose}
-        >취소</button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <span className={clsx('rounded px-2 py-0.5 text-xs', isMain ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')}>{type}</span>
+          <span className="text-gray-400">|</span>
+          <span className="text-xs text-gray-500">{postCount}개의 글</span>
+        </div>
       </div>
     </div>
   );
-}
-
-// === 드래그&드롭용 고유 key 만들기
-function getItemKey(type: "cat" | "sub", catId: number, subId?: number) {
-  return type === "cat" ? `cat-${catId}` : `sub-${catId}-${subId}`;
-}
-// === 드래그 끝났을 때 처리 ===
-function reorderList<T>(list: T[], startIndex: number, endIndex: number): T[] {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
-  return result;
-}
-function flattenForDnd(categories: Category[]) {
-  // 1차원으로 펼침, dnd 동작 위해 "cat/sub" 위치도 함께 표기
-  const result: { type: "cat" | "sub", catIdx: number, subIdx?: number, cat: Category, sub?: SubCategory }[] = [];
-  categories.forEach((cat, catIdx) => {
-    result.push({ type: "cat", catIdx, cat });
-    cat.sub.forEach((sub, subIdx) => {
-      result.push({ type: "sub", catIdx, subIdx, cat, sub });
-    });
-  });
-  return result;
-}
+};
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [expanded, setExpanded] = useState<Record<number, boolean>>(
-    Object.fromEntries(initialCategories.map(cat => [cat.id, true]))
-  );
-  // 이동 관련
-  const [moveModalOpen, setMoveModalOpen] = useState(false);
-  const [moveMainId, setMoveMainId] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Record<number, boolean>>(Object.fromEntries(initialCategories.map((cat) => [cat.id, true])));
+  //모달 상태 관리
+  const [moveModal, setMoveModal] = useState<{
+    isOpen: boolean;
+    item: null | {
+      categoryId: number;
+      subId?: number; // optional로 변경
+    };
+  }>({
+    isOpen: false,
+    item: null,
+  });
+  const handleCategoryMove = (targetCategoryId: number, asMainCategory: boolean) => {
+    const moveItem = moveModal.item;
+
+    if (!moveItem) return;
+
+    setCategories((prev) => {
+      const newCats = [...prev];
+      const sourceCatIndex = newCats.findIndex((c) => c.id === moveItem.categoryId);
+
+      if (sourceCatIndex === -1) return prev;
+
+      const sourceCat = newCats[sourceCatIndex];
+      const targetCat = targetCategoryId !== 0 ? newCats.find((c) => c.id === targetCategoryId) : null;
+
+      // 메인 카테고리를 서브카테고리로 이동
+      if (!moveItem.subId && !asMainCategory && targetCat) {
+        // 자기 자신이나 자신의 서브로는 이동 불가
+        if (targetCat.id === sourceCat.id || sourceCat.sub.some((sub) => sub.id === targetCat.id)) {
+          return prev;
+        }
+
+        // 1. 이동할 카테고리의 서브들을 독립 카테고리로 변환
+        const independentSubs = sourceCat.sub.map(
+          (sub) =>
+            ({
+              id: sub.id,
+              name: sub.name,
+              postCount: sub.postCount,
+              type: sub.type,
+              sub: [],
+            }) as Category,
+        );
+
+        // 2. 이동할 카테고리를 서브카테고리 형태로 변환
+        const newSub: SubCategory = {
+          id: sourceCat.id,
+          name: sourceCat.name,
+          postCount: sourceCat.postCount,
+          type: sourceCat.type,
+        };
+
+        // 3. 원본 카테고리 제거
+        newCats.splice(sourceCatIndex, 1);
+
+        // 4. 목표 카테고리에 서브 추가
+        const targetIndex = newCats.findIndex((c) => c.id === targetCat.id);
+        if (targetIndex !== -1) {
+          // sub 배열이 없으면 초기화
+          targetCat.sub = targetCat.sub || [];
+
+          // 중복 체크 후 추가
+          if (!targetCat.sub.some((s) => s.id === newSub.id)) {
+            targetCat.sub.push(newSub);
+          }
+
+          // 독립된 서브카테고리들 추가
+          newCats.splice(targetIndex + 1, 0, ...independentSubs);
+        }
+
+        return newCats;
+      }
+
+      if (moveItem.subId && asMainCategory) {
+        // 이동할 서브카테고리 찾기
+        const subToMove = sourceCat.sub.find((s) => s.id === moveItem.subId);
+        if (!subToMove) return prev;
+
+        // 새로운 메인 카테고리 생성
+        const newMainCategory: Category = {
+          id: subToMove.id,
+          name: subToMove.name,
+          postCount: subToMove.postCount,
+          type: subToMove.type,
+          sub: [],
+        };
+
+        // 원본에서 서브카테고리 제거
+        sourceCat.sub = sourceCat.sub.filter((s) => s.id !== moveItem.subId);
+
+        // 새 메인 카테고리 추가
+        const insertIndex = sourceCatIndex + 1;
+        newCats.splice(insertIndex, 0, newMainCategory);
+
+        return newCats;
+      }
+
+      // 3. 서브카테고리를 다른 메인의 서브로 이동
+      if (moveItem.subId && !asMainCategory && targetCat) {
+        // 자기 자신의 카테고리로는 이동 불가
+        if (targetCat.id === sourceCat.id) return prev;
+
+        // 이동할 서브카테고리 찾기
+        const subToMove = sourceCat.sub.find((s) => s.id === moveItem.subId);
+        if (!subToMove) return prev;
+
+        // 중복 체크
+        if (targetCat.sub.some((s) => s.id === subToMove.id)) return prev;
+
+        // 원본에서 서브카테고리 제거
+        sourceCat.sub = sourceCat.sub.filter((s) => s.id !== moveItem.subId);
+
+        // 목표 카테고리에 서브 추가
+        targetCat.sub = targetCat.sub || [];
+        targetCat.sub.push({
+          id: subToMove.id,
+          name: subToMove.name,
+          postCount: subToMove.postCount,
+          type: subToMove.type,
+        });
+
+        return newCats;
+      }
+
+      return prev;
+    });
+
+    // 이동 모달 닫기
+    setMoveModal({ isOpen: false, item: null });
+  };
+
+  // 기존 state 선언부 근처에 추가
+  const [mainTitle, setMainTitle] = useState('분류 전체보기');
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState('일반');
+
+  // State 수정 (editModalOpen과 editTarget 대신)
+  const [editingId, setEditingId] = useState<{ catId: number; subId?: number } | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingType, setEditingType] = useState('일반');
 
   // 전체 펼침/접힘
   const handleExpandAll = (expand: boolean) => {
-    setExpanded(
-      Object.fromEntries(categories.map((cat) => [cat.id, expand]))
-    );
+    setExpanded(Object.fromEntries(categories.map((cat) => [cat.id, expand])));
   };
 
   const toggleSubs = (catId: number) => {
     setExpanded((prev) => ({ ...prev, [catId]: !prev[catId] }));
   };
 
+  const [isDraggingOver, setIsDraggingOver] = useState<{
+    id: number | null;
+    side: 'left' | 'right' | null;
+  }>({ id: null, side: null });
+
   function handleEdit(catId: number, subId?: number) {
-    setCategories((prev) =>
-      prev.map((cat) => {
-        if (typeof subId === "number" && cat.id === catId) {
-          return {
-            ...cat,
-            sub: cat.sub.map((sub) =>
-              sub.id === subId
-                ? {
-                  ...sub,
-                  name: prompt("새 이름을 입력하세요", sub.name) || sub.name,
-                }
-                : sub
-            ),
-          };
-        }
-        if (cat.id === catId && subId === undefined) {
-          return {
-            ...cat,
-            name: prompt("새 이름을 입력하세요", cat.name) || cat.name,
-          };
-        }
-        return cat;
-      })
-    );
+    const category = categories.find((cat) => cat.id === catId);
+    if (!category) return;
+
+    if (typeof subId === 'number') {
+      const sub = category.sub.find((s) => s.id === subId);
+      if (!sub) return;
+      setEditingName(sub.name);
+      setEditingType(sub.type);
+    } else {
+      setEditingName(category.name);
+      setEditingType(category.type);
+    }
+    setEditingId({ catId, subId });
   }
 
   function handleDelete(catId: number, subId?: number) {
-    if (!window.confirm("정말 삭제하시겠어요?")) return;
-    setCategories((prev) =>
-      prev
-        .map((cat) => {
-          if (typeof subId === "number" && cat.id === catId) {
+    // 서브카테고리 삭제
+    if (typeof subId === 'number') {
+      if (!window.confirm('정말 삭제하시겠어요?')) return;
+      setCategories((prev) =>
+        prev.map((cat) => {
+          if (cat.id === catId) {
             return { ...cat, sub: cat.sub.filter((sub) => sub.id !== subId) };
           }
           return cat;
-        })
-        .filter((cat) => !(cat.id === catId && subId === undefined))
-    );
+        }),
+      );
+      return;
+    }
+    // 메인 카테고리 삭제
+    const category = categories.find((cat) => cat.id === catId);
+    if (category && category.sub.length > 0) {
+      alert('서브 카테고리가 있으면 메인 카테고리를 삭제할 수 없습니다.\n서브 카테고리를 삭제하거나 이동한 후 삭제해 주십시오.');
+      return;
+    }
+
+    if (!window.confirm('정말 삭제하시겠어요?')) return;
+    setCategories((prev) => prev.filter((cat) => cat.id !== catId));
   }
 
   function handleSetting(catId: number, subId?: number) {
-    if (typeof subId === "number") {
+    alert('설정에 카테고리 설정이랑 설명 넣어야하는데, 이건 이야기 해보죠');
+    /*if (typeof subId === 'number') {
       alert(`서브카테고리 설정: ${catId} / ${subId}`);
     } else {
       alert(`카테고리 설정: ${catId}`);
-    }
+    }*/
   }
 
   function handleAddSub(parentId: number) {
+    // 서브카테고리 추가
     setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === parentId
-          ? {
+      prev.map((cat) => {
+        if (cat.id === parentId) {
+          return {
             ...cat,
             sub: [
               ...cat.sub,
               {
                 id: Date.now(),
-                name: "새 서브카테고리",
+                name: '새 서브카테고리',
                 postCount: 0,
-                type: "일반",
+                type: '일반',
               },
             ],
-          }
-          : cat
-      )
+          };
+        } else {
+          return cat;
+        }
+      }),
     );
+
+    // 해당 카테고리를 펼침 상태로 변경
+    setExpanded((prev) => ({
+      ...prev,
+      [parentId]: true,
+    }));
   }
 
-  function handleMove(fromIdx: number, toIdx: number) {
-    setCategories((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, item);
-      return next;
-    });
-  }
+  function handleAddCategory() {
+    if (!newCategoryName.trim()) return;
 
-  function handleSubMove(catId: number, fromIdx: number, toIdx: number) {
-    setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === catId
-          ? {
-            ...cat,
-            sub: (() => {
-              const s = [...cat.sub];
-              const [item] = s.splice(fromIdx, 1);
-              s.splice(toIdx, 0, item);
-              return s;
-            })(),
-          }
-          : cat
-      )
-    );
+    const newCategory: Category = {
+      id: Date.now(),
+      name: newCategoryName.trim(),
+      postCount: 0,
+      type: newCategoryType,
+      sub: [],
+    };
+
+    // 배열의 끝이 아닌 시작 부분에 새 카테고리 추가
+    setCategories((prev) => [newCategory, ...prev]);
+
+    setIsAdding(false);
+    setNewCategoryName('');
+    setNewCategoryType('일반');
   }
 
   // 서브카테고리 -> 최상위로 승격
-  function handlePromoteSubToMain(catId: number, subId: number) {
-    setCategories((prev) => {
-      let promoted: SubCategory | undefined;
-      const updated = prev.map((cat) => {
-        if (cat.id === catId) {
-          const restSubs = cat.sub.filter((sub) => {
-            if (sub.id === subId) {
-              promoted = sub;
-              return false;
-            }
-            return true;
+  // === 플랫 리스트 생성 함수를 컴포넌트 안으로 이동 ===
+  const flattenForDnd = (categories: Category[]) => {
+    const result: { type: 'cat' | 'sub'; catIdx: number; subIdx?: number; cat: Category; sub?: SubCategory }[] = [];
+
+    categories.forEach((cat, catIdx) => {
+      result.push({ type: 'cat', catIdx, cat });
+      // expanded 상태일 때만 서브카테고리 추가
+      if (expanded[cat.id]) {
+        cat.sub.forEach((sub, subIdx) => {
+          result.push({
+            type: 'sub',
+            catIdx,
+            subIdx,
+            cat,
+            sub,
           });
-          return { ...cat, sub: restSubs };
-        }
-        return cat;
-      });
-
-      if (promoted) {
-        return [
-          ...updated,
-          { ...promoted, sub: [], id: Date.now() },
-        ];
+        });
       }
-      return updated;
     });
-  }
 
-  // 최상위를 다른 카테고리 하위로
-  function handleDemoteMainToSub(mainId: number, targetCatId: number) {
-    setCategories((prev) => {
-      // 분리
-      const mainIdx = prev.findIndex(cat => cat.id === mainId);
-      if (mainIdx === -1) return prev;
-      const [mainCat] = prev.splice(mainIdx, 1);
-      // 하위로
-      return prev.map(cat =>
-        cat.id === targetCatId
-          ? {
-            ...cat,
-            sub: [
-              ...cat.sub,
-              { ...mainCat, sub: undefined }
-            ]
-          }
-          : cat
-      );
-    });
-  }
+    return result;
+  };
 
-  // 모달 열기
-  function openDemoteModal(catId: number) {
-    setMoveMainId(catId);
-    setMoveModalOpen(true);
-  }
-  // 모달에서 타깃 선택
-  function handleSelectMoveTarget(targetId: number) {
-    if (moveMainId !== null) {
-      handleDemoteMainToSub(moveMainId, targetId);
-      setMoveModalOpen(false);
-      setMoveMainId(null);
-    }
-  }
-  function handleCloseMoveModal() {
-    setMoveModalOpen(false);
-    setMoveMainId(null);
-  }
-
-  // === 드래그&드롭 처리 ===
-  function onDragEnd(result: DropResult) {
-    const flatItems = flattenForDnd(categories);
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const fromIdx = result.source.index;
     const toIdx = result.destination.index;
-    if (fromIdx === toIdx) return; // 변경 없음
+    if (fromIdx === toIdx) return;
 
+    const flatItems = flattenForDnd(categories);
     const moved = flatItems[fromIdx];
-    const nextFlat = Array.from(flatItems);
-    const [item] = nextFlat.splice(fromIdx, 1);
-    nextFlat.splice(toIdx, 0, item);
+    const target = flatItems[toIdx];
 
-    // 2차원 구조로 복원
-    const newCats: Category[] = [];
-    let lastCat: Category | null = null;
-    nextFlat.forEach(row => {
-      if (row.type === 'cat') {
-        // 최상위 카테고리
-        lastCat = {
-          ...row.cat,
+    // 메인 카테고리 이동 시 서브카테고리 영역인지 확인
+    if (moved.type === 'cat') {
+      const isTargetSubArea = target.type === 'sub';
+      const isLastMainCategory = target.type === 'cat' && flatItems.slice(toIdx + 1).every((item) => item.type === 'sub');
+
+      if (isTargetSubArea || isLastMainCategory) {
+        // 순서 이동으로 처리
+        setCategories((prev) => {
+          const newCats = [...prev];
+          const [movedCat] = newCats.splice(moved.catIdx, 1);
+          // 타겟이 서브카테고리인 경우, 해당 메인 카테고리 다음 위치로 이동
+          const targetIdx = isTargetSubArea ? target.catIdx + 1 : target.catIdx;
+          newCats.splice(targetIdx, 0, movedCat);
+          return newCats;
+        });
+        return;
+      }
+    }
+
+    // 서브카테고리를 메인 카테고리로 승격
+    if (moved.type === 'sub' && target.type === 'cat') {
+      setCategories((prev) => {
+        let newCats = prev.map((cat) => {
+          if (cat.id === moved.cat.id) {
+            // 기존 서브카테고리 제거
+            return {
+              ...cat,
+              sub: cat.sub.filter((s) => s.id !== moved.sub!.id),
+            };
+          }
+          return cat;
+        });
+
+        // 새로운 메인 카테고리 생성
+        const newCat: Category = {
+          id: moved.sub!.id,
+          name: moved.sub!.name,
+          type: moved.sub!.type,
+          postCount: moved.sub!.postCount,
           sub: [],
         };
-        newCats.push(lastCat);
-      } else if (row.type === 'sub' && lastCat) {
-        // 가장 마지막 카테고리의 하위로
-        lastCat.sub.push(row.sub!);
-      }
-    });
-    setCategories(newCats);
+
+        // 타겟 위치에 삽입
+        const insertIdx = target.catIdx;
+        newCats.splice(insertIdx, 0, newCat);
+
+        return newCats;
+      });
+      return;
+    }
+
+    // 기존의 같은 레벨 간 이동 로직
+    if (moved.type === 'cat' && target.type === 'cat') {
+      setCategories((prev) => {
+        const newCats = [...prev];
+        const [movedCat] = newCats.splice(moved.catIdx, 1);
+        newCats.splice(target.catIdx, 0, movedCat);
+        return newCats;
+      });
+      return;
+    }
+
+    if (moved.type === 'sub' && target.type === 'sub') {
+      setCategories((prev) => {
+        const newCats = prev.map((cat) => ({ ...cat, sub: [...cat.sub] }));
+        const sourceCat = newCats[moved.catIdx];
+        const targetCat = newCats[target.catIdx];
+
+        if (moved.catIdx === target.catIdx) {
+          // 같은 카테고리 내 이동
+          const [movedSub] = sourceCat.sub.splice(moved.subIdx!, 1);
+          sourceCat.sub.splice(target.subIdx!, 0, movedSub);
+        } else {
+          // 다른 카테고리로 이동
+          const [movedSub] = sourceCat.sub.splice(moved.subIdx!, 1);
+          targetCat.sub.splice(target.subIdx!, 0, movedSub);
+        }
+
+        return newCats;
+      });
+    }
+  };
+
+  // 저장 처리 함수
+  function handleSaveEdit() {
+    if (!editingId || !editingName.trim()) return;
+
+    setCategories((prev) =>
+      prev.map((cat) => {
+        if (cat.id === editingId.catId) {
+          if (editingId.subId !== undefined) {
+            // 서브카테고리 수정
+            return {
+              ...cat,
+              sub: cat.sub.map((sub) => {
+                if (sub.id === editingId.subId) {
+                  return {
+                    ...sub,
+                    name: editingName.trim(),
+                    type: editingType,
+                  };
+                } else {
+                  return sub;
+                }
+              }),
+            };
+          }
+          // 메인 카테고리 수정
+          return { ...cat, name: editingName.trim(), type: editingType };
+        }
+        return cat;
+      }),
+    );
+
+    setEditingId(null);
+    setEditingName('');
+    setEditingType('일반');
   }
 
   // -- 카테고리, 서브카테고리 리스트 1차원으로 드래그 지원 --
@@ -332,114 +491,457 @@ export default function CategoriesPage() {
 
   // === 렌더 ===
   return (
-    <div className="category-wrapper bg-gray-50 min-h-screen p-7">
-      <h3 className="font-bold text-2xl mb-4 tracking-tight">카테고리 관리</h3>
+    <div className="category-wrapper min-h-screen bg-gray-50 p-7">
+      <h3 className="mb-4 text-2xl font-bold tracking-tight">카테고리 관리</h3>
 
-      <div className="mb-5">
-        <button className="mr-2 text-xs border border-gray-300 px-3 py-1.5 rounded
-        hover:bg-blue-50 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) =>
-          [cat.id, true])))}>전체 펼치기</button>
-        <button className="text-xs border border-gray-300 px-3 py-1.5 rounded
-        hover:bg-gray-100 duration-150" onClick={() => setExpanded(Object.fromEntries(categories.map((cat) =>
-          [cat.id, false])))}>전체 닫기</button>
-      </div>
+      <DragDropContext
+        onDragEnd={onDragEnd}
+        onDragStart={(start) => {
+          const draggedItem = flat[start.source.index];
+          document.body.setAttribute('data-dragging-type', draggedItem.type);
+        }}
+        onDragUpdate={(update) => {
+          if (!update.destination) return;
 
-      <DragDropContext onDragEnd={onDragEnd}>
+          const flatItems = flattenForDnd(categories); // 여기서 flatItems 계산
+          const draggedItem = flatItems[update.source.index];
+          const targetItem = flatItems[update.destination.index];
+
+          if (!targetItem || targetItem.type !== 'cat') return;
+
+          const draggedElement = document.querySelector(`[data-rbd-draggable-id="${update.draggableId}"]`);
+          if (!draggedElement) return;
+
+          const targetElement = document.querySelector(`[data-rbd-draggable-id="cat-${targetItem.cat.id}"]`);
+          if (!targetElement) return;
+
+          const dragRect = draggedElement.getBoundingClientRect();
+          const targetRect = targetElement.getBoundingClientRect();
+
+          const isRightSide = dragRect.left + dragRect.width / 2 > targetRect.left + targetRect.width / 2;
+
+          setIsDraggingOver({
+            id: targetItem.cat.id,
+            side: isRightSide ? 'right' : 'left',
+          });
+
+          // 드래그 중인 아이템이 메인 카테고리일 때만 시각적 표시 추가
+          if (draggedItem.type === 'cat') {
+            if (isRightSide) {
+              draggedElement.classList.add('dragging-to-sub');
+            } else {
+              draggedElement.classList.remove('dragging-to-sub');
+            }
+
+            document.querySelectorAll('[data-rbd-draggable-id^="cat-"]').forEach((item) => {
+              if (item !== draggedElement) {
+                item.classList.toggle('prev-dragging', !isRightSide);
+              }
+            });
+          }
+        }}
+      >
         <Droppable droppableId="category-list">
           {(provided) => (
-            <ul className="space-y-2" {...provided.droppableProps} ref={provided.innerRef}>
-              {flat.map((item, idx) => {
-                if (item.type === 'cat') {
-                  const cat = item.cat;
-                  return (
-                    <Draggable key={getItemKey("cat", cat.id)} draggableId={getItemKey("cat", cat.id)} index={idx}>
-                      {(provided, snapshot) => (
-                        <li ref={provided.innerRef} {...provided.draggableProps}
-                            className={`border rounded-lg bg-white group shadow ring-2 ${snapshot.isDragging ? 
-                              "ring-blue-200" : "ring-transparent"} transition`}>
-                          {/* -------- 메인 카테고리 ------- */}
-                          <div className="flex items-center gap-2 pl-2 py-3 relative">
-                            {/* 펼침/접힘 */}
-                            {cat.sub.length > 0 ? (
-                              <button
-                                onClick={() => toggleSubs(cat.id)}
-                                className="w-6 text-center text-gray-500"
-                                type="button"
-                                aria-label={expanded[cat.id] ? "접기" : "펼치기"}
-                              >
-                                {expanded[cat.id] ? <span>▼</span> : <span>▶</span>}
-                              </button>
-                            ) : (
-                              <span className="w-6" />
-                            )}
-                            <span {...provided.dragHandleProps} className="cursor-move text-gray-400 select-none ml-1 mr-4">☰</span>
-                            <span className="font-semibold truncate mr-3 text-lg">{cat.name}</span>
-                            <span className="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">
-                              {cat.type}
-                            </span>
-                            <span className="ml-2 text-xs text-gray-500">{cat.postCount}개</span>
-                            <div className="flex items-center gap-1 ml-auto opacity-80 group-hover:opacity-100 transition-opacity">
-                              <button className="text-xs text-blue-600 px-2.5 py-1 rounded hover:bg-blue-50" onClick={() => handleAddSub(cat.id)}>서브추가</button>
-                              <button className="text-xs text-gray-800 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleEdit(cat.id)}>수정</button>
-                              <button className="text-xs text-red-500 px-2 py-1 rounded hover:bg-red-50" onClick={() => handleDelete(cat.id)}>삭제</button>
-                              <button className="text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleSetting(cat.id)}>설정</button>
-                              {/* 카테고리 이동 */}
-                              {categories.length > 1 && (
-                                <button className="text-xs text-yellow-700 ml-2 px-2 py-1 rounded border
-                                border-yellow-100 hover:bg-yellow-50" onClick={() => openDemoteModal(cat.id)}>하위로 이동</button>
+            <ul className="mb-10 flex min-h-[300px] w-full max-w-4xl flex-col rounded-xl border bg-white p-7 shadow" {...provided.droppableProps} ref={provided.innerRef}>
+              {/* --- 안내문구 + 전체펼침/닫기 버튼 --- */}
+              <li className="mb-4 border-b pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm leading-relaxed text-gray-700">
+                    카테고리 순서를 변경하고 주제 연결을 설정할 수 있습니다.
+                    <br />
+                    드래그 앤 드롭으로 카테고리 순서를 변경할 수 있습니다.
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-gray-500">{categories.length}/100</span>
+                    <div className="flex-shrink-0">
+                      <button
+                        className="mr-2 cursor-pointer rounded border border-gray-300 bg-white px-3 py-1.5 text-xs transition hover:bg-gray-50"
+                        onClick={() => handleExpandAll(true)}
+                      >
+                        전체 펼치기
+                      </button>
+                      <button
+                        className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1.5 text-xs transition hover:bg-gray-50"
+                        onClick={() => handleExpandAll(false)}
+                      >
+                        전체 닫기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+
+              {/* --- 분류 전체보기 --- */}
+              <li className="group mb-4 rounded-lg border bg-white shadow-sm">
+                {' '}
+                {/* group 추가 */}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-lg font-bold">{mainTitle}</span>
+                  <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    {' '}
+                    {/* hover 효과 추가 */}
+                    <button onClick={() => setIsAdding(true)} className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 hover:bg-gray-50">
+                      추가
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newTitle = prompt('제목을 입력하세요', mainTitle);
+                        if (newTitle?.trim()) setMainTitle(newTitle);
+                      }}
+                      className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 hover:bg-gray-50"
+                    >
+                      수정
+                    </button>
+                  </div>
+                </div>
+              </li>
+
+              {/* 새 카테고리 추가 폼 */}
+              {isAdding && (
+                <li className="mb-4 rounded-lg border bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3">
+                    <div className="text-sm font-medium">새 카테고리 추가</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="카테고리 이름"
+                        className="flex-1 rounded border px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newCategoryName.trim()) {
+                            handleAddCategory();
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <select
+                        value={newCategoryType}
+                        onChange={(e) => setNewCategoryType(e.target.value)}
+                        className="rounded border px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                      >
+                        <option value="일반">일반</option>
+                        <option value="공지">공지</option>
+                        <option value="자유">자유</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setIsAdding(false);
+                          setNewCategoryName('');
+                        }}
+                        className="rounded border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={handleAddCategory}
+                        className="rounded border bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600"
+                        disabled={!newCategoryName.trim()}
+                      >
+                        추가
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              )}
+
+              {categories.length === 0 ? (
+                <li className="py-12 text-center text-gray-500">
+                  생성된 카테고리가 없습니다.
+                  <br />
+                  카테고리를 생성해주세요.
+                </li>
+              ) : (
+                flat
+                  .map((item, idx) => {
+                    if (item.type === 'cat') {
+                      const cat = item.cat;
+                      return (
+                        <Draggable key={getItemKey('cat', cat.id)} draggableId={getItemKey('cat', cat.id)} index={idx}>
+                          {(provided, snapshot) => (
+                            <li
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              data-type={'cat'}
+                              data-rbd-draggable-id={`cat-${cat.id}`}
+                              className={clsx(
+                                'group category-item rounded-lg border bg-white shadow-sm hover:shadow-md', // category-item 추가
+                                snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : 'ring-transparent',
+                                'transition-all duration-200',
+                                'mb-2',
                               )}
-                            </div>
-                          </div>
-                        </li>
-                      )}
-                    </Draggable>
-                  );
-                } else {
-                  // sub
-                  const cat = item.cat;
-                  const sub = item.sub!;
-                  return (
-                    <Draggable key={getItemKey("sub", cat.id, sub.id)} draggableId={getItemKey("sub", cat.id, sub.id)} index={idx}>
-                      {(provided, snapshot) => (
-                        <li ref={provided.innerRef} {...provided.draggableProps} className={`ml-8 border-l-4 
-                        border-gray-300 rounded bg-gray-50 py-2 px-4 group ring-2 ${snapshot.isDragging ? 
-                          "ring-blue-200" : "ring-transparent"} transition`}>
-                          {/* -------- 서브카테고리 -------- */}
-                          <div className="flex items-center gap-2">
-                            <span {...provided.dragHandleProps} className="cursor-move text-gray-400 select-none mr-4">☰</span>
-                            <span className="truncate mr-3">{sub.name}</span>
-                            <span className="ml-1 px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">{sub.type}</span>
-                            <span className="ml-2 text-xs text-gray-500">{sub.postCount}개</span>
-                            <div className="flex items-center gap-1 ml-auto opacity-80 group-hover:opacity-100 transition-opacity">
-                              <button className="text-xs text-blue-500 px-2 py-1 rounded hover:bg-blue-50" onClick={() => handleAddSub(cat.id)}>서브추가</button>
-                              <button className="text-xs text-gray-800 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleEdit(cat.id, sub.id)}>수정</button>
-                              <button className="text-xs text-red-500 px-2 py-1 rounded hover:bg-red-50" onClick={() => handleDelete(cat.id, sub.id)}>삭제</button>
-                              <button className="text-xs text-yellow-700 px-2 py-1 rounded border
-                              border-yellow-100 hover:bg-yellow-50" onClick={() => handlePromoteSubToMain(cat.id, sub.id)}>최상위로</button>
-                              <button className="text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100" onClick={() => handleSetting(cat.id, sub.id)}>설정</button>
-                            </div>
-                          </div>
-                        </li>
-                      )}
-                    </Draggable>
-                  );
-                }
-              })}
+                            >
+                              {/* 드롭 영역 표시 - 기존 내용 위에 추가 */}
+                              <div
+                                className={clsx(
+                                  'drop-zones',
+                                  isDraggingOver.id === cat.id && isDraggingOver.side === 'left' && 'dragging-over-left',
+                                  isDraggingOver.id === cat.id && isDraggingOver.side === 'right' && 'dragging-over-right',
+                                )}
+                              />
+
+                              {/* -------- 메인 카테고리 ------- */}
+                              <div className="relative flex items-center gap-2 py-3 pl-2">
+                                {/* 펼침/접힘 버튼 */}
+                                {cat.sub.length > 0 ? (
+                                  <button
+                                    onClick={() => toggleSubs(cat.id)}
+                                    className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                                    type="button"
+                                    aria-label={expanded[cat.id] ? '접기' : '펼치기'}
+                                  >
+                                    {expanded[cat.id] ? '▼' : '▶'}
+                                  </button>
+                                ) : (
+                                  <span className="w-6" />
+                                )}
+                                <span {...provided.dragHandleProps} className="mr-4 cursor-move text-gray-400 transition-colors select-none hover:text-gray-600">
+                                  ☰
+                                </span>
+
+                                {editingId?.catId === cat.id && editingId.subId === undefined ? (
+                                  <div className="flex flex-1 items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={editingName}
+                                      onChange={(e) => setEditingName(e.target.value)}
+                                      className="flex-1 rounded border px-3 py-1.5 text-lg focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveEdit();
+                                        if (e.key === 'Escape') setEditingId(null);
+                                      }}
+                                    />
+                                    <select
+                                      value={editingType}
+                                      onChange={(e) => setEditingType(e.target.value)}
+                                      className="rounded border px-3 py-1.5 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                    >
+                                      <option value="일반">일반</option>
+                                      <option value="공지">공지</option>
+                                      <option value="자유">자유</option>
+                                    </select>
+                                    <button
+                                      onClick={handleSaveEdit}
+                                      className="rounded border bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600"
+                                      disabled={!editingName.trim()}
+                                    >
+                                      완료
+                                    </button>
+                                    <button onClick={() => setEditingId(null)} className="rounded border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                                      취소
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <CategoryItem title={cat.name} type={cat.type} postCount={cat.postCount} isMain={true} />
+                                  </>
+                                )}
+
+                                {/* 버튼들 */}
+                                {!editingId && (
+                                  <div className="mr-3 ml-auto flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() => handleAddSub(cat.id)}
+                                    >
+                                      추가
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() => handleEdit(cat.id)}
+                                    >
+                                      수정
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-red-500 hover:bg-gray-50"
+                                      onClick={() => handleDelete(cat.id)}
+                                    >
+                                      삭제
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() => handleSetting(cat.id)}
+                                    >
+                                      설정
+                                    </button>
+                                    {categories.length > 1 && (
+                                      <button
+                                        className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                        onClick={() =>
+                                          setMoveModal({
+                                            isOpen: true,
+                                            item: {
+                                              categoryId: cat.id,
+                                              // subId를 제거하여 메인 카테고리임을 명확히 함
+                                            },
+                                          })
+                                        }
+                                      >
+                                        이동
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          )}
+                        </Draggable>
+                      );
+                    } else {
+                      // sub
+                      const cat = item.cat;
+                      const sub = item.sub!;
+
+                      // expanded 상태에 따라 서브카테고리 표시 여부 결정
+                      if (!expanded[cat.id]) return null;
+
+                      return (
+                        <Draggable key={getItemKey('sub', cat.id, sub.id)} draggableId={getItemKey('sub', cat.id, sub.id)} index={idx}>
+                          {(provided, snapshot) => (
+                            <li
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              data-type={'sub'}
+                              data-rbd-draggable-id={`sub-${cat.id}-${sub.id}`}
+                              className={clsx(
+                                'group ml-8 rounded border-l-4 border-gray-200 bg-gray-50',
+                                'hover:bg-gray-100/50',
+                                snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : 'ring-transparent',
+                                'transition-all duration-200',
+                                'px-4 py-2.5',
+                                'mb-1',
+                              )} // my-2 제거
+                            >
+                              {/* -------- 서브카테고리 -------- */}
+                              <div className="flex items-center gap-2">
+                                <span {...provided.dragHandleProps} className="mr-4 cursor-move text-gray-400 select-none">
+                                  ☰
+                                </span>
+
+                                {editingId?.catId === cat.id && editingId.subId === sub.id ? (
+                                  <div className="flex flex-1 items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={editingName}
+                                      onChange={(e) => setEditingName(e.target.value)}
+                                      className="flex-1 rounded border px-3 py-1.5 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveEdit();
+                                        if (e.key === 'Escape') setEditingId(null);
+                                      }}
+                                    />
+                                    <select
+                                      value={editingType}
+                                      onChange={(e) => setEditingType(e.target.value)}
+                                      className="rounded border px-3 py-1.5 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                    >
+                                      <option value="일반">일반</option>
+                                      <option value="공지">공지</option>
+                                      <option value="자유">자유</option>
+                                    </select>
+                                    <button
+                                      onClick={handleSaveEdit}
+                                      className="rounded border bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600"
+                                      disabled={!editingName.trim()}
+                                    >
+                                      완료
+                                    </button>
+                                    <button onClick={() => setEditingId(null)} className="rounded border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                                      취소
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <CategoryItem title={sub.name} type={sub.type} postCount={sub.postCount} />
+                                  </>
+                                )}
+
+                                {/* 버튼들 */}
+                                {!editingId && (
+                                  <div className="ml-auto flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() => handleEdit(cat.id, sub.id)}
+                                    >
+                                      수정
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-red-500 hover:bg-gray-50"
+                                      onClick={() => handleDelete(cat.id, sub.id)}
+                                    >
+                                      삭제
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() => handleSetting(cat.id, sub.id)}
+                                    >
+                                      설정
+                                    </button>
+                                    <button
+                                      className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 hover:bg-gray-50"
+                                      onClick={() =>
+                                        setMoveModal({
+                                          isOpen: true,
+                                          item: {
+                                            categoryId: cat.id,
+                                            subId: sub.id, // 서브카테고리 ID 전달
+                                          },
+                                        })
+                                      }
+                                    >
+                                      이동
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          )}
+                        </Draggable>
+                      );
+                    }
+                  })
+                  .filter(Boolean)
+              )}
               {provided.placeholder}
+
+              {/* 카테고리 생성 버튼을 ul 안으로 이동 */}
+              <button
+                onClick={() => setIsAdding(true)}
+                className={clsx(
+                  'mt-4 w-full cursor-pointer rounded-lg border-2 border-dashed border-gray-300 bg-transparent px-4 py-3 text-gray-500 transition-colors',
+                  'hover:border-gray-400 hover:text-gray-600',
+                )}
+              >
+                <div className="flex items-center justify-center">
+                  <span className="mr-2">+</span>
+                  <span>카테고리 생성</span>
+                </div>
+              </button>
             </ul>
           )}
         </Droppable>
       </DragDropContext>
-
-      {/* -------- 카테고리 이동 모달 --------- */}
-      <CategorySelectModal
-        open={moveModalOpen}
-        title="서브로 이동할 카테고리 선택"
-        categories={categories}
-        excludeId={moveMainId ?? undefined}
-        onSelect={handleSelectMoveTarget}
-        onClose={handleCloseMoveModal}
-      />
+      {moveModal.isOpen && moveModal.item && (
+        <CategoryMoveModal
+          isOpen={moveModal.isOpen}
+          onClose={() => setMoveModal({ isOpen: false, item: null })}
+          categories={categories}
+          selectedItem={
+            moveModal.item
+              ? {
+                  categoryId: moveModal.item.categoryId,
+                  subId: moveModal.item.subId || 0, // 명시적으로 number 타입 보장
+                }
+              : null
+          }
+          onMove={handleCategoryMove}
+        />
+      )}
     </div>
   );
 }
