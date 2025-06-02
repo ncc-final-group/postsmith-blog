@@ -74,9 +74,11 @@ export default function Sidebar() {
       {/* 상단 사용자 정보 영역 */}
       <div className="mb-1 w-53 flex-col justify-center">
         <div className="flex h-54 items-center justify-center border border-gray-300 bg-gray-200">
-          <figure className="relative h-54 w-40">
-            <Image fill style={{ objectFit: 'contain' }} priority={true} src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={''} />
-          </figure>
+          <Link href="/usermanage/managepage" className="ml-5 block text-sm font-medium text-white">
+            <figure className="relative h-54 w-40">
+              <Image fill style={{ objectFit: 'contain' }} priority={true} src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={''} />
+            </figure>
+          </Link>
         </div>
         <div className="flex h-18 flex-col border border-t-0 border-gray-300 bg-white px-5 py-3">
           <span className="text-base">그냥 뉴비</span>
@@ -131,3 +133,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+
