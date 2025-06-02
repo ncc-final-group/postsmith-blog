@@ -10,6 +10,7 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { createEditor } from "lexical";
 import React, { useState } from "react";
+import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 
 import EditHeader from "@components/EditHeader";
 import Editor, { CustomHRNode } from "@components/Editor";
@@ -50,28 +51,60 @@ function EditorForm({ category, setCategory, title, setTitle }: {
   setTitle: (value: string) => void;
 }) {
   const [editor] = useLexicalComposerContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Lexical editorState에서 HTML 추출
-    const editorState = editor.getEditorState();
-    let html = "";
-    editorState.read(() => {
-      html = $generateHtmlFromNodes(editor, null);
-    });
+    setIsLoading(true);
+    setError(null);
 
-    // 서버로 POST 요청
-    await fetch("http://localhost:8080/api1/post/create", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        category,
+    try {
+      // Lexical editorState에서 HTML 추출
+      const editorState = editor.getEditorState();
+      let html = "";
+      editorState.read(() => {
+        html = $generateHtmlFromNodes(editor, null);
+      });
+
+      // 에디터 내용이 비어있는지 확인
+      if (!html || html === '<p class="mb-2"></p>') {
+        alert('내용을 입력해주세요.');
+        setIsLoading(false);
+        return;
+      }
+
+      const requestBody = {
+        category: 0,
         title,
         content: html,
-      }),
-    });
+      };
 
-    alert("저장 완료!");
+      // 요청 내용 확인
+      alert('Request Body: ' + JSON.stringify(requestBody, null, 2));
+
+      // 서버로 POST 요청
+      const response = await fetch("http://localhost:8080/api1/post/test/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      alert("저장 완료!");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
+      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -96,11 +129,17 @@ function EditorForm({ category, setCategory, title, setTitle }: {
         required
       />
       <Editor />
+      {error && (
+        <div className="text-red-500 text-sm">
+          {error}
+        </div>
+      )}
       <button
         type="submit"
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
+        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition disabled:bg-blue-300"
+        disabled={isLoading}
       >
-        저장
+        {isLoading ? '저장 중...' : '저장'}
       </button>
     </form>
   );
