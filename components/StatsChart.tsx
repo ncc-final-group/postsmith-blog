@@ -5,7 +5,15 @@ import crosshairPlugin from 'chartjs-plugin-crosshair';
 import { useEffect, useState, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 
+// Register chart components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, crosshairPlugin);
+
+// Dynamic import for zoom plugin
+if (typeof window !== 'undefined') {
+  import('chartjs-plugin-zoom').then((zoomPlugin) => {
+    ChartJS.register(zoomPlugin.default);
+  });
+}
 
 interface StatsData {
   date: string;
@@ -29,7 +37,7 @@ export default function StatsChart() {
       try {
         const response = await fetch('/api/stats');
         const data = await response.json();
-        setStatsData(data);
+        setStatsData(data.data);
       } catch (error) {
         throw new Error('Failed to fetch stats: ' + error);
       }
@@ -44,26 +52,6 @@ export default function StatsChart() {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
-
-  // 날짜에서 일(day)만 추출하는 함수
-  const getDayFromDate = (dateStr: string) => {
-    return new Date(dateStr).getDate().toString();
-  };
-
-  // 날짜에서 "MM월" 형식의 문자열을 반환하는 함수
-  const getMonthLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월`;
-  };
-
-  // 주차 계산 함수 (월요일 기준)
-  const getWeekLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // 월요일로 조정
-    const monday = new Date(date.setDate(diff));
-    return monday.getDate().toString();
   };
 
   // 시간 이동 함수
@@ -137,7 +125,8 @@ export default function StatsChart() {
     } else if (period === 'weekly') {
       // 최근 15주 데이터
       const weeklyData = statsData.reduce((acc: { [key: string]: { views: number; visitors: number } }, curr) => {
-        const weekKey = getWeekLabel(curr.date);
+        const date = new Date(curr.date);
+        const weekKey = formatDate(date);
         if (!acc[weekKey]) {
           acc[weekKey] = { views: 0, visitors: 0 };
         }
@@ -146,13 +135,24 @@ export default function StatsChart() {
         return acc;
       }, {});
 
-      const weeks = Object.keys(weeklyData).slice(-15);
+      // 기준 날짜 설정 (timeOffset 고려)
+      const baseDate = new Date();
+      baseDate.setDate(baseDate.getDate() - (timeOffset * 105)); // 15주 단위로 이동 (15 * 7 = 105일)
+
+      // 날짜 배열 생성
+      const weekDates = Array.from({ length: 15 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + (i * 7));
+        return formatDate(date);
+      });
 
       // 월이 바뀌는 지점 찾기
-      const monthLabels = weeks.reduce((acc: { [key: string]: number }, week, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (14 - index) * 7);
+      const monthLabels = Array.from({ length: 15 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + (i * 7));
         const month = date.getMonth() + 1;
+        return { month, index: i };
+      }).reduce((acc: { [key: string]: number }, { month, index }) => {
         if (!acc[month]) {
           acc[month] = index;
         }
@@ -161,31 +161,29 @@ export default function StatsChart() {
 
       // 날짜를 순차적으로 표시하기 위한 배열 생성
       const sequentialDates = Array.from({ length: 15 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (14 - i) * 7);
-        return date.getDate().toString();
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + (i * 7));
+        return {
+          day: date.getDate().toString(),
+          month: date.getMonth() + 1
+        };
       });
 
-      const date = new Date();
-      date.setDate(date.getDate() - (timeOffset * 105)); // 15주 단위로 이동 (15 * 7 = 105일)
-
       return {
-        labels: sequentialDates.map((date, index) => {
-          const currentDate = new Date();
-          currentDate.setDate(currentDate.getDate() - (14 - index) * 7);
-          const month = currentDate.getMonth() + 1;
+        labels: sequentialDates.map(({ day, month }, index) => {
           if (monthLabels[month] === index) {
-            return [`${date}`, `${month}월`];
+            return [`${day}`, `${month}월`];
           }
-          return date;
+          return day;
         }),
-        data: weeks.map((week) => weeklyData[week][statType]),
+        data: weekDates.map(date => weeklyData[date]?.[statType] || 0),
         monthLabels,
       };
     } else {
       // 최근 12개월 데이터
       const monthlyData = statsData.reduce((acc: { [key: string]: { views: number; visitors: number } }, curr) => {
-        const monthKey = getMonthLabel(curr.date);
+        const date = new Date(curr.date);
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
         if (!acc[monthKey]) {
           acc[monthKey] = { views: 0, visitors: 0 };
         }
@@ -194,14 +192,23 @@ export default function StatsChart() {
         return acc;
       }, {});
 
-      const months = Object.keys(monthlyData).slice(-12);
-
-      // 연도가 바뀌는 지점 찾기
+      // 기준 날짜 설정 (timeOffset 고려)
       const baseDate = new Date();
       baseDate.setMonth(baseDate.getMonth() - (timeOffset * 12)); // 12개월 단위로 이동
-      const yearLabels = months.reduce((acc: { [key: string]: number }, month, index) => {
-        const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 11 + index);
-        const year = date.getFullYear().toString();
+
+      // 월별 데이터 배열 생성
+      const monthDates = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setMonth(date.getMonth() + i);
+        return {
+          key: `${date.getFullYear()}-${date.getMonth() + 1}`,
+          label: `${date.getMonth() + 1}월`,
+          year: date.getFullYear()
+        };
+      });
+
+      // 연도가 바뀌는 지점 찾기
+      const yearLabels = monthDates.reduce((acc: { [key: string]: number }, { year }, index) => {
         if (!acc[year]) {
           acc[year] = index;
         }
@@ -209,8 +216,13 @@ export default function StatsChart() {
       }, {});
 
       return {
-        labels: months,
-        data: months.map((month) => monthlyData[month][statType]),
+        labels: monthDates.map(({ label, year }, index) => {
+          if (yearLabels[year] === index) {
+            return [label, `${year}년`];
+          }
+          return label;
+        }),
+        data: monthDates.map(({ key }) => monthlyData[key]?.[statType] || 0),
         yearLabels,
       };
     }
@@ -299,36 +311,32 @@ export default function StatsChart() {
     },
   };
 
-  const buttonStyle = 'px-4 py-2 text-sm font-medium rounded-md transition-colors';
-  const activeButtonStyle = 'bg-teal-500 text-white';
-  const inactiveButtonStyle = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayOfWeek = days[today.getDay()];
-    return `${year}.${month}.${day} ${dayOfWeek}`;
-  };
-
   const handleTimeBlockHover = (index: number | null) => {
     setHoveredIndex(index);
     
     if (chartRef.current && index !== null) {
       const chart = chartRef.current;
-      const tooltip = chart.tooltip;
-      const datasetIndex = 0;
-
-      if (tooltip) {
-        if (index === null) {
-          tooltip.setActiveElements([], { datasetIndex, index });
-        } else {
-          tooltip.setActiveElements([{ datasetIndex, index }], { datasetIndex, index });
-        }
-        chart.update();
+      
+      // 차트의 getDatasetMeta를 사용하여 데이터 포인트의 위치 정보를 가져옵니다
+      const meta = chart.getDatasetMeta(0);
+      if (meta.data[index]) {
+        const element = meta.data[index];
+        chart.setActiveElements([{
+          datasetIndex: 0,
+          index: index,
+          element: element
+        }]);
+        
+        chart.tooltip.setActiveElements([{
+          datasetIndex: 0,
+          index: index,
+        }], {
+          x: element.x,
+          y: element.y
+        });
       }
+      
+      chart.update('none'); // 'none' 모드로 업데이트하여 성능 최적화
     }
   };
 
@@ -361,55 +369,7 @@ export default function StatsChart() {
           <Line
             ref={chartRef}
             data={chartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: true,
-                  mode: 'index',
-                  intersect: false,
-                  callbacks: {
-                    title: (context) => {
-                      const label = processedData.labels[context[0].dataIndex];
-                      if (Array.isArray(label)) {
-                        return `${label[0]} ${label[1]}`;
-                      }
-                      return label;
-                    }
-                  }
-                }
-              },
-              layout: {
-                padding: 10
-              },
-              scales: {
-                x: {
-                  grid: {
-                    display: true,
-                  },
-                  ticks: {
-                    display: false,
-                  },
-                  border: {
-                    display: false,
-                  }
-                },
-                y: {
-                  beginAtZero: true,
-                  border: {
-                    display: false,
-                  }
-                },
-              },
-              hover: {
-                mode: 'index',
-                intersect: false
-              },
-            }}
+            options={options}
           />
         </div>
         <div className="w-full mt-4">
@@ -434,7 +394,9 @@ export default function StatsChart() {
                 return (
                   <div 
                     key={index} 
-                    className="flex flex-col items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                    className={`flex flex-col items-center cursor-pointer transition-colors ${
+                      hoveredIndex === index ? 'bg-gray-50' : ''
+                    }`}
                     onMouseEnter={() => handleTimeBlockHover(index)}
                     onMouseLeave={() => handleTimeBlockHover(null)}
                   >
@@ -467,4 +429,4 @@ export default function StatsChart() {
       )}
     </div>
   );
-}
+} 
