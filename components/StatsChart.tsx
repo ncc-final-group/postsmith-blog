@@ -2,7 +2,7 @@
 
 import { CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js';
 import crosshairPlugin from 'chartjs-plugin-crosshair';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, crosshairPlugin);
@@ -20,6 +20,9 @@ export default function StatsChart() {
   const [statsData, setStatsData] = useState<StatsData[]>([]);
   const [period, setPeriod] = useState<PeriodType>('daily');
   const [statType, setStatType] = useState<StatType>('views');
+  const [timeOffset, setTimeOffset] = useState(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const chartRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -63,6 +66,27 @@ export default function StatsChart() {
     return monday.getDate().toString();
   };
 
+  // 시간 이동 함수
+  const moveTime = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setTimeOffset(prev => prev + 1);
+    } else {
+      setTimeOffset(prev => Math.max(0, prev - 1));
+    }
+  };
+
+  // 현재 기간에 따른 이동 단위 텍스트
+  const getMoveUnitText = () => {
+    switch (period) {
+      case 'daily':
+        return '30일';
+      case 'weekly':
+        return '15주';
+      case 'monthly':
+        return '12개월';
+    }
+  };
+
   // 기간별 데이터 처리
   const processDataByPeriod = () => {
     if (period === 'daily') {
@@ -80,6 +104,7 @@ export default function StatsChart() {
 
       // 최근 30일의 날짜 배열 생성
       const today = new Date();
+      today.setDate(today.getDate() - (timeOffset * 30)); // 30일 단위로 이동
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date(today);
         date.setDate(date.getDate() - (29 - i));
@@ -141,6 +166,9 @@ export default function StatsChart() {
         return date.getDate().toString();
       });
 
+      const date = new Date();
+      date.setDate(date.getDate() - (timeOffset * 105)); // 15주 단위로 이동 (15 * 7 = 105일)
+
       return {
         labels: sequentialDates.map((date, index) => {
           const currentDate = new Date();
@@ -170,6 +198,7 @@ export default function StatsChart() {
 
       // 연도가 바뀌는 지점 찾기
       const baseDate = new Date();
+      baseDate.setMonth(baseDate.getMonth() - (timeOffset * 12)); // 12개월 단위로 이동
       const yearLabels = months.reduce((acc: { [key: string]: number }, month, index) => {
         const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 11 + index);
         const year = date.getFullYear().toString();
@@ -189,18 +218,31 @@ export default function StatsChart() {
 
   const processedData = processDataByPeriod();
 
+  // 한 칸의 너비 계산
+  const blockWidth = 30; // 기본 블록 너비
+  const totalBlocks = processedData.labels.length;
+  const chartWidth = `calc(100% - ${blockWidth}px)`; // 차트 전체 너비
+
   const chartData = {
-    labels: processedData.labels.map((label) => (Array.isArray(label) ? label[0] : label)),
+    labels: processedData.labels.map(() => ""),
     datasets: [
       {
         data: processedData.data,
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        backgroundColor: processedData.data.map((_, index) => 
+          index === hoveredIndex ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.6)'
+        ),
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 2,
-        pointRadius: 5,
-        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+        pointRadius: processedData.data.map((_, index) => 
+          index === hoveredIndex ? 7 : 5
+        ),
+        pointBackgroundColor: processedData.data.map((_, index) => 
+          index === hoveredIndex ? 'rgba(75, 192, 192, 1)' : 'rgba(75, 192, 192, 1)'
+        ),
         pointBorderColor: '#fff',
-        pointBorderWidth: 2,
+        pointBorderWidth: processedData.data.map((_, index) => 
+          index === hoveredIndex ? 3 : 2
+        ),
         pointHoverRadius: 7,
         pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)',
         pointHoverBorderColor: '#fff',
@@ -239,33 +281,9 @@ export default function StatsChart() {
       x: {
         grid: {
           display: true,
-          drawOnChartArea: true,
         },
         ticks: {
-          callback: function (this: { getLabelForValue: (value: any) => string }, value: any, index: number): string | string[] {
-            if (period === 'daily') {
-              const label = processedData.labels[index];
-              return Array.isArray(label) ? label : label;
-            } else if (period === 'weekly' && processedData.monthLabels) {
-              const label = processedData.labels[index];
-              if (Array.isArray(label)) {
-                return label;
-              }
-              return label;
-            } else if (period === 'monthly' && processedData.yearLabels) {
-              const baseDate = new Date();
-              const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 11 + index);
-              const year = date.getFullYear().toString();
-              if (processedData.yearLabels[year] === index) {
-                const label = this.getLabelForValue(value);
-                return [`${label}`, `${year}년`];
-              }
-            }
-            return this.getLabelForValue(value);
-          },
-          maxRotation: 0,
-          minRotation: 0,
-          padding: 10,
+          display: false,
         },
       },
       y: { beginAtZero: true },
@@ -295,35 +313,158 @@ export default function StatsChart() {
     return `${year}.${month}.${day} ${dayOfWeek}`;
   };
 
+  const handleTimeBlockHover = (index: number | null) => {
+    setHoveredIndex(index);
+    
+    if (chartRef.current && index !== null) {
+      const chart = chartRef.current;
+      const tooltip = chart.tooltip;
+      const datasetIndex = 0;
+
+      if (tooltip) {
+        if (index === null) {
+          tooltip.setActiveElements([], { datasetIndex, index });
+        } else {
+          tooltip.setActiveElements([{ datasetIndex, index }], { datasetIndex, index });
+        }
+        chart.update();
+      }
+    }
+  };
+
   return (
-    <div className="h-full w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="text-lg font-medium text-gray-700">{getTodayDate()}</div>
-        <div className="flex space-x-6">
-          <div className="space-x-2">
-            <button className={`${buttonStyle} ${period === 'daily' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('daily')}>
-              일간
+    <div className="flex flex-col items-center w-full">
+      <div className="flex gap-4 mb-4">
+        <select
+          value={period}
+          onChange={(e) => {
+            setPeriod(e.target.value as PeriodType);
+            setTimeOffset(0);
+          }}
+          className="px-4 py-2 border rounded-lg"
+        >
+          <option value="daily">일간</option>
+          <option value="weekly">주간</option>
+          <option value="monthly">월간</option>
+        </select>
+        <select
+          value={statType}
+          onChange={(e) => setStatType(e.target.value as StatType)}
+          className="px-4 py-2 border rounded-lg"
+        >
+          <option value="views">조회수</option>
+          <option value="visitors">방문자</option>
+        </select>
+      </div>
+      <div className="relative w-full">
+        <div className="w-full h-[400px]" style={{ width: chartWidth }}>
+          <Line
+            ref={chartRef}
+            data={chartData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false,
+                  callbacks: {
+                    title: (context) => {
+                      const label = processedData.labels[context[0].dataIndex];
+                      if (Array.isArray(label)) {
+                        return `${label[0]} ${label[1]}`;
+                      }
+                      return label;
+                    }
+                  }
+                }
+              },
+              layout: {
+                padding: 10
+              },
+              scales: {
+                x: {
+                  grid: {
+                    display: true,
+                  },
+                  ticks: {
+                    display: false,
+                  },
+                  border: {
+                    display: false,
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  border: {
+                    display: false,
+                  }
+                },
+              },
+              hover: {
+                mode: 'index',
+                intersect: false
+              },
+            }}
+          />
+        </div>
+        <div className="w-full mt-4">
+          <div className="flex items-center">
+            <button
+              onClick={() => moveTime('prev')}
+              className="py-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-            <button className={`${buttonStyle} ${period === 'weekly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('weekly')}>
-              주간
-            </button>
-            <button className={`${buttonStyle} ${period === 'monthly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('monthly')}>
-              월간
-            </button>
-          </div>
-          <div className="space-x-2">
-            <button className={`${buttonStyle} ${statType === 'views' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('views')}>
-              조회수
-            </button>
-            <button className={`${buttonStyle} ${statType === 'visitors' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('visitors')}>
-              방문자수
+            <div className="flex-1 grid" style={{ 
+              gridTemplateColumns: `repeat(${totalBlocks}, minmax(${blockWidth}px, 1fr))`,
+              width: chartWidth,
+              columnGap: '0'
+            }}>
+              {processedData.labels.map((label, index) => {
+                const displayLabel = Array.isArray(label) ? label[0] : label;
+                const monthLabel = Array.isArray(label) ? label[1] : null;
+                
+                return (
+                  <div 
+                    key={index} 
+                    className="flex flex-col items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                    onMouseEnter={() => handleTimeBlockHover(index)}
+                    onMouseLeave={() => handleTimeBlockHover(null)}
+                  >
+                    <span className="text-sm text-gray-600">{displayLabel}</span>
+                    {monthLabel && (
+                      <span className="text-sm font-medium text-gray-800 mt-1">{monthLabel}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => moveTime('next')}
+              disabled={timeOffset === 0}
+              className={`py-2 rounded-full transition-colors ${
+                timeOffset === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </div>
       </div>
-      <div className="h-[calc(100%-3rem)]">
-        <Line data={chartData} options={options} />
-      </div>
+      {timeOffset > 0 && (
+        <div className="mt-4 text-sm text-gray-500">
+          {getMoveUnitText()} 전 데이터
+        </div>
+      )}
     </div>
   );
 }
