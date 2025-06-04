@@ -16,7 +16,61 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import React from 'react';
 import { $getRoot } from 'lexical';
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
-import { $createCustomImageNode } from './Editor';
+import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './Editor';
+
+// 파일 크기 제한 설정
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_VIDEO_SIZE = 8 * 1024 * 1024; // 8MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// 파일 크기 포맷팅
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// 이미지 압축 함수
+const compressImage = async (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = document.createElement('img') as HTMLImageElement;
+    
+    img.onload = () => {
+      // 최대 너비 1920px로 제한
+      const maxWidth = 1920;
+      let { width, height } = img;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(compressedDataUrl);
+      } else {
+        // 압축 실패시 원본 반환
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string || '');
+        reader.readAsDataURL(file);
+      }
+    };
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 // 커스텀 TextFormatType 타입 확장
 type ExtendedTextFormatType = TextFormatType | string;
@@ -326,7 +380,7 @@ const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
             />
             <input
               type="text"
-              value={customColor || '#000000'}
+              value={customColor || ''}
               onChange={(e) => setCustomColor(e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
               placeholder="#000000"
@@ -481,13 +535,33 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImageUrl(result);
-        setAltText(file.name.split('.')[0]);
-      };
-      reader.readAsDataURL(file);
+      // 파일 크기 체크
+      if (file.size > MAX_IMAGE_SIZE) {
+        alert(`이미지 파일이 너무 큽니다. 최대 ${formatFileSize(MAX_IMAGE_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}\n\n자동으로 압축을 시도합니다.`);
+      }
+      
+      // 이미지 압축
+      if (file.type.startsWith('image/')) {
+        compressImage(file).then((compressedDataUrl) => {
+          setImageUrl(compressedDataUrl);
+          setAltText(file.name.split('.')[0] || '');
+          
+          // 압축 후 크기 확인
+          const compressedSize = compressedDataUrl.length * 0.75; // Base64 크기 추정
+          if (compressedSize > MAX_IMAGE_SIZE) {
+            alert(`압축 후에도 파일이 큽니다. 더 작은 이미지를 사용해주세요.\n압축 후 크기: ${formatFileSize(compressedSize)}`);
+          }
+        });
+      } else {
+        // 이미지가 아닌 경우 원본 사용
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          setImageUrl(result || '');
+          setAltText(file.name.split('.')[0] || '');
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -613,6 +687,362 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
   );
 };
 
+// 미디어 드롭다운 관련 인터페이스
+interface MediaDropdownProps {
+  onSelect: (type: 'image' | 'file' | 'video') => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const mediaOptions = [
+  { 
+    id: 'image',
+    name: '사진',
+    type: 'image' as const,
+    icon: 'bi-image',
+    description: 'JPG, PNG, GIF 등의 이미지 파일'
+  },
+  {
+    id: 'file',
+    name: '파일',
+    type: 'file' as const,
+    icon: 'bi-file-earmark',
+    description: 'PDF, DOC, TXT 등의 일반 파일'
+  },
+  {
+    id: 'video',
+    name: '영상',
+    type: 'video' as const,
+    icon: 'bi-camera-video',
+    description: 'MP4, AVI, MOV 등의 동영상 파일'
+  }
+];
+
+const MediaDropdown = ({ onSelect, onClose, position }: MediaDropdownProps) => {
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  if (!position) return null;
+
+  return (
+    <div
+      ref={formRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-64"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left - 100}px`
+      }}
+    >
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-gray-700 px-2 py-1">미디어 타입 선택</h3>
+        {mediaOptions.map((option) => (
+          <button
+            key={option.id}
+            onClick={() => onSelect(option.type)}
+            className="w-full p-2 hover:bg-gray-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+          >
+            <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-blue-600`}></i>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">{option.name}</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                {option.description}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface FileFormProps {
+  onSubmit: (file: File, fileName: string) => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const FileForm = ({ onSubmit, onClose, position }: FileFormProps) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState('');
+  const formRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 파일 크기 체크
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`파일이 너무 큽니다. 최대 ${formatFileSize(MAX_FILE_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}`);
+        return;
+      }
+      
+      setSelectedFile(file);
+      setFileName(file.name);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (selectedFile) {
+      onSubmit(selectedFile, fileName || selectedFile.name);
+      setSelectedFile(null);
+      setFileName('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  if (!position) return null;
+
+  return (
+    <div
+      ref={formRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left - 100}px`
+      }}
+    >
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-gray-700">파일 업로드</h3>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            accept=".pdf,.doc,.docx,.txt,.zip,.rar"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">표시 이름</label>
+          <input
+            type="text"
+            value={fileName || ''}
+            onChange={(e) => setFileName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="파일 이름"
+          />
+        </div>
+
+        {selectedFile && (
+          <div className="mt-3 p-2 bg-gray-50 rounded">
+            <p className="text-sm text-gray-600">선택된 파일:</p>
+            <p className="text-sm font-medium">{selectedFile.name}</p>
+            <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!selectedFile}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface VideoFormProps {
+  onSubmit: (src: string, alt: string) => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
+  const [videoUrl, setVideoUrl] = useState('');
+  const [altText, setAltText] = useState('');
+  const [uploadType, setUploadType] = useState<'url' | 'file'>('url');
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  useEffect(() => {
+    setVideoUrl('');
+    setAltText('');
+    setSelectedVideo(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [uploadType]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 비디오 파일 크기 체크
+      if (file.size > MAX_VIDEO_SIZE) {
+        alert(`비디오 파일이 너무 큽니다. 최대 ${formatFileSize(MAX_VIDEO_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}`);
+        return;
+      }
+      
+      setSelectedVideo(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setVideoUrl(result || '');
+        setAltText(file.name.split('.')[0] || '');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (videoUrl) {
+      onSubmit(videoUrl, altText || '비디오');
+      setVideoUrl('');
+      setAltText('');
+      setSelectedVideo(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  if (!position) return null;
+
+  return (
+    <div
+      ref={formRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left - 100}px`
+      }}
+    >
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-gray-700">비디오 추가</h3>
+        
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setUploadType('url')}
+            className={`px-3 py-1.5 text-sm rounded ${
+              uploadType === 'url' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            URL
+          </button>
+          <button
+            onClick={() => setUploadType('file')}
+            className={`px-3 py-1.5 text-sm rounded ${
+              uploadType === 'file' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            파일 업로드
+          </button>
+        </div>
+
+        {uploadType === 'url' ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">비디오 URL</label>
+            <input
+              type="url"
+              value={videoUrl || ''}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com/video.mp4"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+          <input
+            type="text"
+            value={altText || ''}
+            onChange={(e) => setAltText(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="비디오 설명"
+          />
+        </div>
+
+        {selectedVideo && uploadType === 'file' && (
+          <div className="mt-3 p-2 bg-gray-50 rounded">
+            <p className="text-sm text-gray-600">선택된 파일:</p>
+            <p className="text-sm font-medium">{selectedVideo.name}</p>
+            <p className="text-xs text-gray-500">{(selectedVideo.size / 1024 / 1024).toFixed(2)} MB</p>
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!videoUrl}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function EditHeader() {
   const [editor] = useLexicalComposerContext();
   const [activeStyles, setActiveStyles] = useState<Set<string>>(new Set());
@@ -625,6 +1055,9 @@ export default function EditHeader() {
   const [textColorFormPosition, setTextColorFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [bgColorFormPosition, setBgColorFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [imageFormPosition, setImageFormPosition] = useState<{ top: number; left: number } | null>(null);
+  const [mediaDropdownPosition, setMediaDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [fileFormPosition, setFileFormPosition] = useState<{ top: number; left: number } | null>(null);
+  const [videoFormPosition, setVideoFormPosition] = useState<{ top: number; left: number } | null>(null);
   const linkButtonRef = useRef<HTMLButtonElement>(null);
   const hrButtonRef = useRef<HTMLButtonElement>(null);
   const listButtonRef = useRef<HTMLButtonElement>(null);
@@ -907,10 +1340,34 @@ export default function EditHeader() {
   const handleImage = () => {
     if (imageButtonRef.current) {
       const rect = imageButtonRef.current.getBoundingClientRect();
-      setImageFormPosition({
+      setMediaDropdownPosition({
         top: rect.bottom + window.scrollY,
         left: rect.left + window.scrollX,
       });
+    }
+  };
+
+  const handleMediaSelect = (type: 'image' | 'file' | 'video') => {
+    setMediaDropdownPosition(null);
+    
+    if (imageButtonRef.current) {
+      const rect = imageButtonRef.current.getBoundingClientRect();
+      const position = {
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      };
+      
+      switch (type) {
+        case 'image':
+          setImageFormPosition(position);
+          break;
+        case 'file':
+          setFileFormPosition(position);
+          break;
+        case 'video':
+          setVideoFormPosition(position);
+          break;
+      }
     }
   };
 
@@ -937,6 +1394,60 @@ export default function EditHeader() {
       afterParagraph.selectEnd();
     });
     setImageFormPosition(null);
+  };
+
+  const handleFileSubmit = (file: File, fileName: string) => {
+    // 파일을 Base64로 변환
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const fileData = e.target?.result as string;
+      const fileExtension = file.name.split('.').pop() || '';
+      
+      // 에디터 업데이트 내부에서 노드 생성
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+        
+        // 파일 노드 생성 (fileName, fileSize, fileType, fileData)
+        const fileNode = $createCustomFileNode(fileName, file.size, fileExtension, fileData);
+        
+        // 파일 앞뒤에 빈 paragraph 추가
+        const beforeParagraph = $createParagraphNode();
+        beforeParagraph.append($createTextNode(''));
+        
+        const afterParagraph = $createParagraphNode();
+        afterParagraph.append($createTextNode(''));
+
+        selection.insertNodes([beforeParagraph, fileNode, afterParagraph]);
+        afterParagraph.selectEnd();
+      });
+    };
+    reader.readAsDataURL(file);
+    setFileFormPosition(null);
+  };
+
+  const handleVideoSubmit = (src: string, alt: string) => {
+    // URL인 경우 바로 처리
+    if (src.startsWith('http') || src.startsWith('data:')) {
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+
+        // 비디오 노드 생성
+        const videoNode = $createCustomVideoNode(src, alt);
+        
+        // 비디오 앞뒤에 빈 paragraph 추가
+        const beforeParagraph = $createParagraphNode();
+        beforeParagraph.append($createTextNode(''));
+        
+        const afterParagraph = $createParagraphNode();
+        afterParagraph.append($createTextNode(''));
+
+        selection.insertNodes([beforeParagraph, videoNode, afterParagraph]);
+        afterParagraph.selectEnd();
+      });
+    }
+    setVideoFormPosition(null);
   };
 
   const handleCode = () => {
@@ -1152,6 +1663,27 @@ export default function EditHeader() {
           onSubmit={handleImageSubmit}
           onClose={() => setImageFormPosition(null)}
           position={imageFormPosition}
+        />
+      )}
+      {mediaDropdownPosition && (
+        <MediaDropdown
+          onSelect={handleMediaSelect}
+          onClose={() => setMediaDropdownPosition(null)}
+          position={mediaDropdownPosition}
+        />
+      )}
+      {fileFormPosition && (
+        <FileForm
+          onSubmit={handleFileSubmit}
+          onClose={() => setFileFormPosition(null)}
+          position={fileFormPosition}
+        />
+      )}
+      {videoFormPosition && (
+        <VideoForm
+          onSubmit={handleVideoSubmit}
+          onClose={() => setVideoFormPosition(null)}
+          position={videoFormPosition}
         />
       )}
     </div>
