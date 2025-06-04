@@ -1,4 +1,4 @@
-import { DecoratorNode, NodeKey, LexicalNode } from 'lexical';
+import { DecoratorNode, LexicalNode, NodeKey } from 'lexical';
 import React from 'react';
 
 export class CustomHRNode extends DecoratorNode<React.ReactElement> {
@@ -20,6 +20,7 @@ export class CustomHRNode extends DecoratorNode<React.ReactElement> {
   createDOM(): HTMLElement {
     const div = document.createElement('div');
     div.style.userSelect = 'none';
+    div.style.cursor = 'pointer';
     return div;
   }
 
@@ -44,6 +45,18 @@ export class CustomHRNode extends DecoratorNode<React.ReactElement> {
   }
 
   canInsertTextAfter(): boolean {
+    return true;
+  }
+
+  isKeyboardSelectable(): boolean {
+    return true;
+  }
+
+  canSelectBefore(): boolean {
+    return true;
+  }
+
+  canSelectAfter(): boolean {
     return true;
   }
 }

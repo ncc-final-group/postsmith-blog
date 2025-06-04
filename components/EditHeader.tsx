@@ -1,22 +1,46 @@
-import { ElementFormatType, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, TextFormatType, createCommand, $isTextNode, COMMAND_PRIORITY_LOW } from 'lexical';
+import { $isTextNode, COMMAND_PRIORITY_LOW, createCommand, ElementFormatType, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, TextFormatType } from 'lexical';
 import { TextNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $createParagraphNode, $getSelection, $isRangeSelection, $createTextNode } from 'lexical';
-import { $setBlocksType } from '@lexical/selection';
-import { $createListNode, $createListItemNode, $isListNode, ListNode } from '@lexical/list';
+import { $createParagraphNode, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
+import { $patchStyleText, $setBlocksType } from '@lexical/selection';
+import { $createListItemNode, $createListNode, $isListNode, ListNode } from '@lexical/list';
 import { TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $createLinkNode } from '@lexical/link';
 import { $createCustomHRNode } from './CustomHRNode';
+import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
+import { $createCodeNode } from '@lexical/code';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import "bootstrap-icons/font/bootstrap-icons.css";
 import React from 'react';
 import { $getRoot } from 'lexical';
-import { SET_TEXT_COLOR_COMMAND, SET_BG_COLOR_COMMAND } from './Editor';
+import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
+import { $createCustomImageNode } from './Editor';
 
 // 커스텀 TextFormatType 타입 확장
 type ExtendedTextFormatType = TextFormatType | string;
+
+// 텍스트 크기 옵션 정의
+const textSizeOptions = [
+  { label: '제목 1', value: 'h1', size: 'text-4xl font-bold' },
+  { label: '제목 2', value: 'h2', size: 'text-3xl font-bold' },
+  { label: '제목 3', value: 'h3', size: 'text-2xl font-bold' },
+  { label: '본문 1', value: 'p1', size: 'text-xl' },
+  { label: '본문 2', value: 'p2', size: 'text-lg' },
+  { label: '본문 3', value: 'p3', size: 'text-base' },
+];
+
+// 글씨체 옵션 정의
+const fontFamilyOptions = [
+  { label: '기본', value: 'default', family: 'inherit' },
+  { label: '고딕', value: 'sans-serif', family: '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif' },
+  { label: '명조', value: 'serif', family: '"Times New Roman", "Batang", serif' },
+  { label: '돋움', value: 'dotum', family: '"Dotum", "Apple SD Gothic Neo", sans-serif' },
+  { label: '굴림', value: 'gulim', family: '"Gulim", "Apple SD Gothic Neo", sans-serif' },
+  { label: '나눔고딕', value: 'nanum', family: '"Nanum Gothic", sans-serif' },
+  { label: '모노스페이스', value: 'monospace', family: '"Courier New", "D2Coding", monospace' },
+];
 
 const ToolbarButton = ({
   format,
@@ -88,7 +112,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">텍스트</label>
           <input
             type="text"
-            value={text}
+            value={text || ''}
             onChange={(e) => setText(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="링크에 표시될 텍스트"
@@ -98,7 +122,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
           <input
             type="url"
-            value={url}
+            value={url || ''}
             onChange={(e) => setUrl(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="https://example.com"
@@ -296,13 +320,13 @@ const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={customColor}
+              value={customColor || '#000000'}
               onChange={(e) => setCustomColor(e.target.value)}
               className="w-8 h-8 p-0 border border-gray-300 rounded"
             />
             <input
               type="text"
-              value={customColor}
+              value={customColor || '#000000'}
               onChange={(e) => setCustomColor(e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
               placeholder="#000000"
@@ -320,18 +344,293 @@ const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
   );
 };
 
+interface ListFormProps {
+  onSubmit: (type: 'bullet' | 'number' | 'checkbox' | 'dash' | 'arrow' | 'roman') => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const listTypes = [
+  { 
+    id: 'bullet',
+    name: '글머리 기호',
+    type: 'bullet' as const,
+    icon: 'bi-dot',
+    preview: '• 항목 1\n• 항목 2\n• 항목 3'
+  },
+  {
+    id: 'number',
+    name: '번호 매기기',
+    type: 'number' as const,
+    icon: 'bi-list-ol',
+    preview: '1. 항목 1\n2. 항목 2\n3. 항목 3'
+  },
+  {
+    id: 'checkbox',
+    name: '체크박스 목록',
+    type: 'checkbox' as const,
+    icon: 'bi-check-square',
+    preview: '☐ 할 일 1\n☐ 할 일 2\n☐ 할 일 3'
+  },
+  {
+    id: 'dash',
+    name: '대시 목록',
+    type: 'dash' as const,
+    icon: 'bi-dash',
+    preview: '- 항목 1\n- 항목 2\n- 항목 3'
+  },
+  {
+    id: 'arrow',
+    name: '화살표 목록',
+    type: 'arrow' as const,
+    icon: 'bi-arrow-right',
+    preview: '→ 항목 1\n→ 항목 2\n→ 항목 3'
+  },
+  {
+    id: 'roman',
+    name: '로마 숫자',
+    type: 'roman' as const,
+    icon: 'bi-list-nested',
+    preview: 'i. 항목 1\nii. 항목 2\niii. 항목 3'
+  }
+];
+
+const ListForm = ({ onSubmit, onClose, position }: ListFormProps) => {
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  if (!position) return null;
+
+  return (
+    <div
+      ref={formRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left - 100}px`
+      }}
+    >
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-gray-700 px-1">리스트 타입 선택</h3>
+        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+          {listTypes.map((listType) => (
+            <button
+              key={listType.id}
+              onClick={() => onSubmit(listType.type)}
+              className="w-full p-2 hover:bg-gray-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+            >
+              <i className={`bi ${listType.icon} text-base mr-2 flex-shrink-0`}></i>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-xs">{listType.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-line leading-tight">
+                  {listType.preview}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ImageFormProps {
+  onSubmit: (src: string, alt: string) => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
+  const [imageUrl, setImageUrl] = useState('');
+  const [altText, setAltText] = useState('');
+  const [uploadType, setUploadType] = useState<'url' | 'file'>('url');
+  const formRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  // uploadType이 변경될 때 상태 초기화
+  useEffect(() => {
+    setImageUrl('');
+    setAltText('');
+    // file input 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [uploadType]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setImageUrl(result);
+        setAltText(file.name.split('.')[0]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (imageUrl) {
+      onSubmit(imageUrl, altText || '이미지');
+      setImageUrl('');
+      setAltText('');
+      // file input 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  if (!position) return null;
+
+  return (
+    <div
+      ref={formRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left - 100}px`
+      }}
+    >
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-gray-700">이미지 추가</h3>
+        
+        {/* 업로드 타입 선택 */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => {
+              setUploadType('url');
+            }}
+            className={`px-3 py-1.5 text-sm rounded ${
+              uploadType === 'url' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            URL
+          </button>
+          <button
+            onClick={() => {
+              setUploadType('file');
+            }}
+            className={`px-3 py-1.5 text-sm rounded ${
+              uploadType === 'file' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            파일 업로드
+          </button>
+        </div>
+
+        {uploadType === 'url' ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">이미지 URL</label>
+            <input
+              type="url"
+              value={imageUrl || ''}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+            <input
+              key={uploadType}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">대체 텍스트</label>
+          <input
+            type="text"
+            value={altText || ''}
+            onChange={(e) => setAltText(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="이미지 설명"
+          />
+        </div>
+
+        {/* 이미지 미리보기 */}
+        {imageUrl && (
+          <div className="mt-3">
+            <p className="text-sm text-gray-600 mb-2">미리보기:</p>
+            <img 
+              src={imageUrl} 
+              alt={altText || '미리보기'} 
+              className="max-w-full h-24 object-cover rounded border"
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!imageUrl}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function EditHeader() {
   const [editor] = useLexicalComposerContext();
   const [activeStyles, setActiveStyles] = useState<Set<string>>(new Set());
   const [blockType, setBlockType] = useState<string>('paragraph');
+  const [currentTextSize, setCurrentTextSize] = useState<string>('p3');
+  const [currentFontFamily, setCurrentFontFamily] = useState<string>('default');
   const [linkFormPosition, setLinkFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [hrFormPosition, setHrFormPosition] = useState<{ top: number; left: number } | null>(null);
+  const [listFormPosition, setListFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [textColorFormPosition, setTextColorFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [bgColorFormPosition, setBgColorFormPosition] = useState<{ top: number; left: number } | null>(null);
+  const [imageFormPosition, setImageFormPosition] = useState<{ top: number; left: number } | null>(null);
   const linkButtonRef = useRef<HTMLButtonElement>(null);
   const hrButtonRef = useRef<HTMLButtonElement>(null);
+  const listButtonRef = useRef<HTMLButtonElement>(null);
   const textColorButtonRef = useRef<HTMLButtonElement>(null);
   const bgColorButtonRef = useRef<HTMLButtonElement>(null);
+  const imageButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
@@ -346,6 +645,61 @@ export default function EditHeader() {
         if (selection.hasFormat('strikethrough')) styles.add('strikethrough');
 
         setActiveStyles(styles);
+        
+        // 현재 블록 타입 감지
+        const anchorNode = selection.anchor.getNode();
+        const element = anchorNode.getKey() === 'root' 
+          ? anchorNode 
+          : anchorNode.getTopLevelElementOrThrow();
+        
+        if (element.getType() === 'heading') {
+          const headingNode = element as any;
+          setCurrentTextSize(headingNode.getTag());
+          setBlockType('heading');
+        } else if (element.getType() === 'paragraph') {
+          // paragraph의 스타일을 확인하여 크기 결정
+          const paragraphNode = element as any;
+          const style = paragraphNode.getStyle() || '';
+          
+          if (style.includes('font-size: 1.25rem')) {
+            setCurrentTextSize('p1');
+          } else if (style.includes('font-size: 1.125rem')) {
+            setCurrentTextSize('p2');
+          } else {
+            setCurrentTextSize('p3');
+          }
+          setBlockType('paragraph');
+        } else {
+          setCurrentTextSize('p3');
+          setBlockType('paragraph');
+        }
+
+        // 글씨체 감지
+        const selectedNodes = selection.getNodes();
+        if (selectedNodes.length > 0) {
+          const firstNode = selectedNodes[0];
+          
+          // 텍스트 노드에서 스타일 확인
+          if ($isTextNode(firstNode)) {
+            const style = firstNode.getStyle() || '';
+            const fontFamilyMatch = style.match(/font-family:\s*([^;]+)/);
+            
+            if (fontFamilyMatch) {
+              const fontFamily = fontFamilyMatch[1].replace(/['"]/g, '').trim();
+              
+              // 정의된 글씨체 옵션과 매칭
+              const matchedOption = fontFamilyOptions.find(option => 
+                option.family.includes(fontFamily) || fontFamily.includes(option.value)
+              );
+              
+              setCurrentFontFamily(matchedOption ? matchedOption.value : 'default');
+            } else {
+              setCurrentFontFamily('default');
+            }
+          } else {
+            setCurrentFontFamily('default');
+          }
+        }
       });
     });
   }, [editor]);
@@ -358,17 +712,74 @@ export default function EditHeader() {
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, alignment);
   };
 
+  const handleTextSize = (size: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+
+      if (size === 'h1' || size === 'h2' || size === 'h3') {
+        // 헤딩으로 변환
+        $setBlocksType(selection, () => $createHeadingNode(size as HeadingTagType));
+      } else {
+        // 본문으로 변환 (paragraph)
+        $setBlocksType(selection, () => {
+          const paragraph = $createParagraphNode();
+          
+          // 본문 크기에 따른 인라인 스타일 적용
+          if (size === 'p1') {
+            paragraph.setStyle('font-size: 1.25rem; line-height: 1.75rem;'); // text-xl
+          } else if (size === 'p2') {
+            paragraph.setStyle('font-size: 1.125rem; line-height: 1.75rem;'); // text-lg
+          } else { // p3
+            paragraph.setStyle('font-size: 1rem; line-height: 1.5rem;'); // text-base
+          }
+          
+          return paragraph;
+        });
+        
+        // DOM에 추가 속성 설정 (스타일 적용 후)
+        setTimeout(() => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              const anchorNode = selection.anchor.getNode();
+              const element = anchorNode.getKey() === 'root' 
+                ? anchorNode 
+                : anchorNode.getTopLevelElementOrThrow();
+              
+              const domElement = editor.getElementByKey(element.getKey());
+              if (domElement && element.getType() === 'paragraph') {
+                domElement.setAttribute('data-text-size', size);
+              }
+            }
+          });
+        }, 10);
+      }
+    });
+    setCurrentTextSize(size);
+  };
+
   const handleList = () => {
-    const selection = $getSelection();
-    if (!$isRangeSelection(selection)) return;
+    if (listButtonRef.current) {
+      const rect = listButtonRef.current.getBoundingClientRect();
+      setListFormPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      });
+    }
+  };
 
-    const nodes = selection.getNodes();
-    const firstNode = nodes[0];
-    const firstNodeParent = firstNode.getParent();
+  const handleListSubmit = (type: 'bullet' | 'number' | 'checkbox' | 'dash' | 'arrow' | 'roman') => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
 
-    if ($isListNode(firstNodeParent)) {
-      // 이미 리스트인 경우, 리스트를 제거하고 일반 텍스트로 변환
-      editor.update(() => {
+      const nodes = selection.getNodes();
+      const firstNode = nodes[0];
+      const firstNodeParent = firstNode.getParent();
+
+      if ($isListNode(firstNodeParent)) {
+        // 이미 리스트인 경우, 리스트를 제거하고 일반 텍스트로 변환
         const paragraphs = nodes.map(node => {
           const text = node.getTextContent();
           const paragraph = $createParagraphNode();
@@ -381,17 +792,34 @@ export default function EditHeader() {
         for (let i = 1; i < paragraphs.length; i++) {
           paragraphs[i - 1].insertAfter(paragraphs[i]);
         }
-      });
-    } else {
-      // 일반 텍스트를 리스트로 변환
-      editor.update(() => {
-        const listNode = $createListNode('bullet');
+      } else {
+        // 일반 텍스트를 리스트로 변환
+        let listNode;
+        if (type === 'bullet' || type === 'number') {
+          // 기본 Lexical 리스트 타입
+          listNode = $createListNode(type);
+        } else {
+          // 커스텀 리스트 타입들은 bullet으로 생성
+          listNode = $createListNode('bullet');
+        }
+        
         const listItemNode = $createListItemNode();
         listItemNode.append($createTextNode(firstNode.getTextContent()));
         listNode.append(listItemNode);
         firstNode.replace(listNode);
-      });
-    }
+        
+        // 커스텀 타입의 경우 DOM에 data attribute 추가 (update 완료 후)
+        if (type !== 'bullet' && type !== 'number') {
+          setTimeout(() => {
+            const domElement = editor.getElementByKey(listNode.getKey());
+            if (domElement) {
+              domElement.setAttribute('data-list-type', type);
+            }
+          }, 0);
+        }
+      }
+    });
+    setListFormPosition(null);
   };
 
   const handleLink = () => {
@@ -467,103 +895,221 @@ export default function EditHeader() {
     setBgColorFormPosition(null);
   };
 
+  const handleFontFamily = (fontValue: string) => {
+    const fontOption = fontFamilyOptions.find(option => option.value === fontValue);
+    if (!fontOption) return;
+
+    const fontFamily = fontValue === 'default' ? '' : fontOption.family;
+    editor.dispatchCommand(SET_FONT_FAMILY_COMMAND, fontFamily);
+    setCurrentFontFamily(fontValue);
+  };
+
+  const handleImage = () => {
+    if (imageButtonRef.current) {
+      const rect = imageButtonRef.current.getBoundingClientRect();
+      setImageFormPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      });
+    }
+  };
+
+  const handleImageSubmit = (src: string, alt: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+
+      // 이미지 앞에 빈 paragraph 추가
+      const beforeParagraph = $createParagraphNode();
+      beforeParagraph.append($createTextNode(''));
+      
+      // 실제 이미지 노드 생성
+      const imageNode = $createCustomImageNode(src, alt);
+      
+      // 이미지 뒤에 빈 paragraph 추가
+      const afterParagraph = $createParagraphNode();
+      afterParagraph.append($createTextNode(''));
+
+      // 노드들 삽입
+      selection.insertNodes([beforeParagraph, imageNode, afterParagraph]);
+      
+      // 이미지 뒤의 paragraph로 커서 이동
+      afterParagraph.selectEnd();
+    });
+    setImageFormPosition(null);
+  };
+
+  const handleCode = () => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+
+      // 빈 코드블록 노드 생성 (placeholder는 CSS로 처리)
+      const codeNode = $createCodeNode();
+      selection.insertNodes([codeNode]);
+    });
+  };
+
+  const handlePlugin = () => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+
+      // 플러그인 플레이스홀더 텍스트 삽입
+      const pluginText = '[플러그인]';
+      const textNode = $createTextNode(pluginText);
+      selection.insertNodes([textNode]);
+    });
+  };
+
   return (
     <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center">
+        <div className="flex items-center space-x-3">
           <Link href="/" className="text-black hover:text-gray-600">
             <i className="bi bi-arrow-left text-xl"></i>
           </Link>
-          <span className="text-lg font-semibold">글쓰기</span>
+          <span className="text-lg font-semibold px-4 py-2">글쓰기</span>
+        </div>
+        
+        {/* 텍스트 크기 선택 드롭다운 */}
+        <div className="flex items-center space-x-1 ml-8">
+          <ToolbarButton
+            format="image"
+            icon={<i className="bi bi-image"></i>}
+            onClick={handleImage}
+            isActive={false}
+            buttonRef={imageButtonRef}
+          />
+          
+          <select
+            value={currentTextSize}
+            onChange={(e) => handleTextSize(e.target.value)}
+            className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 h-8"
+          >
+            {textSizeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          
+          {/* 글씨체 선택 드롭다운 */}
+          <select
+            value={currentFontFamily}
+            onChange={(e) => handleFontFamily(e.target.value)}
+            className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 h-8"
+          >
+            {fontFamilyOptions.map((option) => (
+              <option key={option.value} value={option.value} style={{ fontFamily: option.family }}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          
+          <div className="mx-2 h-6 border-l border-gray-300" />
+          
+          <ToolbarButton
+            format="bold"
+            icon={<i className="bi bi-type-bold"></i>}
+            onClick={() => handleFormat('bold')}
+            isActive={activeStyles.has('bold')}
+          />
+          <ToolbarButton
+            format="italic"
+            icon={<i className="bi bi-type-italic"></i>}
+            onClick={() => handleFormat('italic')}
+            isActive={activeStyles.has('italic')}
+          />
+          <ToolbarButton
+            format="underline"
+            icon={<i className="bi bi-type-underline"></i>}
+            onClick={() => handleFormat('underline')}
+            isActive={activeStyles.has('underline')}
+          />
+          <ToolbarButton
+            format="strikethrough"
+            icon={<i className="bi bi-type-strikethrough"></i>}
+            onClick={() => handleFormat('strikethrough')}
+            isActive={activeStyles.has('strikethrough')}
+          />
+          <div className="mx-2 h-6 border-l border-gray-300" />
+          <ToolbarButton
+            format="textColor"
+            icon={<i className="bi bi-pencil"></i>}
+            onClick={handleTextColor}
+            isActive={false}
+            buttonRef={textColorButtonRef}
+          />
+          <ToolbarButton
+            format="bgColor"
+            icon={<i className="bi bi-paint-bucket"></i>}
+            onClick={handleBgColor}
+            isActive={false}
+            buttonRef={bgColorButtonRef}
+          />
+          <div className="mx-2 h-6 border-l border-gray-300" />
+          <ToolbarButton
+            format="left"
+            icon={<i className="bi bi-text-left"></i>}
+            onClick={() => handleAlignment('left')}
+            isActive={false}
+          />
+          <ToolbarButton
+            format="center"
+            icon={<i className="bi bi-text-center"></i>}
+            onClick={() => handleAlignment('center')}
+            isActive={false}
+          />
+          <ToolbarButton
+            format="right"
+            icon={<i className="bi bi-text-right"></i>}
+            onClick={() => handleAlignment('right')}
+            isActive={false}
+          />
+          <ToolbarButton
+            format="justify"
+            icon={<i className="bi bi-justify"></i>}
+            onClick={() => handleAlignment('justify')}
+            isActive={false}
+          />
+          <div className="mx-2 h-6 border-l border-gray-300" />
+          <ToolbarButton
+            format="list"
+            icon={<i className="bi bi-list-ul"></i>}
+            onClick={handleList}
+            isActive={false}
+            buttonRef={listButtonRef}
+          />
+          <ToolbarButton
+            format="link"
+            icon={<i className="bi bi-link-45deg"></i>}
+            onClick={handleLink}
+            isActive={false}
+            buttonRef={linkButtonRef}
+          />
+          <ToolbarButton
+            format="divider"
+            icon={<i className="bi bi-hr"></i>}
+            onClick={handleDivider}
+            isActive={false}
+            buttonRef={hrButtonRef}
+          />
+          <ToolbarButton
+            format="code"
+            icon={<i className="bi bi-code"></i>}
+            onClick={handleCode}
+            isActive={false}
+          />
+          <ToolbarButton
+            format="plugin"
+            icon={<i className="bi bi-plugin"></i>}
+            onClick={handlePlugin}
+            isActive={false}
+          />
         </div>
       </div>
-      <div className="flex items-center mt-2 space-x-1">
-        <ToolbarButton
-          format="bold"
-          icon={<i className="bi bi-type-bold"></i>}
-          onClick={() => handleFormat('bold')}
-          isActive={activeStyles.has('bold')}
-        />
-        <ToolbarButton
-          format="italic"
-          icon={<i className="bi bi-type-italic"></i>}
-          onClick={() => handleFormat('italic')}
-          isActive={activeStyles.has('italic')}
-        />
-        <ToolbarButton
-          format="underline"
-          icon={<i className="bi bi-type-underline"></i>}
-          onClick={() => handleFormat('underline')}
-          isActive={activeStyles.has('underline')}
-        />
-        <ToolbarButton
-          format="strikethrough"
-          icon={<i className="bi bi-type-strikethrough"></i>}
-          onClick={() => handleFormat('strikethrough')}
-          isActive={activeStyles.has('strikethrough')}
-        />
-        <div className="mx-2 h-6 border-l border-gray-300" />
-        <ToolbarButton
-          format="textColor"
-          icon={<i className="bi bi-pencil"></i>}
-          onClick={handleTextColor}
-          isActive={false}
-          buttonRef={textColorButtonRef}
-        />
-        <ToolbarButton
-          format="bgColor"
-          icon={<i className="bi bi-paint-bucket"></i>}
-          onClick={handleBgColor}
-          isActive={false}
-          buttonRef={bgColorButtonRef}
-        />
-        <div className="mx-2 h-6 border-l border-gray-300" />
-        <ToolbarButton
-          format="left"
-          icon={<i className="bi bi-text-left"></i>}
-          onClick={() => handleAlignment('left')}
-          isActive={false}
-        />
-        <ToolbarButton
-          format="center"
-          icon={<i className="bi bi-text-center"></i>}
-          onClick={() => handleAlignment('center')}
-          isActive={false}
-        />
-        <ToolbarButton
-          format="right"
-          icon={<i className="bi bi-text-right"></i>}
-          onClick={() => handleAlignment('right')}
-          isActive={false}
-        />
-        <ToolbarButton
-          format="justify"
-          icon={<i className="bi bi-justify"></i>}
-          onClick={() => handleAlignment('justify')}
-          isActive={false}
-        />
-        <div className="mx-2 h-6 border-l border-gray-300" />
-        <ToolbarButton
-          format="list"
-          icon={<i className="bi bi-list-ul"></i>}
-          onClick={handleList}
-          isActive={false}
-        />
-        <ToolbarButton
-          format="link"
-          icon={<i className="bi bi-link-45deg"></i>}
-          onClick={handleLink}
-          isActive={false}
-          buttonRef={linkButtonRef}
-        />
-        <ToolbarButton
-          format="divider"
-          icon={<i className="bi bi-hr"></i>}
-          onClick={handleDivider}
-          isActive={false}
-          buttonRef={hrButtonRef}
-        />
-      </div>
+      
       {linkFormPosition && (
         <LinkForm
           onSubmit={handleLinkSubmit}
@@ -576,6 +1122,13 @@ export default function EditHeader() {
           onSubmit={handleHrSubmit}
           onClose={() => setHrFormPosition(null)}
           position={hrFormPosition}
+        />
+      )}
+      {listFormPosition && (
+        <ListForm
+          onSubmit={handleListSubmit}
+          onClose={() => setListFormPosition(null)}
+          position={listFormPosition}
         />
       )}
       {textColorFormPosition && (
@@ -592,6 +1145,13 @@ export default function EditHeader() {
           onClose={() => setBgColorFormPosition(null)}
           position={bgColorFormPosition}
           title="배경 색상"
+        />
+      )}
+      {imageFormPosition && (
+        <ImageForm
+          onSubmit={handleImageSubmit}
+          onClose={() => setImageFormPosition(null)}
+          position={imageFormPosition}
         />
       )}
     </div>

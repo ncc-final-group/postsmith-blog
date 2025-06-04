@@ -13,12 +13,18 @@ import React, { useState } from "react";
 import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 
 import EditHeader from "@components/EditHeader";
-import Editor, { CustomHRNode } from "@components/Editor";
+import Editor, { CustomImageNode } from "@components/Editor";
+import { CustomHRNode } from "@components/CustomHRNode";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
   paragraph: "mb-2",
+  heading: {
+    h1: "text-4xl font-bold mb-4",
+    h2: "text-3xl font-bold mb-3", 
+    h3: "text-2xl font-bold mb-2",
+  },
   text: {
     bold: "font-bold",
     italic: "italic",
@@ -31,9 +37,13 @@ const theme = {
     right: "text-right",
     justify: "text-justify",
   },
-  list: {
-    ul: "list-disc list-inside pl-4",
-    ol: "list-decimal list-inside pl-4"
+  list: { 
+    ul: 'list-disc list-inside pl-4',
+    ol: 'list-decimal list-inside pl-4',
+    checkbox: 'list-none pl-4',
+    dash: 'list-none pl-4',
+    arrow: 'list-none pl-4', 
+    roman: 'list-none pl-4'
   },
   divider: {
     solid: "my-4 border-t-2 border-black",
@@ -41,7 +51,9 @@ const theme = {
     dotted: "my-4 border-t-2 border-dotted border-black",
     double: "my-4 border-t-4 border-double border-black",
     thick: "my-4 border-t-4 border-black"
-  }
+  },
+  // 스타일이 적용된 텍스트를 위한 클래스
+  characterStyles: { colored: 'styled-text' },
 };
 
 function EditorForm({ category, setCategory, title, setTitle }: {
@@ -110,7 +122,7 @@ function EditorForm({ category, setCategory, title, setTitle }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <select
-        className="w-1/2 border border-gray-300 rounded px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
+        className="w-1/3 border border-gray-300 rounded px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
         value={category}
         onChange={e => setCategory(e.target.value)}
         required
@@ -164,6 +176,7 @@ export default function EditPage() {
       TableRowNode,
       LinkNode,
       CustomHRNode,
+      CustomImageNode,
     ],
     onError: (error: Error) => {
       throw error;
@@ -174,7 +187,7 @@ export default function EditPage() {
     <div className="bg-white">
       <LexicalComposer initialConfig={initialConfig}>
         <EditHeader />
-        <div className="max-w-3xl mx-auto py-10 px-4">
+        <div className="max-w-5xl mx-auto py-10 px-4">
           <EditorForm
             category={category}
             setCategory={setCategory}
