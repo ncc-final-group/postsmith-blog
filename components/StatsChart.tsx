@@ -2,7 +2,7 @@
 
 import { CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js';
 import crosshairPlugin from 'chartjs-plugin-crosshair';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
 // Register chart components
@@ -291,12 +291,8 @@ export default function StatsChart() {
     },
     scales: {
       x: {
-        grid: {
-          display: true,
-        },
-        ticks: {
-          display: false,
-        },
+        grid: { display: true },
+        ticks: { display: false },
       },
       y: { beginAtZero: true },
     },
