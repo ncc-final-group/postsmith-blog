@@ -1,0 +1,358 @@
+"use client";
+
+import { CodeHighlightNode, CodeNode } from "@lexical/code";
+import { $generateHtmlFromNodes } from "@lexical/html";
+import { LinkNode } from "@lexical/link";
+import { ListItemNode, ListNode } from "@lexical/list";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
+import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
+import { createEditor } from "lexical";
+import React, { useEffect, useState } from "react";
+import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
+
+import EditHeader from "@components/EditHeader";
+import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from "@components/Editor";
+import { CustomHRNode } from "@components/CustomHRNode";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+
+const theme = {
+  // 기본 테마: 필요시 커스터마이즈 가능
+  paragraph: "mb-2",
+  heading: {
+    h1: "text-4xl font-bold mb-4",
+    h2: "text-3xl font-bold mb-3", 
+    h3: "text-2xl font-bold mb-2",
+  },
+  text: {
+    bold: "font-bold",
+    italic: "italic",
+    underline: "underline",
+    strikethrough: "line-through",
+    textColor: "text-black",
+    backgroundColor: "bg-transparent",
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+    justify: "text-justify",
+  },
+  list: { 
+    ul: 'list-disc list-inside pl-4',
+    ol: 'list-decimal list-inside pl-4',
+    checkbox: 'list-none pl-4',
+    dash: 'list-none pl-4',
+    arrow: 'list-none pl-4', 
+    roman: 'list-none pl-4'
+  },
+  divider: {
+    solid: "my-4 border-t-2 border-black",
+    dashed: "my-4 border-t-2 border-dashed border-black",
+    dotted: "my-4 border-t-2 border-dotted border-black",
+    double: "my-4 border-t-4 border-double border-black",
+    thick: "my-4 border-t-4 border-black"
+  },
+  // 스타일이 적용된 텍스트를 위한 클래스
+  characterStyles: { colored: 'styled-text' },
+};
+
+function EditorForm({ category, setCategory, title, setTitle }: {
+  category: string;
+  setCategory: (value: string) => void;
+  title: string;
+  setTitle: (value: string) => void;
+}) {
+  return (
+    <div className="p-4">
+      <div className="mb-4">
+        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+          카테고리
+        </label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">카테고리 선택</option>
+          <option value="tech">기술</option>
+          <option value="life">일상</option>
+          <option value="review">리뷰</option>
+          <option value="etc">기타</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          제목
+        </label>
+        <input
+          type="text"
+          id="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="포스트 제목을 입력하세요"
+          required
+        />
+      </div>
+    </div>
+  );
+}
+
+function SaveButtons({ category, title }: {
+  category: string;
+  title: string;
+}) {
+  const [editor] = useLexicalComposerContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Lexical editorState에서 HTML 추출
+      const editorState = editor.getEditorState();
+      let html = "";
+      editorState.read(() => {
+        html = $generateHtmlFromNodes(editor, null);
+      });
+
+      // 에디터 내용이 비어있는지 확인
+      if (!html || html === '<p class="mb-2"></p>') {
+        alert('내용을 입력해주세요.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 16MB 제한 확인 (15MB로 여유 확보)
+      const maxSize = 15 * 1024 * 1024; // 15MB
+      const contentSize = new Blob([html]).size;
+      if (contentSize > maxSize) {
+        alert(`콘텐츠가 너무 큽니다! 최대 15MB까지 허용됩니다.\n현재 크기: ${(contentSize / 1024 / 1024).toFixed(2)}MB\n\n일부 이미지나 파일을 제거해주세요.`);
+        setIsLoading(false);
+        return;
+      }
+
+      const requestBody = {
+        category: 0,
+        title,
+        content: html,
+      };
+
+      // 요청 내용 확인
+      alert('Request Body: ' + JSON.stringify(requestBody, null, 2));
+
+      // 서버로 POST 요청
+      const response = await fetch("http://localhost:8080/api1/post/test/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      alert("저장 완료!");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
+      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTempSave = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Lexical editorState에서 HTML 추출
+      const editorState = editor.getEditorState();
+      let html = "";
+      editorState.read(() => {
+        html = $generateHtmlFromNodes(editor, null);
+      });
+
+      const requestBody = {
+        category: 0,
+        title: title || '제목 없음',
+        content: html,
+        isDraft: true, // 임시 저장 플래그
+      };
+
+      // 임시 저장 요청 (실제로는 다른 엔드포인트를 사용할 수 있음)
+      alert('임시 저장 완료!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '임시 저장 중 오류가 발생했습니다.');
+      alert('임시 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 border-t border-gray-200">
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* 버튼 영역 */}
+      <div className="flex justify-between gap-4">
+        <button
+          type="button"
+          onClick={handleTempSave}
+          disabled={isLoading}
+          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+            isLoading
+              ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+              : 'bg-gray-500 hover:bg-gray-600 text-white'
+          }`}
+        >
+          {isLoading ? '저장 중...' : '임시 저장'}
+        </button>
+        
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+            isLoading
+              ? 'bg-gray-400 cursor-not-allowed text-gray-600'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          {isLoading ? '저장 중...' : '저장'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ContentSizeMonitor() {
+  const [editor] = useLexicalComposerContext();
+  const [contentSize, setContentSize] = useState(0);
+
+  // 콘텐츠 크기 모니터링
+  useEffect(() => {
+    const updateContentSize = () => {
+      editor.getEditorState().read(() => {
+        const html = $generateHtmlFromNodes(editor, null);
+        const sizeInBytes = new Blob([html]).size;
+        setContentSize(sizeInBytes);
+      });
+    };
+
+    // 에디터 변경 시마다 크기 업데이트
+    const removeListener = editor.registerUpdateListener(() => {
+      updateContentSize();
+    });
+
+    // 초기 크기 설정
+    updateContentSize();
+
+    return () => {
+      removeListener();
+    };
+  }, [editor]);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span className="text-gray-600">콘텐츠 크기:</span>
+          <span className={`font-mono ${contentSize > 15 * 1024 * 1024 ? 'text-red-600 font-bold' : 
+            contentSize > 12 * 1024 * 1024 ? 'text-orange-500' : 'text-green-600'}`}>
+            {formatFileSize(contentSize)} / 15MB
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${
+              contentSize > 15 * 1024 * 1024 ? 'bg-red-500' : 
+              contentSize > 12 * 1024 * 1024 ? 'bg-orange-400' : 'bg-green-500'
+            }`}
+            style={{ width: `${Math.min((contentSize / (15 * 1024 * 1024)) * 100, 100)}%` }}
+          ></div>
+        </div>
+        {contentSize > 12 * 1024 * 1024 && contentSize <= 15 * 1024 * 1024 && (
+          <p className="mt-2 text-xs text-orange-600">
+            ⚠️ 콘텐츠 크기가 80%를 초과했습니다. 일부 파일을 제거하는 것을 고려해보세요.
+          </p>
+        )}
+        {contentSize > 15 * 1024 * 1024 && (
+          <p className="mt-2 text-xs text-red-600">
+            🚫 콘텐츠 크기가 한계를 초과했습니다! 저장하기 전에 크기를 줄여주세요.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function PostEditor() {
+  const [category, setCategory] = useState('');
+  const [title, setTitle] = useState('');
+
+  const initialConfig = {
+    namespace: "PostEditor",
+    theme,
+    nodes: [
+      ListNode,
+      ListItemNode,
+      HeadingNode,
+      QuoteNode,
+      CodeNode,
+      CodeHighlightNode,
+      TableNode,
+      TableCellNode,
+      TableRowNode,
+      LinkNode,
+      CustomHRNode,
+      CustomFileNode,
+      CustomImageNode,
+      CustomVideoNode,
+    ],
+    onError: (error: Error) => {
+      throw error;
+    },
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <LexicalComposer initialConfig={initialConfig}>
+        <ContentSizeMonitor />
+        <EditHeader />
+        <div className="max-w-4xl mx-auto py-8 px-4 pb-20">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <EditorForm 
+              category={category} 
+              setCategory={setCategory} 
+              title={title} 
+              setTitle={setTitle} 
+            />
+            <Editor />
+            <SaveButtons category={category} title={title} />
+          </div>
+        </div>
+      </LexicalComposer>
+    </div>
+  );
+}
