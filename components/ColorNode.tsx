@@ -13,7 +13,7 @@ export class ColorTextNode extends TextNode {
   }
 
   constructor(text: string, textColor: string = 'text-black', bgColor: string = 'bg-transparent', key?: string) {
-    super(text, false, key);
+    super(text, key);
     this.__textColor = textColor;
     this.__bgColor = bgColor;
   }
@@ -24,8 +24,8 @@ export class ColorTextNode extends TextNode {
     return element;
   }
 
-  updateDOM(prevNode: ColorTextNode, dom: HTMLElement): boolean {
-    const isUpdated = super.updateDOM(prevNode, dom);
+  updateDOM(prevNode: this, dom: HTMLElement, config: any): boolean {
+    const isUpdated = super.updateDOM(prevNode, dom, config);
     if (prevNode.__textColor !== this.__textColor || prevNode.__bgColor !== this.__bgColor) {
       dom.className = `${this.__textColor} ${this.__bgColor}`;
       return true;
