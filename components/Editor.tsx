@@ -10,11 +10,11 @@ import { ClearEditorPlugin } from "@lexical/react/LexicalClearEditorPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, CLICK_COMMAND } from 'lexical';
 import { $patchStyleText } from '@lexical/selection';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 import { $getRoot } from 'lexical';
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
 import { CustomHRNode } from "./CustomHRNode";
@@ -94,7 +94,7 @@ function OnChange() {
 function EnterKeyPlugin() {
   const [editor] = useLexicalComposerContext();
 
-  React.useEffect(() => {
+  useEffect(() => {
     return editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
@@ -172,28 +172,19 @@ function EnterKeyPlugin() {
           }
         }
 
-        // 엔터 키 처리 후 새로운 텍스트의 스타일을 초기화
+        // 현재 selection의 스타일을 가져옴
+        const currentStyle = selection.style || '';
+
+        // 엔터 키 처리 후 새로운 텍스트의 스타일을 유지
         setTimeout(() => {
           editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection) && selection.isCollapsed()) {
-              // 새로운 paragraph에서 모든 스타일 초기화
-              const anchorNode = selection.anchor.getNode();
-              
-              // 현재 노드가 paragraph이고 텍스트가 없는 경우 (새로운 라인)
-              if ($isParagraphNode(anchorNode) && anchorNode.getTextContent() === '') {
-                // 새로운 텍스트 노드를 생성하여 기본 스타일로 설정
-                const newTextNode = $createTextNode('');
-                newTextNode.setStyle(''); // 모든 스타일 제거
-                anchorNode.append(newTextNode);
-                newTextNode.select();
-              }
-              
-              // selection의 스타일도 초기화
-              selection.style = '';
+              // 새로운 paragraph에 이전 스타일 적용
+              selection.style = currentStyle;
             }
           });
-        }, 10); // 약간의 지연을 주어 DOM 업데이트 후 실행
+        }, 0);
         
         return false; // 기본 엔터 동작은 유지
       },
@@ -254,7 +245,7 @@ function HRKeyboardPlugin() {
 function ColorPlugin() {
   const [editor] = useLexicalComposerContext();
 
-  React.useEffect(() => {
+  useEffect(() => {
     // 텍스트 색상 변경 명령어 등록
     editor.registerCommand(
       SET_TEXT_COLOR_COMMAND,
@@ -263,9 +254,12 @@ function ColorPlugin() {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return false;
 
-          // 선택된 텍스트가 있는 경우
-          if (!selection.isCollapsed()) {
-            $patchStyleText(selection, { 'color': color });
+          if (selection.isCollapsed()) {
+            // 선택 영역이 없을 때 - 현재 selection의 스타일 설정
+            selection.style = selection.style ? selection.style + `color: ${color};` : `color: ${color};`;
+          } else {
+            // 선택 영역이 있을 때 - 선택된 텍스트에만 적용
+            $patchStyleText(selection, { color });
           }
         });
         return true;
@@ -281,42 +275,12 @@ function ColorPlugin() {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return false;
 
-          // 선택된 텍스트가 있는 경우
-          if (!selection.isCollapsed()) {
-            $patchStyleText(selection, { 'background-color': color });
-          }
-        });
-        return true;
-      },
-      COMMAND_PRIORITY_LOW
-    );
-
-    // 글씨체 변경 명령어 등록
-    editor.registerCommand(
-      SET_FONT_FAMILY_COMMAND,
-      (fontFamily: string) => {
-        editor.update(() => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return false;
-
-          // 선택된 텍스트가 있는 경우
-          if (!selection.isCollapsed()) {
-            if (fontFamily === '') {
-              $patchStyleText(selection, { 'font-family': null });
-            } else {
-              $patchStyleText(selection, { 'font-family': fontFamily });
-            }
+          if (selection.isCollapsed()) {
+            // 선택 영역이 없을 때 - 현재 selection의 스타일 설정
+            selection.style = selection.style ? selection.style + `background-color: ${color};` : `background-color: ${color};`;
           } else {
-            // 텍스트가 선택되지 않은 경우 - 현재 커서 위치에서 입력될 텍스트에 스타일 적용
-            if (fontFamily === '') {
-              // 기본 글씨체로 설정
-              selection.style = selection.style ? selection.style.replace(/font-family:[^;]*;?/g, '') : '';
-            } else {
-              // 현재 selection의 스타일에 글씨체 추가/수정
-              const currentStyle = selection.style || '';
-              const newStyle = currentStyle.replace(/font-family:[^;]*;?/g, '') + `font-family: ${fontFamily};`;
-              selection.style = newStyle;
-            }
+            // 선택 영역이 있을 때 - 선택된 텍스트에만 적용
+            $patchStyleText(selection, { 'background-color': color });
           }
         });
         return true;
@@ -1170,217 +1134,103 @@ export function $isCustomVideoNode(node: LexicalNode | null | undefined): node i
   return node instanceof CustomVideoNode;
 }
 
+// LinkClickPlugin 추가
+function LinkClickPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    // 에디터 DOM 요소에 클릭 이벤트 리스너 추가
+    const editorElement = editor.getRootElement();
+    if (!editorElement) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const closestLink = target.closest('a');
+      
+      if (closestLink) {
+        e.preventDefault();
+        window.open(closestLink.href, '_blank');
+      }
+    };
+
+    editorElement.addEventListener('click', handleClick);
+
+    return () => {
+      editorElement.removeEventListener('click', handleClick);
+    };
+  }, [editor]);
+
+  return null;
+}
+
 export default function Editor() {
+  const [defaultFontFamily, setDefaultFontFamily] = useState('inherit');
+  const [editor] = useLexicalComposerContext();
+  
+  useEffect(() => {
+    return editor.registerCommand(
+      SET_FONT_FAMILY_COMMAND,
+      (fontFamily: string) => {
+        setDefaultFontFamily(fontFamily || 'inherit');
+        return true;
+      },
+      COMMAND_PRIORITY_LOW
+    );
+  }, [editor]);
+
   return (
     <div className="border border-gray-300 rounded bg-white">
       <style jsx global>{`
-        /* 커스텀 리스트 타입 스타일 */
-        ul[data-list-type="checkbox"] li::before {
-          content: "☐ ";
-          margin-right: 8px;
-          color: #666;
-        }
-        ul[data-list-type="dash"] li::before {
-          content: "- ";
-          margin-right: 8px;
-          color: #333;
-        }
-        ul[data-list-type="arrow"] li::before {
-          content: "→ ";
-          margin-right: 8px;
-          color: #333;
-        }
-        ul[data-list-type="roman"] {
-          counter-reset: roman-counter;
-        }
-        ul[data-list-type="roman"] li {
-          counter-increment: roman-counter;
-        }
-        ul[data-list-type="roman"] li::before {
-          content: counter(roman-counter, lower-roman) ". ";
-          margin-right: 8px;
-          color: #333;
+        /* 웹 폰트 추가 */
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&family=Nanum+Myeongjo:wght@400;700&display=swap');
+        
+        /* 기존 스타일 유지 */
+        
+        /* 글꼴 관련 스타일 */
+        .editor-content {
+          font-family: ${defaultFontFamily};
         }
         
-        /* 기본 리스트 마커 제거 */
-        ul[data-list-type] {
-          list-style: none !important;
+        .editor-content [style*="font-family"] {
+          font-family: inherit;
         }
-        ul[data-list-type] li {
-          list-style: none !important;
+
+        /* 링크 스타일 */
+        .editor-content a {
+          color: #2563eb;
+          text-decoration: underline;
+          cursor: pointer;
+          pointer-events: all !important;
         }
-        
-        /* 본문 크기 스타일 */
-        .editor-paragraph {
-          margin-bottom: 0.5rem;
+
+        .editor-content a:hover {
+          color: #1d4ed8;
         }
-        
-        /* data attribute 기반 본문 크기 스타일 */
-        p[data-text-size="p1"] {
-          font-size: 1.25rem !important;
-          line-height: 1.75rem !important;
+
+        /* 글꼴 스타일 보완 */
+        @font-face {
+          font-family: 'NanumGothic';
+          src: local('Nanum Gothic');
         }
-        
-        p[data-text-size="p2"] {
-          font-size: 1.125rem !important;
-          line-height: 1.75rem !important;
-        }
-        
-        p[data-text-size="p3"] {
-          font-size: 1rem !important;
-          line-height: 1.5rem !important;
-        }
-        
-        /* 인라인 스타일이 적용된 paragraph를 위한 CSS */
-        p[style*="font-size: 1.25rem"] {
-          font-size: 1.25rem !important;
-          line-height: 1.75rem !important;
-        }
-        
-        p[style*="font-size: 1.125rem"] {
-          font-size: 1.125rem !important;
-          line-height: 1.75rem !important;
-        }
-        
-        p[style*="font-size: 1rem"] {
-          font-size: 1rem !important;
-          line-height: 1.5rem !important;
-        }
-        
-        /* ContentEditable 내부의 모든 인라인 스타일 강제 적용 */
-        .editor-content p {
-          margin-bottom: 0.5rem;
-        }
-        
-        /* 텍스트 색상 및 배경색 스타일 */
-        .styled-text {
-          display: inline;
-        }
-        
-        /* 코드 블록 스타일 */
-        .editor-content code {
-          background-color: #f5f5f5;
-          border-radius: 8px;
-          padding: 12px 16px;
-          display: block;
-          font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-          font-size: 14px;
-          line-height: 1.5;
-          color: #333;
-          border: 1px solid #e0e0e0;
-          margin: 8px 0;
-          white-space: pre-wrap;
-          overflow-x: auto;
-          min-height: 40px;
-        }
-        
-        /* 코드 블록 내부의 br 태그 스타일 */
-        .editor-content code br {
-          display: block;
-          margin: 0;
-          padding: 0;
-        }
-        
-        /* 코드 노드 전체 스타일 */
-        .editor-content [data-lexical-text="true"] {
-          white-space: pre-wrap;
-        }
-        
-        /* Lexical CodeNode 스타일 */
-        .editor-content .PlaygroundEditorTheme__code {
-          background-color: #f5f5f5 !important;
-          border-radius: 8px !important;
-          padding: 12px 16px !important;
-          display: block !important;
-          font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
-          font-size: 14px !important;
-          line-height: 1.5 !important;
-          color: #333 !important;
-          border: 1px solid #e0e0e0 !important;
-          margin: 8px 0 !important;
-          white-space: pre-wrap !important;
-          overflow-x: auto !important;
-          min-height: 40px !important;
-        }
-        
-        /* 코드 블록 placeholder 스타일 */
-        .editor-content code:empty::before {
-          content: '코드를 입력하세요';
-          color: #999;
-          font-style: italic;
-          pointer-events: none;
-        }
-        
-        /* Lexical CodeNode가 비어있을 때 placeholder */
-        .editor-content .PlaygroundEditorTheme__code:empty::before {
-          content: '코드를 입력하세요';
-          color: #999 !important;
-          font-style: italic;
-          pointer-events: none;
-        }
-        
-        /* CodeNode 내부가 비어있는 경우 */
-        .editor-content [data-lexical-code="true"]:empty::before {
-          content: '코드를 입력하세요';
-          color: #999;
-          font-style: italic;
-          pointer-events: none;
-        }
-        
-        /* 커스텀 이미지 노드 스타일 */
-        .editor-content img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 8px;
-          margin: 20px 0;
-          display: block;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* 이미지 컨테이너 스타일 */
-        .custom-image-node {
-          text-align: center;
-          margin: 24px 0;
-        }
-        
-        /* 이미지 노드 앞뒤 paragraph 간격 조정 */
-        .editor-content p + div[data-lexical-decorator] {
-          margin-top: 20px;
-        }
-        
-        .editor-content div[data-lexical-decorator] + p {
-          margin-top: 20px;
-        }
-        
-        /* 커스텀 비디오 노드 스타일 */
-        .editor-content video {
-          max-width: 100%;
-          height: auto;
-          border-radius: 8px;
-          margin: 20px 0;
-          display: block;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* 비디오 컨테이너 스타일 */
-        .custom-video-node {
-          text-align: center;
-          margin: 24px 0;
+
+        @font-face {
+          font-family: 'NanumMyeongjo';
+          src: local('Nanum Myeongjo');
         }
       `}</style>
       <div className="p-4">
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-              className="min-h-[400px] outline-none text-black prose max-w-none editor-content" 
+              className="min-h-[400px] outline-none text-black prose max-w-none editor-content"
             />
           }
-          placeholder={<div className="text-gray-400">내용을 입력하세요</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
         <ListPlugin />
         <LinkPlugin />
+        <LinkClickPlugin />
         <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
         <AutoFocusPlugin />
         <ClearEditorPlugin />

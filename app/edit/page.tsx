@@ -65,9 +65,6 @@ function EditorForm({ category, setCategory, title, setTitle }: {
   return (
     <div className="p-4">
       <div className="mb-4">
-        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-          카테고리
-        </label>
         <select
           id="category"
           value={category}
@@ -82,16 +79,13 @@ function EditorForm({ category, setCategory, title, setTitle }: {
         </select>
       </div>
       <div className="mb-4">
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          제목
-        </label>
         <input
           type="text"
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="포스트 제목을 입력하세요"
+          placeholder="제목을 입력하세요"
           required
         />
       </div>

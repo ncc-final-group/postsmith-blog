@@ -1,11 +1,9 @@
 import { $isTextNode, COMMAND_PRIORITY_LOW, createCommand, ElementFormatType, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, TextFormatType } from 'lexical';
-import { TextNode } from 'lexical';
+import { TextNode, $createParagraphNode, $createTextNode, $getSelection, $isRangeSelection, $isParagraphNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $createParagraphNode, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
 import { $patchStyleText, $setBlocksType } from '@lexical/selection';
 import { $createListItemNode, $createListNode, $isListNode, ListNode } from '@lexical/list';
-import { TOGGLE_LINK_COMMAND } from '@lexical/link';
-import { $createLinkNode } from '@lexical/link';
+import { TOGGLE_LINK_COMMAND, $createLinkNode, $isLinkNode } from '@lexical/link';
 import { $createCustomHRNode } from './CustomHRNode';
 import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
 import { $createCodeNode } from '@lexical/code';
@@ -17,6 +15,7 @@ import React from 'react';
 import { $getRoot } from 'lexical';
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
 import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './Editor';
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 
 // 파일 크기 제한 설정
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -85,15 +84,16 @@ const textSizeOptions = [
   { label: '본문 3', value: 'p3', size: 'text-base' },
 ];
 
-// 글씨체 옵션 정의
+// 글꼴 옵션 수정
 const fontFamilyOptions = [
   { label: '기본', value: 'default', family: 'inherit' },
-  { label: '고딕', value: 'sans-serif', family: '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif' },
-  { label: '명조', value: 'serif', family: '"Times New Roman", "Batang", serif' },
-  { label: '돋움', value: 'dotum', family: '"Dotum", "Apple SD Gothic Neo", sans-serif' },
-  { label: '굴림', value: 'gulim', family: '"Gulim", "Apple SD Gothic Neo", sans-serif' },
-  { label: '나눔고딕', value: 'nanum', family: '"Nanum Gothic", sans-serif' },
-  { label: '모노스페이스', value: 'monospace', family: '"Courier New", "D2Coding", monospace' },
+  { label: '돋움', value: 'dotum', family: 'Dotum, 돋움, sans-serif' },
+  { label: '굴림', value: 'gulim', family: 'Gulim, 굴림, sans-serif' },
+  { label: '나눔고딕', value: 'nanumgothic', family: 'NanumGothic, 나눔고딕, sans-serif' },
+  { label: '나눔명조', value: 'nanummyeongjo', family: 'NanumMyeongjo, 나눔명조, serif' },
+  { label: '맑은 고딕', value: 'malgun', family: 'Malgun Gothic, 맑은 고딕, sans-serif' },
+  { label: '바탕', value: 'batang', family: 'Batang, 바탕, serif' },
+  { label: '궁서', value: 'gungsuh', family: 'Gungsuh, 궁서, serif' },
 ];
 
 const ToolbarButton = ({
@@ -1106,38 +1106,20 @@ export default function EditHeader() {
           setCurrentTextSize('p3');
           setBlockType('paragraph');
         }
-
-        // 글씨체 감지
-        const selectedNodes = selection.getNodes();
-        if (selectedNodes.length > 0) {
-          const firstNode = selectedNodes[0];
-          
-          // 텍스트 노드에서 스타일 확인
-          if ($isTextNode(firstNode)) {
-            const style = firstNode.getStyle() || '';
-            const fontFamilyMatch = style.match(/font-family:\s*([^;]+)/);
-            
-            if (fontFamilyMatch) {
-              const fontFamily = fontFamilyMatch[1].replace(/['"]/g, '').trim();
-              
-              // 정의된 글씨체 옵션과 매칭
-              const matchedOption = fontFamilyOptions.find(option => 
-                option.family.includes(fontFamily) || fontFamily.includes(option.value)
-              );
-              
-              setCurrentFontFamily(matchedOption ? matchedOption.value : 'default');
-            } else {
-              setCurrentFontFamily('default');
-            }
-          } else {
-            setCurrentFontFamily('default');
-          }
-        }
       });
     });
   }, [editor]);
 
   const handleFormat = (format: string) => {
+    if (format === 'underline' && activeStyles.has('strikethrough')) {
+      // underline 선택 시 strikethrough 제거
+      editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+    } else if (format === 'strikethrough' && activeStyles.has('underline')) {
+      // strikethrough 선택 시 underline 제거
+      editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
+    }
+    
+    // 선택한 포맷 적용
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, format as TextFormatType);
   };
 
@@ -1270,11 +1252,30 @@ export default function EditHeader() {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
 
+      // 현재 선택된 텍스트 제거
+      if (!selection.isCollapsed()) {
+        selection.removeText();
+      }
+      
+      // 링크 노드 생성
       const linkNode = $createLinkNode(url);
-      linkNode.append($createTextNode(text));
+      linkNode.setURL(url);
+      linkNode.setTarget('_blank');
+      linkNode.setRel('noopener noreferrer');
+
+      // 텍스트 노드 생성 및 링크 노드에 추가
+      const textNode = $createTextNode(text);
+      linkNode.append(textNode);
+
+      // 현재 selection 위치에 링크 노드 삽입
       selection.insertNodes([linkNode]);
     });
+
+    // 링크 폼 닫기
     setLinkFormPosition(null);
+
+    // 포커스 복원
+    editor.focus();
   };
 
   const handleDivider = () => {
@@ -1319,12 +1320,50 @@ export default function EditHeader() {
   };
 
   const handleTextColorSubmit = (color: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        if (selection.isCollapsed()) {
+          // 선택 영역이 없을 때 - 현재 selection의 스타일 설정
+          selection.style = selection.style ? selection.style + `color: ${color};` : `color: ${color};`;
+        } else {
+          // 선택 영역이 있을 때 - 선택된 텍스트에만 적용
+          $patchStyleText(selection, { color });
+        }
+      }
+    });
+
+    // 색상 명령 실행
     editor.dispatchCommand(SET_TEXT_COLOR_COMMAND, color);
+    
+    // 포커스 복원
+    editor.focus();
+    
+    // 색상 선택 폼 닫기
     setTextColorFormPosition(null);
   };
 
   const handleBgColorSubmit = (color: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        if (selection.isCollapsed()) {
+          // 선택 영역이 없을 때 - 현재 selection의 스타일 설정
+          selection.style = selection.style ? selection.style + `background-color: ${color};` : `background-color: ${color};`;
+        } else {
+          // 선택 영역이 있을 때 - 선택된 텍스트에만 적용
+          $patchStyleText(selection, { 'background-color': color });
+        }
+      }
+    });
+
+    // 색상 명령 실행
     editor.dispatchCommand(SET_BG_COLOR_COMMAND, color);
+    
+    // 포커스 복원
+    editor.focus();
+    
+    // 색상 선택 폼 닫기
     setBgColorFormPosition(null);
   };
 
@@ -1332,9 +1371,49 @@ export default function EditHeader() {
     const fontOption = fontFamilyOptions.find(option => option.value === fontValue);
     if (!fontOption) return;
 
-    const fontFamily = fontValue === 'default' ? '' : fontOption.family;
-    editor.dispatchCommand(SET_FONT_FAMILY_COMMAND, fontFamily);
+    // 글꼴 선택 상태 업데이트
     setCurrentFontFamily(fontValue);
+
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+
+      const root = $getRoot();
+      const firstChild = root.getFirstChild();
+      
+      // 빈 에디터인 경우
+      if ($isParagraphNode(firstChild) && firstChild.getTextContent() === '') {
+        // 기존 paragraph를 새로운 것으로 교체
+        const newParagraph = $createParagraphNode();
+        const textNode = $createTextNode('');
+        if (fontValue !== 'default') {
+          textNode.setStyle(`font-family: ${fontOption.family};`);
+        }
+        newParagraph.append(textNode);
+        firstChild.replace(newParagraph);
+        textNode.select();
+      } else {
+        // 일반적인 경우
+        if (selection.isCollapsed()) {
+          if (fontValue === 'default') {
+            selection.style = selection.style ? selection.style.replace(/font-family:[^;]*;?/g, '') : '';
+          } else {
+            const currentStyle = selection.style || '';
+            const newStyle = currentStyle.replace(/font-family:[^;]*;?/g, '') + `font-family: ${fontOption.family};`;
+            selection.style = newStyle;
+          }
+        } else {
+          if (fontValue === 'default') {
+            $patchStyleText(selection, { 'font-family': null });
+          } else {
+            $patchStyleText(selection, { 'font-family': fontOption.family });
+          }
+        }
+      }
+    });
+
+    // 포커스 복원
+    editor.focus();
   };
 
   const handleImage = () => {
