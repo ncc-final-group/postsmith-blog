@@ -5,17 +5,31 @@ import { $generateHtmlFromNodes } from "@lexical/html";
 import { LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
-import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { createEditor } from "lexical";
-import React, { useEffect, useState } from "react";
 import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
+import React, { useCallback, useEffect, useState } from "react";
 
+import { CustomHRNode } from "@components/CustomHRNode";
 import EditHeader from "@components/EditHeader";
 import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from "@components/Editor";
-import { CustomHRNode } from "@components/CustomHRNode";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+
+
+
+// 카테고리 타입 정의
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  parent_id: number | null;
+  type: string;
+  sort_order: number;
+  post_count: number;
+  user_id: number;
+}
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
@@ -62,6 +76,39 @@ function EditorForm({ category, setCategory, title, setTitle }: {
   title: string;
   setTitle: (value: string) => void;
 }) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setIsLoadingCategories(true);
+      // API Route를 통해 카테고리 가져오기
+      const response = await fetch('/api/categories?blogId=1');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setCategories(result.data as Category[]);
+      } else {
+        throw new Error(result.message || 'Failed to fetch categories');
+      }
+    } catch (error) {
+      // 에러 발생시 기본 카테고리 사용
+      const fallbackCategories = [
+        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: 1 },
+        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: 1 },
+        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: 1 },
+        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: 1 }
+      ];
+      setCategories(fallbackCategories);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
   return (
     <div className="p-4">
       <div className="mb-4">
@@ -70,12 +117,16 @@ function EditorForm({ category, setCategory, title, setTitle }: {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={isLoadingCategories}
         >
-          <option value="">카테고리 선택</option>
-          <option value="tech">기술</option>
-          <option value="life">일상</option>
-          <option value="review">리뷰</option>
-          <option value="etc">기타</option>
+          <option value="">
+            {isLoadingCategories ? '카테고리 로딩 중...' : '카테고리 선택'}
+          </option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id.toString()}>
+              {cat.name}
+            </option>
+          ))}
         </select>
       </div>
       <div className="mb-4">
@@ -131,7 +182,7 @@ function SaveButtons({ category, title }: {
       }
 
       const requestBody = {
-        category: 0,
+        category: parseInt(category) || 0,
         title,
         content: html,
       };
@@ -140,7 +191,7 @@ function SaveButtons({ category, title }: {
       alert('Request Body: ' + JSON.stringify(requestBody, null, 2));
 
       // 서버로 POST 요청
-      const response = await fetch("http://localhost:8080/api1/post/test/create", {
+      const response = await fetch("http://localhost:8080/api1/post/주소/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +227,7 @@ function SaveButtons({ category, title }: {
       });
 
       const requestBody = {
-        category: 0,
+        category: parseInt(category) || 0,
         title: title || '제목 없음',
         content: html,
         isDraft: true, // 임시 저장 플래그

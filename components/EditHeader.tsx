@@ -1,5 +1,7 @@
+"use client";
+
 import { $isTextNode, COMMAND_PRIORITY_LOW, createCommand, ElementFormatType, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, TextFormatType } from 'lexical';
-import { TextNode, $createParagraphNode, $createTextNode, $getSelection, $isRangeSelection, $isParagraphNode } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, TextNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $patchStyleText, $setBlocksType } from '@lexical/selection';
 import { $createListItemNode, $createListNode, $isListNode, ListNode } from '@lexical/list';

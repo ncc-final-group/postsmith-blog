@@ -1,25 +1,27 @@
+"use client";
+import React, { useEffect, useState } from "react";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { TRANSFORMERS } from "@lexical/markdown";
 import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { ClearEditorPlugin } from "@lexical/react/LexicalClearEditorPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, CLICK_COMMAND } from 'lexical';
+import { TRANSFORMERS } from "@lexical/markdown";
 import { $patchStyleText } from '@lexical/selection';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
-import { $getRoot } from 'lexical';
-import React, { useState, useEffect } from "react";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
-import { CustomHRNode } from "./CustomHRNode";
 import { $createHeadingNode } from '@lexical/rich-text';
-import { $isTextNode } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, CLICK_COMMAND, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND } from 'lexical';
+import { $getRoot } from 'lexical';
+import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
+
+import { CustomHRNode } from "./CustomHRNode";
+
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 // 색상 변경 명령어 생성
 export const SET_TEXT_COLOR_COMMAND = createCommand('SET_TEXT_COLOR_COMMAND');
@@ -1205,6 +1207,48 @@ export default function Editor() {
 
         .editor-content a:hover {
           color: #1d4ed8;
+        }
+
+        /* 코드 블럭 스타일 - 모든 코드를 블럭 형태로 */
+        .editor-content code {
+          display: block;
+          background-color: #f1f5f9;
+          color: #475569;
+          padding: 16px;
+          border-radius: 8px;
+          font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
+          font-size: 14px !important;
+          border: 1px solid #e2e8f0;
+          margin: 16px 0;
+          overflow-x: auto;
+          line-height: 1.4;
+          white-space: pre-wrap;
+          font-weight: normal !important;
+        }
+
+        .editor-content pre {
+          background-color: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 16px;
+          overflow-x: auto;
+          margin: 16px 0;
+          font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
+          font-size: 14px !important;
+          line-height: 1.4;
+          font-weight: normal !important;
+        }
+
+        .editor-content pre code {
+          display: block;
+          background-color: transparent;
+          border: none;
+          padding: 0;
+          margin: 0;
+          color: #475569;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          font-weight: inherit !important;
         }
 
         /* 글꼴 스타일 보완 */
