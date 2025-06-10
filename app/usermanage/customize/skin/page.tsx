@@ -14,7 +14,7 @@ const skins: Skin[] = [
 export default function SkinPage() {
   return (
     <main className="min-h-screen bg-gray-100 py-8">
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="mx-auto max-w-none px-4">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">스킨 관리</h1>
         <SkinList skins={skins} activeSkinId="odyssey" />
       </div>

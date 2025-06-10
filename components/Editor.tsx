@@ -15,9 +15,10 @@ import { TRANSFORMERS } from "@lexical/markdown";
 import { $patchStyleText } from '@lexical/selection';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 import { $createHeadingNode } from '@lexical/rich-text';
-import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, CLICK_COMMAND, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, CLICK_COMMAND, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND } from 'lexical';
 import { $getRoot } from 'lexical';
 import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
+import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListItemNode, ListNode } from '@lexical/list';
 
 import { CustomHRNode } from "./CustomHRNode";
 
@@ -105,6 +106,61 @@ function EnterKeyPlugin() {
 
         const anchorNode = selection.anchor.getNode();
         const anchorOffset = selection.anchor.offset;
+
+        // 리스트 아이템에서 엔터키 처리
+        let currentNode = anchorNode;
+        let listItemNode = null;
+        
+        // 부모 노드를 따라 올라가면서 ListItemNode를 찾음
+        while (currentNode) {
+          if ($isListItemNode(currentNode)) {
+            listItemNode = currentNode;
+            break;
+          }
+          const parent = currentNode.getParent();
+          if (!parent) break;
+          currentNode = parent;
+        }
+        
+        if (listItemNode) {
+          const textContent = listItemNode.getTextContent();
+          
+          // 빈 리스트 아이템에서 엔터를 누른 경우
+          if (textContent === '') {
+            const listNode = listItemNode.getParent();
+            if ($isListNode(listNode)) {
+              // 1단 리스트인지 확인 (부모가 리스트 아이템이 아닌 경우)
+              const listParent = listNode.getParent();
+              const isTopLevel = !$isListItemNode(listParent);
+              
+              if (isTopLevel) {
+                // 1단 리스트에서 빈 아이템의 엔터: 리스트를 빠져나가기
+                if (event) event.preventDefault();
+                
+                // 새로운 paragraph 생성
+                const newParagraph = $createParagraphNode();
+                const textNode = $createTextNode('');
+                newParagraph.append(textNode);
+                
+                // 리스트 뒤에 paragraph 추가
+                listNode.insertAfter(newParagraph);
+                
+                // 현재 리스트 아이템 제거
+                listItemNode.remove();
+                
+                // 리스트가 비어있으면 리스트도 제거
+                if (listNode.getChildren().length === 0) {
+                  listNode.remove();
+                }
+                
+                // 새로운 paragraph로 포커스 이동
+                textNode.select();
+                
+                return true;
+              }
+            }
+          }
+        }
 
         // 이미지 노드 앞뒤에서 엔터키 처리
         if (anchorNode.getType() === 'custom-image') {
@@ -239,6 +295,151 @@ function HRKeyboardPlugin() {
       },
       COMMAND_PRIORITY_LOW
     );
+  }, [editor]);
+
+  return null;
+}
+
+function ListTabIndentationPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      KEY_TAB_COMMAND,
+      (event: KeyboardEvent) => {
+        const selection = $getSelection();
+        
+        if ($isRangeSelection(selection)) {
+          const anchorNode = selection.anchor.getNode();
+          
+          // 리스트 아이템 안에 있는지 확인
+          let listItemNode = null;
+          let currentNode = anchorNode;
+          
+          // 부모 노드를 따라 올라가면서 ListItemNode를 찾음
+          while (currentNode) {
+            if ($isListItemNode(currentNode)) {
+              listItemNode = currentNode;
+              break;
+            }
+            const parent = currentNode.getParent();
+            if (!parent) break;
+            currentNode = parent;
+          }
+          
+          if (listItemNode) {
+            event.preventDefault();
+            
+            const listNode = listItemNode.getParent();
+            if (!$isListNode(listNode)) return false;
+            
+            if (event.shiftKey) {
+              // Shift + Tab: 아웃덴트 (들여쓰기 해제)
+              const listType = listNode.getListType();
+              const currentValue = listItemNode.getValue();
+              
+              // 부모 리스트 노드의 부모를 찾음
+              const grandParent = listNode.getParent();
+              
+              if (grandParent) {
+                // 새로운 리스트 아이템 생성
+                const newListItem = $createListItemNode();
+                newListItem.append(...listItemNode.getChildren());
+                newListItem.setValue(currentValue);
+                
+                // 현재 아이템을 부모 레벨로 이동
+                if ($isListItemNode(grandParent)) {
+                  grandParent.insertAfter(newListItem);
+                } else {
+                  // 최상위 레벨로 이동
+                  const newList = $createListNode(listType);
+                  newList.append(newListItem);
+                  listNode.insertBefore(newList);
+                }
+                
+                listItemNode.remove();
+                newListItem.select();
+              }
+            } else {
+              // Tab: 인덴트 (들여쓰기)
+              const prevSibling = listItemNode.getPreviousSibling();
+              
+              if ($isListItemNode(prevSibling)) {
+                const listType = listNode.getListType();
+                const currentValue = listItemNode.getValue();
+                
+                // 이전 형제 요소의 자식으로 중첩 리스트 생성
+                let nestedList = null;
+                const lastChild = prevSibling.getLastChild();
+                
+                if ($isListNode(lastChild)) {
+                  nestedList = lastChild;
+                } else {
+                  nestedList = $createListNode(listType);
+                  prevSibling.append(nestedList);
+                }
+                
+                // 새로운 리스트 아이템 생성하여 중첩 리스트에 추가
+                const newListItem = $createListItemNode();
+                newListItem.append(...listItemNode.getChildren());
+                newListItem.setValue(currentValue);
+                
+                nestedList.append(newListItem);
+                listItemNode.remove();
+                newListItem.select();
+              }
+            }
+            
+            return true;
+          }
+        }
+        
+        return false;
+      },
+      COMMAND_PRIORITY_LOW
+    );
+  }, [editor]);
+
+  return null;
+}
+
+function CheckboxTogglePlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const editorElement = editor.getRootElement();
+    if (!editorElement) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // 체크박스 리스트 아이템인지 확인
+      const listItem = target.closest('li');
+      if (!listItem) return;
+      
+      const list = listItem.closest('ul[data-list-type="checkbox"]');
+      if (!list) return;
+
+      // 에디터 내의 클릭인지 확인
+      if (!editorElement.contains(listItem)) return;
+
+      e.preventDefault();
+      
+      // 체크 상태 토글
+      const isChecked = listItem.hasAttribute('data-checked');
+      
+      if (isChecked) {
+        listItem.removeAttribute('data-checked');
+      } else {
+        listItem.setAttribute('data-checked', 'true');
+      }
+    };
+
+    editorElement.addEventListener('click', handleClick);
+
+    return () => {
+      editorElement.removeEventListener('click', handleClick);
+    };
   }, [editor]);
 
   return null;
@@ -478,27 +679,226 @@ function ImageComponent({ src, alt, width, height, node }: {
   );
 }
 
+function VideoComponent({ src, alt, width, height, node }: { 
+  src: string; 
+  alt: string; 
+  width: string; 
+  height: string; 
+  node: any;
+}) {
+  const [editor] = useLexicalComposerContext();
+  const [showSizeMenu, setShowSizeMenu] = React.useState(false);
+  const [customWidth, setCustomWidth] = React.useState('');
+  const [showCustomInput, setShowCustomInput] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const sizeOptions = [
+    { label: '작게 (25%)', value: '25%' },
+    { label: '보통 (50%)', value: '50%' },
+    { label: '크게 (75%)', value: '75%' },
+    { label: '최대 (100%)', value: '100%' },
+    { label: '자동', value: 'auto' },
+    { label: '사용자 정의', value: 'custom' }
+  ];
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowSizeMenu(false);
+        setShowCustomInput(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleVideoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowSizeMenu(!showSizeMenu);
+  };
+
+  const handleSizeChange = (newWidth: string) => {
+    if (newWidth === 'custom') {
+      setShowCustomInput(true);
+      return;
+    }
+
+    editor.update(() => {
+      node.setSize(newWidth);
+    });
+    setShowSizeMenu(false);
+  };
+
+  const handleCustomSizeSubmit = () => {
+    if (customWidth) {
+      const width = /^\d+$/.test(customWidth) ? `${customWidth}px` : customWidth;
+      
+      editor.update(() => {
+        node.setSize(width);
+      });
+      setShowSizeMenu(false);
+      setShowCustomInput(false);
+      setCustomWidth('');
+    }
+  };
+
+  return (
+    <div className="relative inline-block group" style={{ margin: '20px 0', textAlign: 'center' }}>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <video
+          src={src}
+          controls
+          onClick={handleVideoClick}
+          style={{ 
+            width: width,
+            height: height,
+            maxWidth: '100%',
+            borderRadius: '8px',
+            border: showSizeMenu ? '3px solid #3B82F6' : '2px solid #e2e8f0',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s ease'
+          }}
+        >
+          <source src={src} type="video/mp4" />
+          <source src={src} type="video/webm" />
+          <source src={src} type="video/ogg" />
+          {alt}
+        </video>
+        
+        {/* 크기 조절 메뉴 */}
+        {showSizeMenu && (
+          <div
+            ref={menuRef}
+            style={{
+              position: 'absolute',
+              top: '0px',
+              right: '-220px',
+              background: 'white',
+              border: '2px solid #ccc',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              padding: '12px',
+              zIndex: 9999,
+              minWidth: '200px'
+            }}
+          >
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>비디오 크기</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {sizeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleSizeChange(option.value)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px',
+                    fontSize: '13px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: width === option.value ? '#e3f2fd' : 'transparent',
+                    color: width === option.value ? '#1976d2' : '#333',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (width !== option.value) {
+                      (e.target as HTMLElement).style.background = '#f5f5f5';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (width !== option.value) {
+                      (e.target as HTMLElement).style.background = 'transparent';
+                    }
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            
+            {/* 사용자 정의 크기 입력 */}
+            {showCustomInput && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                  사용자 정의 크기 (예: 300px, 50%, 20rem)
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={customWidth}
+                    onChange={(e) => setCustomWidth(e.target.value)}
+                    placeholder="300px"
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && handleCustomSizeSubmit()}
+                  />
+                  <button
+                    onClick={handleCustomSizeSubmit}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#2196f3',
+                      color: 'white',
+                      fontSize: '11px',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    적용
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* 현재 크기 표시 */}
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '11px', color: '#666' }}>
+              현재 크기: {width} × {height}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div style={{ 
+        fontSize: '14px', 
+        color: '#64748b', 
+        marginTop: '8px',
+        fontStyle: 'italic'
+      }}>
+        {alt}
+      </div>
+    </div>
+  );
+}
+
 // 커스텀 이미지 노드 생성
 export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   __src: string;
   __alt: string;
   __width: string;
   __height: string;
+  __mediaId?: number;
 
   static getType(): string {
     return 'custom-image';
   }
 
   static clone(node: CustomImageNode): CustomImageNode {
-    return new CustomImageNode(node.__src, node.__alt, node.__width, node.__height, node.__key);
+    return new CustomImageNode(node.__src, node.__alt, node.__width, node.__height, node.__mediaId, node.__key);
   }
 
-  constructor(src: string, alt: string, width: string = 'auto', height: string = 'auto', key?: NodeKey) {
+  constructor(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number, key?: NodeKey) {
     super(key);
     this.__src = src;
     this.__alt = alt;
     this.__width = width;
     this.__height = height;
+    this.__mediaId = mediaId;
   }
 
   createDOM(): HTMLElement {
@@ -523,9 +923,9 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     
     // 크기 조절 메뉴 생성
     const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
+    sizeMenu.style.position = 'fixed';
     sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
+    sizeMenu.style.left = '0px';
     sizeMenu.style.background = 'white';
     sizeMenu.style.border = '2px solid #ccc';
     sizeMenu.style.borderRadius = '8px';
@@ -608,6 +1008,24 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
       
       menuOpen = !menuOpen;
       if (menuOpen) {
+        // 메뉴 위치 동적 계산
+        const imgRect = img.getBoundingClientRect();
+        const menuWidth = 220;
+        const viewportWidth = window.innerWidth;
+        
+        // 오른쪽에 공간이 있으면 오른쪽에, 없으면 왼쪽에 표시
+        if (imgRect.right + menuWidth <= viewportWidth - 20) {
+          sizeMenu.style.position = 'fixed';
+          sizeMenu.style.left = `${imgRect.right + 10}px`;
+          sizeMenu.style.top = `${imgRect.top}px`;
+          sizeMenu.style.right = 'auto';
+        } else {
+          sizeMenu.style.position = 'fixed';
+          sizeMenu.style.right = `${viewportWidth - imgRect.left + 10}px`;
+          sizeMenu.style.top = `${imgRect.top}px`;
+          sizeMenu.style.left = 'auto';
+        }
+        
         sizeMenu.style.display = 'block';
         img.style.border = '3px solid #3B82F6';
       } else {
@@ -617,16 +1035,35 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     });
     
     // 외부 클릭시 메뉴 닫기
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target as Node)) {
+    const handleOutsideClick = (e: Event) => {
+      if (!container.contains(e.target as Node) && !sizeMenu.contains(e.target as Node)) {
         sizeMenu.style.display = 'none';
         img.style.border = '2px solid transparent';
         menuOpen = false;
       }
+    };
+    
+    document.addEventListener('click', handleOutsideClick);
+    
+    // 컨테이너가 DOM에서 제거될 때 정리
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+          if (node === container || (node as Element).contains?.(container)) {
+            document.removeEventListener('click', handleOutsideClick);
+            if (sizeMenu.parentNode) {
+              sizeMenu.parentNode.removeChild(sizeMenu);
+            }
+            observer.disconnect();
+          }
+        });
+      });
     });
     
+    observer.observe(document.body, { childList: true, subtree: true });
+    
     container.appendChild(img);
-    container.appendChild(sizeMenu);
+    document.body.appendChild(sizeMenu);
     
     return container;
   }
@@ -650,8 +1087,12 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   }
 }
 
-export function $createCustomImageNode(src: string, alt: string, width: string = 'auto', height: string = 'auto'): CustomImageNode {
-  return new CustomImageNode(src, alt, width, height);
+export function $createCustomImageNode(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number): CustomImageNode {
+  return new CustomImageNode(src, alt, width, height, mediaId);
+}
+
+export function $isCustomImageNode(node: LexicalNode | null | undefined): node is CustomImageNode {
+  return node instanceof CustomImageNode;
 }
 
 // 파일 노드 관련 타입
@@ -979,9 +1420,9 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     
     // 크기 조절 메뉴 (이미지와 유사)
     const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
+    sizeMenu.style.position = 'fixed';
     sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
+    sizeMenu.style.left = '0px';
     sizeMenu.style.background = 'white';
     sizeMenu.style.border = '2px solid #ccc';
     sizeMenu.style.borderRadius = '8px';
@@ -1063,6 +1504,24 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       
       menuOpen = !menuOpen;
       if (menuOpen) {
+        // 메뉴 위치 동적 계산
+        const videoRect = videoCard.getBoundingClientRect();
+        const menuWidth = 220;
+        const viewportWidth = window.innerWidth;
+        
+        // 오른쪽에 공간이 있으면 오른쪽에, 없으면 왼쪽에 표시
+        if (videoRect.right + menuWidth <= viewportWidth - 20) {
+          sizeMenu.style.position = 'fixed';
+          sizeMenu.style.left = `${videoRect.right + 10}px`;
+          sizeMenu.style.top = `${videoRect.top}px`;
+          sizeMenu.style.right = 'auto';
+        } else {
+          sizeMenu.style.position = 'fixed';
+          sizeMenu.style.right = `${viewportWidth - videoRect.left + 10}px`;
+          sizeMenu.style.top = `${videoRect.top}px`;
+          sizeMenu.style.left = 'auto';
+        }
+        
         sizeMenu.style.display = 'block';
         videoCard.style.border = '3px solid #3B82F6';
       } else {
@@ -1072,16 +1531,35 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     });
     
     // 외부 클릭시 메뉴 닫기
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target as Node)) {
+    const handleOutsideClick = (e: Event) => {
+      if (!container.contains(e.target as Node) && !sizeMenu.contains(e.target as Node)) {
         sizeMenu.style.display = 'none';
         videoCard.style.border = '2px solid #e5e5e5';
         menuOpen = false;
       }
+    };
+    
+    document.addEventListener('click', handleOutsideClick);
+    
+    // 컨테이너가 DOM에서 제거될 때 정리
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+          if (node === container || (node as Element).contains?.(container)) {
+            document.removeEventListener('click', handleOutsideClick);
+            if (sizeMenu.parentNode) {
+              sizeMenu.parentNode.removeChild(sizeMenu);
+            }
+            observer.disconnect();
+          }
+        });
+      });
     });
     
+    observer.observe(document.body, { childList: true, subtree: true });
+    
     container.appendChild(videoCard);
-    container.appendChild(sizeMenu);
+    document.body.appendChild(sizeMenu);
     
     return container;
   }
@@ -1160,6 +1638,60 @@ function LinkClickPlugin() {
     return () => {
       editorElement.removeEventListener('click', handleClick);
     };
+  }, [editor]);
+
+  return null;
+}
+
+function MediaDeletionPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      KEY_BACKSPACE_COMMAND,
+      (event: KeyboardEvent) => {
+        const selection = $getSelection();
+        
+        if ($isRangeSelection(selection)) {
+          const anchorNode = selection.anchor.getNode();
+          
+          // 미디어 노드들을 체크
+          let mediaNode = null;
+          
+          if ($isCustomImageNode(anchorNode)) {
+            mediaNode = anchorNode;
+          } else if ($isCustomVideoNode(anchorNode)) {
+            mediaNode = anchorNode;
+          } else if ($isCustomFileNode(anchorNode)) {
+            mediaNode = anchorNode;
+          } else {
+            // 부모 노드들도 체크
+            let currentNode = anchorNode.getParent();
+            while (currentNode) {
+              if ($isCustomImageNode(currentNode) || $isCustomVideoNode(currentNode) || $isCustomFileNode(currentNode)) {
+                mediaNode = currentNode;
+                break;
+              }
+              currentNode = currentNode.getParent();
+            }
+          }
+          
+          // 미디어 노드가 선택되었을 때 삭제
+          if (mediaNode) {
+            event.preventDefault();
+            
+            // 에디터에서만 노드 삭제 (서버에서는 삭제하지 않음)
+            // 실제 미디어 파일 삭제는 usermanage의 media 관리 창에서만 가능
+            mediaNode.remove();
+            
+            return true;
+          }
+        }
+        
+        return false;
+      },
+      COMMAND_PRIORITY_LOW
+    );
   }, [editor]);
 
   return null;
@@ -1251,6 +1783,159 @@ export default function Editor() {
           font-weight: inherit !important;
         }
 
+        /* 리스트 스타일 */
+        .editor-content ul,
+        .editor-content ol {
+          margin: 16px 0;
+          padding-left: 24px;
+        }
+
+        .editor-content li {
+          margin: 4px 0;
+          line-height: 1.6;
+        }
+
+        /* 기본 리스트 타입 */
+        .editor-content ul {
+          list-style-type: disc;
+        }
+
+        .editor-content ol {
+          list-style-type: decimal;
+        }
+
+        /* 커스텀 리스트 타입 */
+        .editor-content ul[data-list-type="checkbox"] {
+          list-style-type: none;
+        }
+
+        .editor-content ul[data-list-type="checkbox"] li {
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .editor-content ul[data-list-type="checkbox"] li::before {
+          content: "";
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #94a3b8;
+          border-radius: 3px;
+          margin-right: 8px;
+          vertical-align: middle;
+          transition: all 0.2s ease;
+          background-color: transparent;
+        }
+
+        .editor-content ul[data-list-type="checkbox"] li[data-checked="true"]::before {
+          background-color: #2563eb;
+          border-color: #2563eb;
+          background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 8l2.5 2.5L12 5'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: center;
+          background-size: 12px 12px;
+        }
+
+        .editor-content ul[data-list-type="checkbox"] li:hover::before {
+          border-color: #64748b;
+        }
+
+        .editor-content ul[data-list-type="checkbox"] li[data-checked="true"]:hover::before {
+          background-color: #1d4ed8;
+          border-color: #1d4ed8;
+        }
+
+        .editor-content ul[data-list-type="dash"] {
+          list-style-type: none;
+        }
+
+        .editor-content ul[data-list-type="dash"] li::before {
+          content: "– ";
+          margin-right: 8px;
+          color: #333;
+        }
+
+        .editor-content ul[data-list-type="arrow"] {
+          list-style-type: none;
+        }
+
+        .editor-content ul[data-list-type="arrow"] li::before {
+          content: "→ ";
+          margin-right: 8px;
+          color: #333;
+        }
+
+        .editor-content ul[data-list-type="roman"] {
+          list-style-type: none;
+          counter-reset: roman-counter;
+        }
+
+        .editor-content ul[data-list-type="roman"] li {
+          counter-increment: roman-counter;
+        }
+
+        .editor-content ul[data-list-type="roman"] li::before {
+          content: counter(roman-counter, lower-roman) ". ";
+          margin-right: 8px;
+          color: #333;
+        }
+
+        /* 중첩 리스트 들여쓰기 */
+        .editor-content ul ul,
+        .editor-content ol ol,
+        .editor-content ul ol,
+        .editor-content ol ul {
+          margin: 4px 0;
+          padding-left: 20px;
+        }
+
+        /* 텍스트 크기 스타일 - EditHeader와 일치 */
+        .editor-content h1 {
+          font-size: 2.25rem !important; /* 36px */
+          line-height: 1.2 !important;
+          font-weight: bold !important;
+          margin: 16px 0 !important;
+        }
+
+        .editor-content h2 {
+          font-size: 1.875rem !important; /* 30px */
+          line-height: 1.2 !important;
+          font-weight: bold !important;
+          margin: 14px 0 !important;
+        }
+
+        .editor-content h3 {
+          font-size: 1.5rem !important; /* 24px */
+          line-height: 1.2 !important;
+          font-weight: bold !important;
+          margin: 12px 0 !important;
+        }
+
+        /* 본문 크기 스타일 */
+        .editor-content p[data-text-size="p1"] {
+          font-size: 1.25rem !important; /* 20px */
+          line-height: 1.75rem !important;
+          margin: 8px 0 !important;
+        }
+
+        .editor-content p[data-text-size="p2"] {
+          font-size: 1.125rem !important; /* 18px */
+          line-height: 1.75rem !important;
+          margin: 6px 0 !important;
+        }
+
+        .editor-content p[data-text-size="p3"], 
+        .editor-content p {
+          font-size: 1rem !important; /* 16px */
+          line-height: 1.5rem !important;
+          margin: 4px 0 !important;
+        }
+
+        /* 기본 패러그래프 스타일 */
+        .editor-content p {
+          margin: 4px 0;
+        }
+
         /* 글꼴 스타일 보완 */
         @font-face {
           font-family: 'NanumGothic';
@@ -1275,12 +1960,15 @@ export default function Editor() {
         <ListPlugin />
         <LinkPlugin />
         <LinkClickPlugin />
+        <CheckboxTogglePlugin />
+        <MediaDeletionPlugin />
         <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
         <AutoFocusPlugin />
         <ClearEditorPlugin />
         <OnChange />
         <EnterKeyPlugin />
         <HRKeyboardPlugin />
+        <ListTabIndentationPlugin />
         <ColorPlugin />
         <HtmlExtractPlugin />
       </div>

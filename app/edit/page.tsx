@@ -12,6 +12,7 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { createEditor } from "lexical";
 import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 import React, { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { CustomHRNode } from "@components/CustomHRNode";
 import EditHeader from "@components/EditHeader";
@@ -191,7 +192,7 @@ function SaveButtons({ category, title }: {
       alert('Request Body: ' + JSON.stringify(requestBody, null, 2));
 
       // 서버로 POST 요청
-      const response = await fetch("http://localhost:8080/api1/post/주소/create", {
+      const response = await fetch("http://localhost:8080/api/contents/blog/주소/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -355,6 +356,9 @@ function ContentSizeMonitor() {
 export default function PostEditor() {
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
+  const searchParams = useSearchParams();
+  // 테스트용으로 blogId를 1로 고정
+  const blogId = 1;
 
   const initialConfig = {
     namespace: "PostEditor",
@@ -384,7 +388,7 @@ export default function PostEditor() {
     <div className="min-h-screen bg-gray-50">
       <LexicalComposer initialConfig={initialConfig}>
         <ContentSizeMonitor />
-        <EditHeader />
+        <EditHeader blogId={blogId} />
         <div className="max-w-4xl mx-auto py-8 px-4 pb-20">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <EditorForm 

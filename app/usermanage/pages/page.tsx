@@ -147,7 +147,7 @@ export default function BoardSitePage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="max-w-6xl">
+      <div className="max-w-none">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
             페이지 관리
@@ -167,7 +167,7 @@ export default function BoardSitePage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl pt-1">
+      <div className="max-w-none pt-1">
         {/* Search and Filter */}
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
           {/* Select All */}

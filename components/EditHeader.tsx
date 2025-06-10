@@ -4,8 +4,8 @@ import { $isTextNode, COMMAND_PRIORITY_LOW, createCommand, ElementFormatType, FO
 import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, TextNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $patchStyleText, $setBlocksType } from '@lexical/selection';
-import { $createListItemNode, $createListNode, $isListNode, ListNode } from '@lexical/list';
-import { TOGGLE_LINK_COMMAND, $createLinkNode, $isLinkNode } from '@lexical/link';
+import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListNode } from '@lexical/list';
+import { $createLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $createCustomHRNode } from './CustomHRNode';
 import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
 import { $createCodeNode } from '@lexical/code';
@@ -18,11 +18,10 @@ import { $getRoot } from 'lexical';
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
 import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './Editor';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
+import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
+import { getMediaFiles, type MediaFile } from '../lib/mediaService';
 
-// 파일 크기 제한 설정
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
-const MAX_VIDEO_SIZE = 8 * 1024 * 1024; // 8MB
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 
 // 파일 크기 포맷팅
 const formatFileSize = (bytes: number): string => {
@@ -32,47 +31,6 @@ const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
-
-// 이미지 압축 함수
-const compressImage = async (file: File): Promise<string> => {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = document.createElement('img') as HTMLImageElement;
-    
-    img.onload = () => {
-      // 최대 너비 1920px로 제한
-      const maxWidth = 1920;
-      let { width, height } = img;
-      
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(compressedDataUrl);
-      } else {
-        // 압축 실패시 원본 반환
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string || '');
-        reader.readAsDataURL(file);
-      }
-    };
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-};
-
 // 커스텀 TextFormatType 타입 확장
 type ExtendedTextFormatType = TextFormatType | string;
 
@@ -98,6 +56,30 @@ const fontFamilyOptions = [
   { label: '궁서', value: 'gungsuh', family: 'Gungsuh, 궁서, serif' },
 ];
 
+// 툴팁 정보 정의
+const getToolTipInfo = (format: string): { title: string; description: string } => {
+  const tooltips: Record<string, { title: string; description: string }> = {
+    'image': { title: '파일', description: '이미지, 동영상, 파일 삽입' },
+    'bold': { title: '굵게', description: '텍스트를 굵게 표시' },
+    'italic': { title: '기울임', description: '텍스트를 기울임꼴로 표시' },
+    'underline': { title: '밑줄', description: '텍스트에 밑줄 추가' },
+    'strikethrough': { title: '취소선', description: '텍스트에 취소선 추가' },
+    'textColor': { title: '글자 색상', description: '텍스트 색상 변경' },
+    'bgColor': { title: '배경 색상', description: '텍스트 배경색 변경' },
+    'left': { title: '왼쪽 정렬', description: '텍스트를 왼쪽으로 정렬' },
+    'center': { title: '가운데 정렬', description: '텍스트를 가운데로 정렬' },
+    'right': { title: '오른쪽 정렬', description: '텍스트를 오른쪽으로 정렬' },
+    'justify': { title: '양쪽 정렬', description: '텍스트를 양쪽으로 정렬' },
+    'list': { title: '목록', description: '목록 형식 삽입' },
+    'link': { title: '링크', description: '하이퍼링크 삽입' },
+    'divider': { title: '구분선', description: '수평선 삽입' },
+    'code': { title: '코드', description: '코드 블록 삽입' },
+    'plugin': { title: '플러그인', description: '플러그인 텍스트 삽입' },
+  };
+  
+  return tooltips[format] || { title: format, description: '' };
+};
+
 const ToolbarButton = ({
   format,
   icon,
@@ -112,23 +94,88 @@ const ToolbarButton = ({
   isActive: boolean;
   buttonRef?: React.LegacyRef<HTMLButtonElement>;
   style?: React.CSSProperties;
-}) => (
-  <button
-    ref={buttonRef}
-    type="button"
-    onMouseDown={e => {
-      e.preventDefault();
-      onClick();
-    }}
-    className={`px-2 py-1 border border-black rounded mx-1 hover:bg-gray-200 text-black ${
-      isActive ? 'bg-gray-200' : 'bg-white'
-    }`}
-    aria-label={format}
-    style={style}
-  >
-    {icon}
-  </button>
-);
+}) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const tooltipInfo = getToolTipInfo(format);
+  const localButtonRef = useRef<HTMLButtonElement>(null);
+  const actualButtonRef = buttonRef || localButtonRef;
+
+  const updateTooltipPosition = () => {
+    if (actualButtonRef && 'current' in actualButtonRef && actualButtonRef.current) {
+      const rect = actualButtonRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.bottom + 8, // 버튼 아래 8px
+        left: rect.left + rect.width / 2, // 버튼 중앙
+      });
+    }
+  };
+
+  const handleMouseEnter = () => {
+    updateTooltipPosition();
+    setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowTooltip(false); // 클릭 시 툴팁 숨기기
+    onClick();
+  };
+
+  // 스크롤 시 툴팁 위치 업데이트
+  useEffect(() => {
+    if (showTooltip) {
+      const handleScroll = () => updateTooltipPosition();
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [showTooltip]);
+
+  return (
+    <>
+      <button
+        ref={actualButtonRef}
+        type="button"
+        onMouseDown={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`px-2 py-1 border border-black rounded mx-1 transition-all duration-200 text-black ${
+          isActive 
+            ? 'bg-gray-200 shadow-inner' 
+            : 'bg-white hover:bg-gray-100 hover:shadow-md'
+        }`}
+        aria-label={format}
+        style={style}
+      >
+        {icon}
+      </button>
+      
+      {/* 툴팁 - fixed 위치로 동적 계산 */}
+      {showTooltip && (
+        <div 
+          className="fixed z-50 transform -translate-x-1/2"
+          style={{
+            top: `${tooltipPosition.top}px`,
+            left: `${tooltipPosition.left}px`,
+          }}
+        >
+          <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+            <div className="font-medium">{tooltipInfo.title}</div>
+            {tooltipInfo.description && (
+              <div className="text-gray-300 text-xs mt-1">{tooltipInfo.description}</div>
+            )}
+            {/* 위쪽 화살표 */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 interface LinkFormProps {
   onSubmit: (text: string, url: string) => void;
@@ -137,8 +184,8 @@ interface LinkFormProps {
 }
 
 const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
-  const [text, setText] = useState('');
-  const [url, setUrl] = useState('');
+  const [text, setText] = useState<string>('');
+  const [url, setUrl] = useState<string>('');
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,7 +204,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -168,7 +215,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">텍스트</label>
           <input
             type="text"
-            value={text || ''}
+            value={text}
             onChange={(e) => setText(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="링크에 표시될 텍스트"
@@ -178,7 +225,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
           <input
             type="url"
-            value={url || ''}
+            value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="https://example.com"
@@ -267,7 +314,7 @@ const HrForm = ({ onSubmit, onClose, position }: HrFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -327,7 +374,7 @@ const bgColors = [
 
 const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
   const formRef = useRef<HTMLDivElement>(null);
-  const [customColor, setCustomColor] = useState('#000000');
+  const [customColor, setCustomColor] = useState<string>('#000000');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -347,7 +394,7 @@ const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -470,7 +517,7 @@ const ListForm = ({ onSubmit, onClose, position }: ListFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -501,15 +548,18 @@ const ListForm = ({ onSubmit, onClose, position }: ListFormProps) => {
 };
 
 interface ImageFormProps {
-  onSubmit: (src: string, alt: string) => void;
+  onSubmit: (src: string, alt: string, mediaId?: number) => void;
   onClose: () => void;
   position: { top: number; left: number } | null;
+  blogId?: number;
 }
 
-const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
-  const [imageUrl, setImageUrl] = useState('');
-  const [altText, setAltText] = useState('');
+const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [altText, setAltText] = useState<string>('');
   const [uploadType, setUploadType] = useState<'url' | 'file'>('url');
+  const [mediaId, setMediaId] = useState<number | undefined>(undefined);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -526,52 +576,87 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
 
   // uploadType이 변경될 때 상태 초기화
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('업로드 타입 변경:', uploadType);
     setImageUrl('');
     setAltText('');
+    setMediaId(undefined);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
+    }
     // file input 초기화
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [uploadType]);
+  }, [uploadType, previewUrl]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 파일 크기 체크
-      if (file.size > MAX_IMAGE_SIZE) {
-        alert(`이미지 파일이 너무 큽니다. 최대 ${formatFileSize(MAX_IMAGE_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}\n\n자동으로 압축을 시도합니다.`);
+      // 클라이언트 사이드 파일 크기 검증 (10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('파일 크기가 10MB를 초과했습니다. 더 작은 파일을 선택해주세요.');
+        // 파일 입력 초기화
+        if (event.target) {
+          event.target.value = '';
+        }
+        return;
       }
+
+      // 즉시 미리보기를 위한 Object URL 생성
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
       
-      // 이미지 압축
-      if (file.type.startsWith('image/')) {
-        compressImage(file).then((compressedDataUrl) => {
-          setImageUrl(compressedDataUrl);
-          setAltText(file.name.split('.')[0] || '');
-          
-          // 압축 후 크기 확인
-          const compressedSize = compressedDataUrl.length * 0.75; // Base64 크기 추정
-          if (compressedSize > MAX_IMAGE_SIZE) {
-            alert(`압축 후에도 파일이 큽니다. 더 작은 이미지를 사용해주세요.\n압축 후 크기: ${formatFileSize(compressedSize)}`);
-          }
-        });
-      } else {
-        // 이미지가 아닌 경우 원본 사용
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          setImageUrl(result || '');
-          setAltText(file.name.split('.')[0] || '');
-        };
-        reader.readAsDataURL(file);
+      // 서버에 파일 업로드
+      try {
+        const fileName = file.name.split('.')[0] || '';
+        // eslint-disable-next-line no-console
+        console.log('이미지 업로드 시작:', { fileName, fileSize: file.size });
+        
+        const result = await uploadImageToServer(file, fileName, undefined, blogId);
+        // eslint-disable-next-line no-console
+        console.log('이미지 업로드 결과:', result);
+        
+        if (result.success && result.url) {
+          // eslint-disable-next-line no-console
+          console.log('이미지 URL 설정:', result.url);
+          setImageUrl(result.url);
+          setAltText(result.altText || fileName);
+          setMediaId(result.mediaId);
+          // 업로드 성공 후 Object URL 해제
+          URL.revokeObjectURL(objectUrl);
+          setPreviewUrl('');
+        } else {
+          // eslint-disable-next-line no-console
+          console.error('업로드 실패:', result);
+          alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
+          // 업로드 실패 시에도 Object URL 해제
+          URL.revokeObjectURL(objectUrl);
+          setPreviewUrl('');
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('파일 업로드 중 오류 발생:', error);
+        alert('파일 업로드 중 오류가 발생했습니다.');
+        // 오류 발생 시에도 Object URL 해제
+        URL.revokeObjectURL(objectUrl);
+        setPreviewUrl('');
       }
     }
   };
 
   const handleSubmit = () => {
     if (imageUrl) {
-      onSubmit(imageUrl, altText || '이미지');
+      onSubmit(imageUrl, altText || '이미지', mediaId);
       setImageUrl('');
       setAltText('');
+      setMediaId(undefined);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl('');
+      }
       // file input 초기화
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -584,7 +669,7 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -592,6 +677,11 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
     >
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700">이미지 추가</h3>
+        
+        {/* 디버그 정보 */}
+        <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded">
+          디버그: URL={imageUrl ? '있음' : '없음'}, 미리보기={previewUrl ? '있음' : '없음'}, 타입={uploadType}
+        </div>
         
         {/* 업로드 타입 선택 */}
         <div className="flex space-x-2">
@@ -626,8 +716,13 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">이미지 URL</label>
             <input
               type="url"
-              value={imageUrl || ''}
-              onChange={(e) => setImageUrl(e.target.value)}
+              value={imageUrl}
+              onChange={(e) => {
+                const url = e.target.value;
+                setImageUrl(url);
+                // eslint-disable-next-line no-console
+                console.log('URL 입력 변경:', url);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="https://example.com/image.jpg"
             />
@@ -650,7 +745,7 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">대체 텍스트</label>
           <input
             type="text"
-            value={altText || ''}
+            value={altText}
             onChange={(e) => setAltText(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="이미지 설명"
@@ -658,14 +753,44 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
         </div>
 
         {/* 이미지 미리보기 */}
-        {imageUrl && (
+        {(imageUrl || previewUrl) && (
           <div className="mt-3">
             <p className="text-sm text-gray-600 mb-2">미리보기:</p>
-            <img 
-              src={imageUrl} 
-              alt={altText || '미리보기'} 
-              className="max-w-full h-24 object-cover rounded border"
-            />
+            <div className="relative">
+              <div className="relative w-full h-24 rounded border overflow-hidden">
+                {previewUrl ? (
+                  // 파일 업로드 중일 때는 Object URL 사용
+                  <img 
+                    src={previewUrl} 
+                    alt={altText || '미리보기'} 
+                    className="w-full h-full object-cover"
+                    onLoad={() => {
+                      // eslint-disable-next-line no-console
+                      console.log('미리보기 로드 성공:', previewUrl);
+                    }}
+                  />
+                ) : (
+                  // 서버 업로드 완료 후 이미지 표시
+                  <img 
+                    src={imageUrl} 
+                    alt={altText || '미리보기'} 
+                    className="w-full h-full object-cover"
+                    onLoad={() => {
+                      // eslint-disable-next-line no-console
+                      console.log('이미지 로드 성공:', imageUrl);
+                    }}
+                    onError={(e) => {
+                      // eslint-disable-next-line no-console
+                      console.error('이미지 로드 실패:', imageUrl, e);
+                    }}
+                  />
+                )}
+              </div>
+              <div className="mt-1 text-xs text-gray-500 break-all">
+                URL: {previewUrl || imageUrl}
+                {previewUrl && <span className="ml-2 text-orange-500">(업로드 중...)</span>}
+              </div>
+            </div>
           </div>
         )}
 
@@ -689,12 +814,7 @@ const ImageForm = ({ onSubmit, onClose, position }: ImageFormProps) => {
   );
 };
 
-// 미디어 드롭다운 관련 인터페이스
-interface MediaDropdownProps {
-  onSelect: (type: 'image' | 'file' | 'video') => void;
-  onClose: () => void;
-  position: { top: number; left: number } | null;
-}
+
 
 const mediaOptions = [
   { 
@@ -720,7 +840,15 @@ const mediaOptions = [
   }
 ];
 
-const MediaDropdown = ({ onSelect, onClose, position }: MediaDropdownProps) => {
+// 미디어 선택 드롭다운 개선
+interface MediaDropdownProps {
+  onSelect: (type: 'image' | 'file' | 'video') => void;
+  onExistingSelect: (type: 'image' | 'file' | 'video') => void;
+  onClose: () => void;
+  position: { top: number; left: number } | null;
+}
+
+const MediaDropdown = ({ onSelect, onExistingSelect, onClose, position }: MediaDropdownProps) => {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -739,43 +867,315 @@ const MediaDropdown = ({ onSelect, onClose, position }: MediaDropdownProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-64"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-72"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
       }}
     >
-      <div className="space-y-1">
-        <h3 className="text-sm font-medium text-gray-700 px-2 py-1">미디어 타입 선택</h3>
-        {mediaOptions.map((option) => (
-          <button
-            key={option.id}
-            onClick={() => onSelect(option.type)}
-            className="w-full p-2 hover:bg-gray-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
-          >
-            <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-blue-600`}></i>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">{option.name}</div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {option.description}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-gray-700 px-2 py-1">미디어 삽입</h3>
+        
+        {/* 새 파일 업로드 섹션 */}
+        <div className="border-b border-gray-100 pb-2">
+          <h4 className="text-xs font-medium text-gray-600 px-2 mb-1">새 파일 업로드</h4>
+          {mediaOptions.map((option) => (
+            <button
+              key={`new-${option.id}`}
+              onClick={() => onSelect(option.type)}
+              className="w-full p-2 hover:bg-blue-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+            >
+              <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-blue-600`}></i>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm">{option.name} 업로드</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {option.description}
+                </div>
               </div>
-            </div>
+            </button>
+          ))}
+        </div>
+
+        {/* 기존 파일 선택 섹션 */}
+        <div>
+          <h4 className="text-xs font-medium text-gray-600 px-2 mb-1">기존 파일 선택</h4>
+          {mediaOptions.map((option) => (
+            <button
+              key={`existing-${option.id}`}
+              onClick={() => onExistingSelect(option.type)}
+              className="w-full p-2 hover:bg-green-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+            >
+              <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-green-600`}></i>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm">기존 {option.name} 선택</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  업로드된 {option.name} 목록에서 선택
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 기존 미디어 파일 선택 모달 컴포넌트
+interface ExistingMediaModalProps {
+  onSubmit: (files: MediaFile[]) => void;
+  onClose: () => void;
+  isOpen: boolean;
+  fileType: 'image' | 'file' | 'video';
+  blogId?: number;
+}
+
+const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: ExistingMediaModalProps) => {
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadMediaFiles = async () => {
+      try {
+        setLoading(true);
+        const response = await getMediaFiles({
+          userId: 1, // 고정값
+          page: 0,
+          size: 100, // 모달이므로 더 많은 파일 로드
+          fileType: fileType,
+        });
+        setMediaFiles(response.content);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '파일 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      loadMediaFiles();
+      setSelectedFiles(new Set()); // 모달 열릴 때 선택 초기화
+    }
+  }, [isOpen, fileType]);
+
+  const handleFileToggle = (fileId: number) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      // 비디오 타입인 경우 하나만 선택 가능
+      if (fileType === 'video') {
+        newSelected.clear();
+      }
+      newSelected.add(fileId);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    // 비디오 타입인 경우 전체 선택 비활성화
+    if (fileType === 'video') return;
+    
+    if (selectedFiles.size === mediaFiles.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(mediaFiles.map(file => file.id)));
+    }
+  };
+
+  const handleSubmit = () => {
+    // 중복 클릭 방지
+    if (isSubmitting || selectedFiles.size === 0) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const selectedMediaFiles = mediaFiles.filter(file => selectedFiles.has(file.id));
+      onSubmit(selectedMediaFiles);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getFileTypeLabel = () => {
+    switch (fileType) {
+      case 'image': return '이미지';
+      case 'video': return '동영상';
+      case 'file': return '파일';
+      default: return '파일';
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+      {/* 배경 오버레이 */}
+      <div 
+        className="absolute inset-0"
+        onClick={onClose}
+      />
+      
+      {/* 모달 컨텐츠 */}
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">기존 {getFileTypeLabel()} 선택</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <i className="bi bi-x-lg text-xl"></i>
           </button>
-        ))}
+        </div>
+
+        {/* 컨텐츠 */}
+        <div className="p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <span className="ml-3 text-gray-600">파일 목록 로딩 중...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-red-500">{error}</p>
+            </div>
+          ) : mediaFiles.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-gray-500">업로드된 {getFileTypeLabel()}이 없습니다.</p>
+            </div>
+          ) : (
+            <>
+              {/* 전체 선택 버튼 */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  {fileType !== 'video' && (
+                    <button
+                      onClick={handleSelectAll}
+                      className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.size === mediaFiles.length && mediaFiles.length > 0}
+                        onChange={handleSelectAll}
+                        className="mr-2"
+                      />
+                      전체 선택
+                    </button>
+                  )}
+                  {fileType === 'video' && (
+                    <div className="text-sm text-gray-500">
+                      비디오는 하나씩만 선택 가능합니다
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {selectedFiles.size}개 선택됨 / 총 {mediaFiles.length}개
+                </div>
+              </div>
+
+                             {/* 파일 그리드 */}
+               <div 
+                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto pr-2"
+                 style={{
+                   scrollbarWidth: 'thin',
+                   scrollbarColor: '#d1d5db #f3f4f6'
+                 }}
+               >
+                {mediaFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    onClick={() => handleFileToggle(file.id)}
+                    className={`relative border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                      selectedFiles.has(file.id)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* 체크박스 */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(file.id)}
+                        onChange={() => handleFileToggle(file.id)}
+                        className="w-4 h-4"
+                      />
+                    </div>
+
+                    {/* 파일 미리보기 */}
+                    <div className="mb-2">
+                      {fileType === 'image' ? (
+                        <img
+                          src={file.fileUrl}
+                          alt={file.altText || file.originalFileName}
+                          className="w-full h-24 object-cover rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42Mjc0IDM2IDM2IDMwLjYyNzQgMzYgMjRDMzYgMTcuMzcyNiAzMC42Mjc0IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42Mjc0IDE3LjM3MjYgMzYgMjQgMzYiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjwvcG='
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-24 bg-gray-100 rounded flex items-center justify-center">
+                          <i className={`bi ${fileType === 'video' ? 'bi-camera-video' : 'bi-file-earmark'} text-2xl text-gray-500`}></i>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 파일 정보 */}
+                    <div className="text-xs">
+                      <div className="font-medium truncate" title={file.originalFileName}>
+                        {file.originalFileName}
+                      </div>
+                      <div className="text-gray-500 mt-1">
+                        {new Date(file.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-gray-500">
+                        {Math.round(file.fileSize / 1024)} KB
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 푸터 */}
+        {!loading && !error && mediaFiles.length > 0 && (
+          <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={selectedFiles.size === 0}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              선택한 파일 삽입 ({selectedFiles.size}개)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 interface FileFormProps {
-  onSubmit: (file: File, fileName: string) => void;
+  onSubmit: (fileUrl: string, fileName: string, fileSize: number, fileType: string) => void;
   onClose: () => void;
   position: { top: number; left: number } | null;
+  blogId?: number;
 }
 
-const FileForm = ({ onSubmit, onClose, position }: FileFormProps) => {
+const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
+  const [fileName, setFileName] = useState<string>('');
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -793,24 +1193,42 @@ const FileForm = ({ onSubmit, onClose, position }: FileFormProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 파일 크기 체크
-      if (file.size > MAX_FILE_SIZE) {
-        alert(`파일이 너무 큽니다. 최대 ${formatFileSize(MAX_FILE_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}`);
+      // 클라이언트 사이드 파일 크기 검증 (50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        alert('파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.');
+        // 파일 입력 초기화
+        if (event.target) {
+          event.target.value = '';
+        }
         return;
       }
-      
+
       setSelectedFile(file);
       setFileName(file.name);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedFile) {
-      onSubmit(selectedFile, fileName || selectedFile.name);
-      setSelectedFile(null);
-      setFileName('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      try {
+        const result = await uploadFileToServer(selectedFile, fileName || selectedFile.name, undefined, blogId);
+        
+        if (result.success && result.url) {
+          // 파일 노드에 필요한 정보를 전달
+          onSubmit(result.url, fileName || selectedFile.name, selectedFile.size, result.fileType || '');
+          setSelectedFile(null);
+          setFileName('');
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } else {
+          alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('파일 업로드 중 오류 발생:', error);
+        alert('파일 업로드 중 오류가 발생했습니다.');
       }
     }
   };
@@ -820,7 +1238,7 @@ const FileForm = ({ onSubmit, onClose, position }: FileFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -844,7 +1262,7 @@ const FileForm = ({ onSubmit, onClose, position }: FileFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">표시 이름</label>
           <input
             type="text"
-            value={fileName || ''}
+            value={fileName}
             onChange={(e) => setFileName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="파일 이름"
@@ -883,11 +1301,12 @@ interface VideoFormProps {
   onSubmit: (src: string, alt: string) => void;
   onClose: () => void;
   position: { top: number; left: number } | null;
+  blogId?: number;
 }
 
-const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
-  const [videoUrl, setVideoUrl] = useState('');
-  const [altText, setAltText] = useState('');
+const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [altText, setAltText] = useState<string>('');
   const [uploadType, setUploadType] = useState<'url' | 'file'>('url');
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -905,37 +1324,67 @@ const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
   }, [onClose]);
 
   useEffect(() => {
-    setVideoUrl('');
-    setAltText('');
-    setSelectedVideo(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    // uploadType 변경 시 초기화
+    if (uploadType === 'url') {
+      setVideoUrl('');
+      setAltText('');
+      setSelectedVideo(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } else {
+      setVideoUrl('');
+      setAltText('');
+      setSelectedVideo(null);
     }
   }, [uploadType]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 비디오 파일 크기 체크
-      if (file.size > MAX_VIDEO_SIZE) {
-        alert(`비디오 파일이 너무 큽니다. 최대 ${formatFileSize(MAX_VIDEO_SIZE)}까지 허용됩니다.\n현재 크기: ${formatFileSize(file.size)}`);
+      // 클라이언트 사이드 파일 크기 검증 (50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        alert('파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.');
+        // 파일 입력 초기화
+        if (event.target) {
+          event.target.value = '';
+        }
         return;
       }
-      
-      setSelectedVideo(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setVideoUrl(result || '');
-        setAltText(file.name.split('.')[0] || '');
-      };
-      reader.readAsDataURL(file);
+
+      // 서버에 파일 업로드
+      try {
+        const fileName = file.name.split('.')[0] || '';
+        const result = await uploadVideoToServer(file, fileName, undefined, blogId);
+        
+        if (result.success && result.url) {
+          setVideoUrl(result.url || '');
+          setAltText(result.altText || fileName || '비디오');
+          setSelectedVideo(file);
+        } else {
+          alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
+          // 업로드 실패 시에도 초기값 유지
+          setVideoUrl('');
+          setAltText('');
+          setSelectedVideo(null);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('비디오 업로드 중 오류 발생:', error);
+        alert('비디오 업로드 중 오류가 발생했습니다.');
+        // 에러 발생 시에도 초기값 유지
+        setVideoUrl('');
+        setAltText('');
+        setSelectedVideo(null);
+      }
     }
   };
 
   const handleSubmit = () => {
-    if (videoUrl) {
+    if (videoUrl && videoUrl.trim()) {
       onSubmit(videoUrl, altText || '비디오');
+      // 제출 후 초기화
       setVideoUrl('');
       setAltText('');
       setSelectedVideo(null);
@@ -950,7 +1399,7 @@ const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
   return (
     <div
       ref={formRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
       style={{ 
         top: `${position.top}px`,
         left: `${position.left - 100}px`
@@ -987,7 +1436,7 @@ const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">비디오 URL</label>
             <input
               type="url"
-              value={videoUrl || ''}
+              value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="https://example.com/video.mp4"
@@ -1010,7 +1459,7 @@ const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
           <input
             type="text"
-            value={altText || ''}
+            value={altText}
             onChange={(e) => setAltText(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="비디오 설명"
@@ -1045,7 +1494,11 @@ const VideoForm = ({ onSubmit, onClose, position }: VideoFormProps) => {
   );
 };
 
-export default function EditHeader() {
+interface EditHeaderProps {
+  blogId?: number;
+}
+
+export default function EditHeader({ blogId }: EditHeaderProps) {
   const [editor] = useLexicalComposerContext();
   const [activeStyles, setActiveStyles] = useState<Set<string>>(new Set());
   const [blockType, setBlockType] = useState<string>('paragraph');
@@ -1060,6 +1513,8 @@ export default function EditHeader() {
   const [mediaDropdownPosition, setMediaDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [fileFormPosition, setFileFormPosition] = useState<{ top: number; left: number } | null>(null);
   const [videoFormPosition, setVideoFormPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isExistingMediaModalOpen, setIsExistingMediaModalOpen] = useState(false);
+  const [existingMediaFileType, setExistingMediaFileType] = useState<'image' | 'file' | 'video'>('image');
   const linkButtonRef = useRef<HTMLButtonElement>(null);
   const hrButtonRef = useRef<HTMLButtonElement>(null);
   const listButtonRef = useRef<HTMLButtonElement>(null);
@@ -1134,43 +1589,85 @@ export default function EditHeader() {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
 
-      if (size === 'h1' || size === 'h2' || size === 'h3') {
-        // 헤딩으로 변환
-        $setBlocksType(selection, () => $createHeadingNode(size as HeadingTagType));
-      } else {
-        // 본문으로 변환 (paragraph)
-        $setBlocksType(selection, () => {
-          const paragraph = $createParagraphNode();
-          
-          // 본문 크기에 따른 인라인 스타일 적용
-          if (size === 'p1') {
-            paragraph.setStyle('font-size: 1.25rem; line-height: 1.75rem;'); // text-xl
-          } else if (size === 'p2') {
-            paragraph.setStyle('font-size: 1.125rem; line-height: 1.75rem;'); // text-lg
-          } else { // p3
-            paragraph.setStyle('font-size: 1rem; line-height: 1.5rem;'); // text-base
-          }
-          
-          return paragraph;
-        });
+      // 텍스트가 선택되어 있는지 확인 (드래그된 상태)
+      if (!selection.isCollapsed()) {
+        // 선택된 텍스트에만 인라인 스타일 적용
+        let fontSize = '';
+        let lineHeight = '';
+        let fontWeight = '';
         
-        // DOM에 추가 속성 설정 (스타일 적용 후)
-        setTimeout(() => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if ($isRangeSelection(selection)) {
-              const anchorNode = selection.anchor.getNode();
-              const element = anchorNode.getKey() === 'root' 
-                ? anchorNode 
-                : anchorNode.getTopLevelElementOrThrow();
-              
-              const domElement = editor.getElementByKey(element.getKey());
-              if (domElement && element.getType() === 'paragraph') {
-                domElement.setAttribute('data-text-size', size);
-              }
+        if (size === 'h1') {
+          fontSize = '2.25rem';
+          lineHeight = '1.2';
+          fontWeight = 'bold';
+        } else if (size === 'h2') {
+          fontSize = '1.875rem';
+          lineHeight = '1.2';
+          fontWeight = 'bold';
+        } else if (size === 'h3') {
+          fontSize = '1.5rem';
+          lineHeight = '1.2';
+          fontWeight = 'bold';
+        } else if (size === 'p1') {
+          fontSize = '1.25rem';
+          lineHeight = '1.75rem';
+          fontWeight = 'normal';
+        } else if (size === 'p2') {
+          fontSize = '1.125rem';
+          lineHeight = '1.75rem';
+          fontWeight = 'normal';
+        } else { // p3
+          fontSize = '1rem';
+          lineHeight = '1.5rem';
+          fontWeight = 'normal';
+        }
+        
+        // 선택된 텍스트에 인라인 스타일 적용
+        $patchStyleText(selection, {
+          'font-size': fontSize,
+          'line-height': lineHeight,
+          'font-weight': fontWeight
+        });
+      } else {
+        // 커서만 있는 경우 (텍스트 선택되지 않음) - 블록 단위로 변경
+        if (size === 'h1' || size === 'h2' || size === 'h3') {
+          // 헤딩으로 변환
+          $setBlocksType(selection, () => $createHeadingNode(size as HeadingTagType));
+        } else {
+          // 본문으로 변환 (paragraph)
+          $setBlocksType(selection, () => {
+            const paragraph = $createParagraphNode();
+            
+            // 본문 크기에 따른 인라인 스타일 적용
+            if (size === 'p1') {
+              paragraph.setStyle('font-size: 1.25rem; line-height: 1.75rem;'); // text-xl
+            } else if (size === 'p2') {
+              paragraph.setStyle('font-size: 1.125rem; line-height: 1.75rem;'); // text-lg
+            } else { // p3
+              paragraph.setStyle('font-size: 1rem; line-height: 1.5rem;'); // text-base
             }
+            
+            return paragraph;
           });
-        }, 10);
+          
+          // DOM에 추가 속성 설정 (스타일 적용 후)
+          setTimeout(() => {
+            editor.update(() => {
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                const anchorNode = selection.anchor.getNode();
+                const element = anchorNode.getKey() === 'root' 
+                  ? anchorNode 
+                  : anchorNode.getTopLevelElementOrThrow();
+                
+                const domElement = editor.getElementByKey(element.getKey());
+                if (domElement && element.getType() === 'paragraph') {
+                  domElement.setAttribute('data-text-size', size);
+                }
+              }
+            });
+          }, 10);
+        }
       }
     });
     setCurrentTextSize(size);
@@ -1180,8 +1677,8 @@ export default function EditHeader() {
     if (listButtonRef.current) {
       const rect = listButtonRef.current.getBoundingClientRect();
       setListFormPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1191,48 +1688,151 @@ export default function EditHeader() {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
 
-      const nodes = selection.getNodes();
-      const firstNode = nodes[0];
-      const firstNodeParent = firstNode.getParent();
+      const anchorNode = selection.anchor.getNode();
+      
+      // 현재 노드가 리스트 아이템 안에 있는지 확인
+      let currentListItemNode = null;
+      let currentNode = anchorNode;
+      
+      while (currentNode) {
+        if ($isListItemNode(currentNode)) {
+          currentListItemNode = currentNode;
+          break;
+        }
+        const parent = currentNode.getParent();
+        if (!parent) break;
+        currentNode = parent;
+      }
 
-      if ($isListNode(firstNodeParent)) {
-        // 이미 리스트인 경우, 리스트를 제거하고 일반 텍스트로 변환
-        const paragraphs = nodes.map(node => {
-          const text = node.getTextContent();
-          const paragraph = $createParagraphNode();
-          const textNode = $createTextNode(text);
-          paragraph.append(textNode);
-          return paragraph;
-        });
-
-        firstNodeParent.replace(paragraphs[0]);
-        for (let i = 1; i < paragraphs.length; i++) {
-          paragraphs[i - 1].insertAfter(paragraphs[i]);
+      if (currentListItemNode) {
+        // 현재 리스트 아이템 안에 있는 경우
+        const currentList = currentListItemNode.getParent();
+        if (!$isListNode(currentList)) return;
+        
+        const currentListType = currentList.getListType();
+        
+                          // 리스트 타입 변경 또는 들여쓰기
+        const prevSibling = currentListItemNode.getPreviousSibling();
+        
+        if (prevSibling && $isListItemNode(prevSibling)) {
+          // 이전 형제가 있는 경우: 들여쓰기하면서 타입 변경
+          if (type === 'bullet' || type === 'number') {
+            // 기본 리스트 타입으로 들여쓰기
+            const nestedList = $createListNode(type);
+            const newListItem = $createListItemNode();
+            newListItem.append(...currentListItemNode.getChildren());
+            nestedList.append(newListItem);
+            prevSibling.append(nestedList);
+            
+            // 현재 리스트 아이템 제거
+            currentListItemNode.remove();
+            
+            // 새로운 리스트 아이템으로 포커스 이동
+            newListItem.select();
+          } else {
+            // 커스텀 타입으로 들여쓰기
+            const nestedList = $createListNode('bullet');
+            const newListItem = $createListItemNode();
+            newListItem.append(...currentListItemNode.getChildren());
+            nestedList.append(newListItem);
+            prevSibling.append(nestedList);
+            currentListItemNode.remove();
+            
+            // 새로운 리스트 아이템으로 포커스 이동
+            newListItem.select();
+            
+            // 커스텀 타입 설정
+            setTimeout(() => {
+              const domElement = editor.getElementByKey(nestedList.getKey());
+              if (domElement) {
+                domElement.setAttribute('data-list-type', type);
+              }
+            }, 0);
+          }
+        } else {
+          // 이전 형제가 없는 경우: 현재 위치에서 타입만 변경
+          if (type === 'bullet' || type === 'number') {
+            // 기본 리스트 타입으로 변경
+            if (currentListType !== type) {
+              // 새로운 타입의 리스트 생성
+              const newList = $createListNode(type);
+              const newListItem = $createListItemNode();
+              newListItem.append(...currentListItemNode.getChildren());
+              newList.append(newListItem);
+              
+              // 현재 리스트를 새로운 리스트로 교체
+              currentList.replace(newList);
+              
+              // 새로운 리스트 아이템으로 포커스 이동
+              newListItem.select();
+            }
+          } else {
+            // 커스텀 타입으로 변경
+            const newList = $createListNode('bullet');
+            const newListItem = $createListItemNode();
+            newListItem.append(...currentListItemNode.getChildren());
+            newList.append(newListItem);
+            
+            // 현재 리스트를 새로운 리스트로 교체
+            currentList.replace(newList);
+            
+            // 새로운 리스트 아이템으로 포커스 이동
+            newListItem.select();
+            
+            // 커스텀 타입 설정
+            setTimeout(() => {
+              const domElement = editor.getElementByKey(newList.getKey());
+              if (domElement) {
+                domElement.setAttribute('data-list-type', type);
+              }
+            }, 0);
+          }
         }
       } else {
-        // 일반 텍스트를 리스트로 변환
-        let listNode;
-        if (type === 'bullet' || type === 'number') {
-          // 기본 Lexical 리스트 타입
-          listNode = $createListNode(type);
+        // 일반 텍스트를 리스트로 변환 (기존 로직 유지)
+        const nodes = selection.getNodes();
+        const firstNode = nodes[0];
+        const firstNodeParent = firstNode.getParent();
+
+        if ($isListNode(firstNodeParent)) {
+          // 이미 리스트인 경우, 리스트를 제거하고 일반 텍스트로 변환
+          const paragraphs = nodes.map(node => {
+            const text = node.getTextContent();
+            const paragraph = $createParagraphNode();
+            const textNode = $createTextNode(text);
+            paragraph.append(textNode);
+            return paragraph;
+          });
+
+          firstNodeParent.replace(paragraphs[0]);
+          for (let i = 1; i < paragraphs.length; i++) {
+            paragraphs[i - 1].insertAfter(paragraphs[i]);
+          }
         } else {
-          // 커스텀 리스트 타입들은 bullet으로 생성
-          listNode = $createListNode('bullet');
-        }
-        
-        const listItemNode = $createListItemNode();
-        listItemNode.append($createTextNode(firstNode.getTextContent()));
-        listNode.append(listItemNode);
-        firstNode.replace(listNode);
-        
-        // 커스텀 타입의 경우 DOM에 data attribute 추가 (update 완료 후)
-        if (type !== 'bullet' && type !== 'number') {
-          setTimeout(() => {
-            const domElement = editor.getElementByKey(listNode.getKey());
-            if (domElement) {
-              domElement.setAttribute('data-list-type', type);
-            }
-          }, 0);
+          // 일반 텍스트를 리스트로 변환
+          let listNode;
+          if (type === 'bullet' || type === 'number') {
+            // 기본 Lexical 리스트 타입
+            listNode = $createListNode(type);
+          } else {
+            // 커스텀 리스트 타입들은 bullet으로 생성
+            listNode = $createListNode('bullet');
+          }
+          
+          const listItemNode = $createListItemNode();
+          listItemNode.append($createTextNode(firstNode.getTextContent()));
+          listNode.append(listItemNode);
+          firstNode.replace(listNode);
+          
+          // 커스텀 타입의 경우 DOM에 data attribute 추가 (update 완료 후)
+          if (type !== 'bullet' && type !== 'number') {
+            setTimeout(() => {
+              const domElement = editor.getElementByKey(listNode.getKey());
+              if (domElement) {
+                domElement.setAttribute('data-list-type', type);
+              }
+            }, 0);
+          }
         }
       }
     });
@@ -1243,8 +1843,8 @@ export default function EditHeader() {
     if (linkButtonRef.current) {
       const rect = linkButtonRef.current.getBoundingClientRect();
       setLinkFormPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1284,8 +1884,8 @@ export default function EditHeader() {
     if (hrButtonRef.current) {
       const rect = hrButtonRef.current.getBoundingClientRect();
       setHrFormPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1305,8 +1905,8 @@ export default function EditHeader() {
     if (textColorButtonRef.current) {
       const rect = textColorButtonRef.current.getBoundingClientRect();
       setTextColorFormPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1315,8 +1915,8 @@ export default function EditHeader() {
     if (bgColorButtonRef.current) {
       const rect = bgColorButtonRef.current.getBoundingClientRect();
       setBgColorFormPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1422,8 +2022,8 @@ export default function EditHeader() {
     if (imageButtonRef.current) {
       const rect = imageButtonRef.current.getBoundingClientRect();
       setMediaDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       });
     }
   };
@@ -1434,8 +2034,8 @@ export default function EditHeader() {
     if (imageButtonRef.current) {
       const rect = imageButtonRef.current.getBoundingClientRect();
       const position = {
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
       };
       
       switch (type) {
@@ -1452,7 +2052,7 @@ export default function EditHeader() {
     }
   };
 
-  const handleImageSubmit = (src: string, alt: string) => {
+  const handleImageSubmit = (src: string, alt: string, mediaId?: number) => {
     editor.update(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
@@ -1461,8 +2061,8 @@ export default function EditHeader() {
       const beforeParagraph = $createParagraphNode();
       beforeParagraph.append($createTextNode(''));
       
-      // 실제 이미지 노드 생성
-      const imageNode = $createCustomImageNode(src, alt);
+      // 실제 이미지 노드 생성 (mediaId 포함)
+      const imageNode = $createCustomImageNode(src, alt, 'auto', 'auto', mediaId);
       
       // 이미지 뒤에 빈 paragraph 추가
       const afterParagraph = $createParagraphNode();
@@ -1477,33 +2077,25 @@ export default function EditHeader() {
     setImageFormPosition(null);
   };
 
-  const handleFileSubmit = (file: File, fileName: string) => {
-    // 파일을 Base64로 변환
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const fileData = e.target?.result as string;
-      const fileExtension = file.name.split('.').pop() || '';
+  const handleFileSubmit = (fileUrl: string, fileName: string, fileSize: number, fileType: string) => {
+    // 에디터 업데이트 내부에서 노드 생성
+    editor.update(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
       
-      // 에디터 업데이트 내부에서 노드 생성
-      editor.update(() => {
-        const selection = $getSelection();
-        if (!$isRangeSelection(selection)) return;
-        
-        // 파일 노드 생성 (fileName, fileSize, fileType, fileData)
-        const fileNode = $createCustomFileNode(fileName, file.size, fileExtension, fileData);
-        
-        // 파일 앞뒤에 빈 paragraph 추가
-        const beforeParagraph = $createParagraphNode();
-        beforeParagraph.append($createTextNode(''));
-        
-        const afterParagraph = $createParagraphNode();
-        afterParagraph.append($createTextNode(''));
+      // 파일 노드 생성 (fileName, fileSize, fileType, fileUrl)
+      const fileNode = $createCustomFileNode(fileName, fileSize, fileType, fileUrl);
+      
+      // 파일 앞뒤에 빈 paragraph 추가
+      const beforeParagraph = $createParagraphNode();
+      beforeParagraph.append($createTextNode(''));
+      
+      const afterParagraph = $createParagraphNode();
+      afterParagraph.append($createTextNode(''));
 
-        selection.insertNodes([beforeParagraph, fileNode, afterParagraph]);
-        afterParagraph.selectEnd();
-      });
-    };
-    reader.readAsDataURL(file);
+      selection.insertNodes([beforeParagraph, fileNode, afterParagraph]);
+      afterParagraph.selectEnd();
+    });
     setFileFormPosition(null);
   };
 
@@ -1529,6 +2121,65 @@ export default function EditHeader() {
       });
     }
     setVideoFormPosition(null);
+  };
+
+  const handleExistingMediaSelect = (type: 'image' | 'file' | 'video') => {
+    setMediaDropdownPosition(null);
+    setExistingMediaFileType(type);
+    setIsExistingMediaModalOpen(true);
+  };
+
+  const handleExistingMediaSubmit = (files: MediaFile[]) => {
+    // 빈 파일 배열이거나 이미 처리 중인 경우 방지
+    if (!files || files.length === 0) return;
+    
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        for (const file of files) {
+          if (file.fileType === 'image') {
+            // 이미지 노드 생성 및 삽입 (handleImageSubmit과 동일한 방식)
+            const beforeParagraph = $createParagraphNode();
+            beforeParagraph.append($createTextNode(''));
+            
+            const imageNode = $createCustomImageNode(file.fileUrl, file.altText || file.originalFileName, 'auto', 'auto', file.id);
+            
+            const afterParagraph = $createParagraphNode();
+            afterParagraph.append($createTextNode(''));
+
+            selection.insertNodes([beforeParagraph, imageNode, afterParagraph]);
+            afterParagraph.selectEnd();
+            
+          } else if (file.fileType === 'video') {
+            // 비디오 노드 생성 및 삽입 (handleVideoSubmit과 동일한 방식)
+            const beforeParagraph = $createParagraphNode();
+            beforeParagraph.append($createTextNode(''));
+            
+            const videoNode = $createCustomVideoNode(file.fileUrl, file.altText || file.originalFileName);
+            
+            const afterParagraph = $createParagraphNode();
+            afterParagraph.append($createTextNode(''));
+
+            selection.insertNodes([beforeParagraph, videoNode, afterParagraph]);
+            afterParagraph.selectEnd();
+            
+          } else {
+            // 파일 노드 생성 및 삽입 (handleFileSubmit과 동일한 방식)
+            const beforeParagraph = $createParagraphNode();
+            beforeParagraph.append($createTextNode(''));
+            
+            const fileNode = $createCustomFileNode(file.originalFileName, file.fileSize, file.mimeType, file.fileUrl);
+            
+            const afterParagraph = $createParagraphNode();
+            afterParagraph.append($createTextNode(''));
+
+            selection.insertNodes([beforeParagraph, fileNode, afterParagraph]);
+            afterParagraph.selectEnd();
+          }
+        }
+      }
+    });
+    setIsExistingMediaModalOpen(false);
   };
 
   const handleCode = () => {
@@ -1566,7 +2217,7 @@ export default function EditHeader() {
         
         {/* 텍스트 크기 선택 드롭다운 */}
         <div className="flex items-center space-x-1 ml-8">
-          <ToolbarButton
+                    <ToolbarButton
             format="image"
             icon={<i className="bi bi-image"></i>}
             onClick={handleImage}
@@ -1574,30 +2225,75 @@ export default function EditHeader() {
             buttonRef={imageButtonRef}
           />
           
-          <select
-            value={currentTextSize}
-            onChange={(e) => handleTextSize(e.target.value)}
-            className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 h-8"
-          >
-            {textSizeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="mx-2 h-6 border-l border-gray-300" />
+          
+          <div className="relative group mx-1">
+            <select
+              value={currentTextSize}
+              onChange={(e) => handleTextSize(e.target.value)}
+              className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 h-8 transition-all duration-200"
+              style={{
+                fontSize: '1rem', // 선택된 값은 본문3 크기로 통일
+                fontWeight: 'normal',
+                lineHeight: '1.2',
+                width: 'auto',
+                minWidth: '100px'
+              }}
+            >
+              {textSizeOptions.map((option) => (
+                <option 
+                  key={option.value} 
+                  value={option.value}
+                  style={{
+                    fontSize: option.value === 'h1' ? '2.25rem' : 
+                            option.value === 'h2' ? '1.875rem' :
+                            option.value === 'h3' ? '1.5rem' :
+                            option.value === 'p1' ? '1.25rem' :
+                            option.value === 'p2' ? '1.125rem' : '1rem',
+                    fontWeight: ['h1', 'h2', 'h3'].includes(option.value) ? 'bold' : 'normal',
+                    lineHeight: '1.2'
+                  }}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            
+            {/* 텍스트 크기 툴팁 - 호버 시만 표시, sticky 헤더와 함께 움직임 */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                <div className="font-medium">텍스트 크기</div>
+                <div className="text-gray-300 text-xs mt-1">제목과 본문 크기 선택</div>
+                {/* 위쪽 화살표 */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+              </div>
+            </div>
+          </div>
           
           {/* 글씨체 선택 드롭다운 */}
-          <select
-            value={currentFontFamily}
-            onChange={(e) => handleFontFamily(e.target.value)}
-            className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 h-8"
-          >
-            {fontFamilyOptions.map((option) => (
-              <option key={option.value} value={option.value} style={{ fontFamily: option.family }}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative group mx-1">
+            <select
+              value={currentFontFamily}
+              onChange={(e) => handleFontFamily(e.target.value)}
+              className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 h-8 transition-all duration-200"
+            >
+              {fontFamilyOptions.map((option) => (
+                <option key={option.value} value={option.value} style={{ fontFamily: option.family }}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            
+            {/* 글꼴 툴팁 - 아래쪽 표시 */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                <div className="font-medium">글꼴</div>
+                <div className="text-gray-300 text-xs mt-1">텍스트 글꼴 변경</div>
+                {/* 위쪽 화살표 */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+              </div>
+                         </div>
+           </div>
           
           <div className="mx-2 h-6 border-l border-gray-300" />
           
@@ -1744,20 +2440,31 @@ export default function EditHeader() {
           onSubmit={handleImageSubmit}
           onClose={() => setImageFormPosition(null)}
           position={imageFormPosition}
+          blogId={blogId}
         />
       )}
-      {mediaDropdownPosition && (
-        <MediaDropdown
-          onSelect={handleMediaSelect}
-          onClose={() => setMediaDropdownPosition(null)}
-          position={mediaDropdownPosition}
+              {mediaDropdownPosition && (
+          <MediaDropdown
+            onSelect={handleMediaSelect}
+            onExistingSelect={handleExistingMediaSelect}
+            onClose={() => setMediaDropdownPosition(null)}
+            position={mediaDropdownPosition}
+          />
+        )}
+        
+        <ExistingMediaModal
+          onSubmit={handleExistingMediaSubmit}
+          onClose={() => setIsExistingMediaModalOpen(false)}
+          isOpen={isExistingMediaModalOpen}
+          fileType={existingMediaFileType}
+          blogId={blogId}
         />
-      )}
       {fileFormPosition && (
         <FileForm
           onSubmit={handleFileSubmit}
           onClose={() => setFileFormPosition(null)}
           position={fileFormPosition}
+          blogId={blogId}
         />
       )}
       {videoFormPosition && (
@@ -1765,6 +2472,7 @@ export default function EditHeader() {
           onSubmit={handleVideoSubmit}
           onClose={() => setVideoFormPosition(null)}
           position={videoFormPosition}
+          blogId={blogId}
         />
       )}
     </div>

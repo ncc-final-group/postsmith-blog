@@ -15,6 +15,13 @@ const nextConfig: NextConfig = {
         pathname: '/**',
         search: '',
       },
+      {
+        protocol: 'https',
+        hostname: 'kr.object.ncloudstorage.com',
+        port: '',
+        pathname: '/postsmith-bucket/**',
+        search: '',
+      },
     ],
   },
 };
