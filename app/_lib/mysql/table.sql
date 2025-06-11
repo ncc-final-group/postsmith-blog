@@ -18,13 +18,11 @@ SELECT `blogs`.`id`,
     `blogs`.`updated_at`
 FROM `postsmith`.`blogs`;
 SELECT `categories`.`id`,
+    `categories`.`blog_id`,
+    `categories`.`category_id`,
     `categories`.`name`,
-    `categories`.`description`,
-    `categories`.`parent_id`,
-    `categories`.`type`,
-    `categories`.`sort_order`,
-    `categories`.`post_count`,
-    `categories`.`user_id`
+    `categories`.`sequence`,
+    `categories`.`description`
 FROM `postsmith`.`categories`;
 SELECT `content_tags`.`content_id`,
     `content_tags`.`tag_id`
@@ -41,8 +39,9 @@ SELECT `content_visits`.`id`,
     `content_visits`.`created_at`
 FROM `postsmith`.`content_visits`;
 SELECT `contents`.`id`,
-    `contents`.`blog_id`,
     `contents`.`category_id`,
+    `contents`.`blog_id`,
+    `contents`.`sequence`,
     `contents`.`type`,
     `contents`.`title`,
     `contents`.`content_html`,
@@ -51,9 +50,9 @@ SELECT `contents`.`id`,
     `contents`.`is_public`,
     `contents`.`likes`,
     `contents`.`created_at`,
-    `contents`.`updated_at`,
-    `contents`.`categories_id`
+    `contents`.`updated_at`
 FROM `postsmith`.`contents`;
+
 SELECT `notifications`.`id`,
     `notifications`.`user_id`,
     `notifications`.`type`,

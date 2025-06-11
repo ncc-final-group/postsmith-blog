@@ -61,6 +61,11 @@ export class CustomHRNode extends DecoratorNode<React.ReactElement> {
   }
 }
 
+// Helper functions
 export function $createCustomHRNode(style: string): CustomHRNode {
   return new CustomHRNode(style);
+}
+
+export function $isCustomHRNode(node: any): node is CustomHRNode {
+  return node instanceof CustomHRNode;
 } 

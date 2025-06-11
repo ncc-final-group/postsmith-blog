@@ -6,7 +6,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $patchStyleText, $setBlocksType } from '@lexical/selection';
 import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListNode } from '@lexical/list';
 import { $createLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
-import { $createCustomHRNode } from './CustomHRNode';
+import { $createCustomHRNode } from '../components/CustomHRNode';
 import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
 import { $createCodeNode } from '@lexical/code';
 import Image from 'next/image';
