@@ -1,3 +1,4 @@
+/*
 import { Dialog } from '@headlessui/react';
 import { useState } from 'react';
 
@@ -52,7 +53,7 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
             카테고리 이동
           </Dialog.Title>
 
-          {/* 검색 입력창 */}
+          {/!* 검색 입력창 *!/}
           <div className="mb-4">
             <input
               type="text"
@@ -64,9 +65,9 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
             />
           </div>
 
-          {/* 카테고리 목록 */}
+          {/!* 카테고리 목록 *!/}
           <div className="max-h-[400px] space-y-2 overflow-y-auto">
-            {/* 일반 카테고리 옵션 */}
+            {/!* 일반 카테고리 옵션 *!/}
             <div
               onClick={() => !isMoving && handleMove(0, true)}
               className={`cursor-pointer rounded-lg border p-4 transition-colors duration-200 hover:bg-blue-50 ${isMoving ? 'cursor-not-allowed opacity-50' : ''}`}
@@ -79,7 +80,7 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
               </div>
             </div>
 
-            {/* 다른 카테고리 목록 */}
+            {/!* 다른 카테고리 목록 *!/}
             {filteredCategories.length === 0 ? (
               <div className="py-4 text-center text-gray-500">이동 가능한 카테고리가 없습니다.</div>
             ) : (
@@ -100,7 +101,7 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
             )}
           </div>
 
-          {/* 하단 버튼 */}
+          {/!* 하단 버튼 *!/}
           <div className="mt-4 flex justify-end gap-2">
             <button onClick={onClose} className="rounded-md px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-100" disabled={isMoving}>
               취소
@@ -111,3 +112,4 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
     </Dialog>
   );
 }
+*/
