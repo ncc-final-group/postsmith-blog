@@ -42,11 +42,17 @@ export default function PostsListPage() {
         setLoading(true);
         setError(null);
 
-        // 카테고리와 콘텐츠를 병렬로 가져오기
+        // 카테고리와 콘텐츠를 병렬로 가져오기 (subdomain 기반으로 자동 감지)
         const [contentsResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/contents?blogId=1'),
-          fetch('/api/categories?blogId=1')
+          fetch('/api/contents'),
+          fetch('/api/categories')
         ]);
+
+        // 블로그가 존재하지 않는 경우 404 처리
+        if (contentsResponse.status === 404 || categoriesResponse.status === 404) {
+          setError('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
+          return;
+        }
 
         const contentsResult = await contentsResponse.json();
         const categoriesResult = await categoriesResponse.json();

@@ -45,8 +45,15 @@ export default function PostDetailPage() {
         setLoading(true);
         setError(null);
 
-        // 블로그 ID는 1로 고정, content_sequence는 URL의 [id] 사용
-        const response = await fetch(`/api/posts/${postId}?blogId=1`);
+        // subdomain 기반으로 자동 감지
+        const response = await fetch(`/api/posts/${postId}`);
+        
+        // 블로그가 존재하지 않는 경우 404 처리
+        if (response.status === 404) {
+          setError('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
+          return;
+        }
+        
         const result = await response.json();
 
         if (result.success && result.data) {

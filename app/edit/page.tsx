@@ -1,4 +1,6 @@
 "use client";
+/* eslint-disable no-console */
+/* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { $generateHtmlFromNodes } from "@lexical/html";
@@ -17,6 +19,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CustomHRNode } from "@components/CustomHRNode";
 import EditHeader from "@components/EditHeader";
 import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from "@components/Editor";
+import { getSubdomain } from "../../lib/utils";
+import { BLOG_API_URL } from "../../lib/constants";
 
 
 
@@ -83,8 +87,15 @@ function EditorForm({ category, setCategory, title, setTitle }: {
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoadingCategories(true);
-      // API Route를 통해 카테고리 가져오기
-      const response = await fetch('/api/categories?blogId=1');
+      // API Route를 통해 카테고리 가져오기 (subdomain 기반으로 자동 감지)
+      const response = await fetch('/api/categories');
+      
+      // 블로그가 존재하지 않는 경우 404 처리
+      if (response.status === 404) {
+        alert('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
+        return;
+      }
+      
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -152,6 +163,7 @@ function SaveButtons({ category, title }: {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +171,13 @@ function SaveButtons({ category, title }: {
     setError(null);
 
     try {
+      // 서브도메인 가져오기
+      const subdomain = getSubdomain();
+      if (!subdomain) {
+        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
+        return;
+      }
+
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = "";
@@ -182,31 +201,55 @@ function SaveButtons({ category, title }: {
         return;
       }
 
+      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
+      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
+      if (!blogResponse.ok) {
+        alert('블로그 정보를 가져올 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      const blogData = await blogResponse.json();
+      const blogId = blogData?.id || blogData?.data?.id;
+
+      if (!blogId) {
+        alert('블로그 ID를 찾을 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+
       const requestBody = {
+        blogId,
         category: parseInt(category) || 0,
         title,
         content: html,
       };
 
-      // 요청 내용 확인
-      alert('Request Body: ' + JSON.stringify(requestBody, null, 2));
+      // 디버깅을 위한 로그 추가
+      console.log('요청 URL:', `${BLOG_API_URL}/create`);
+      console.log('요청 데이터:', requestBody);
 
       // 서버로 POST 요청
-      const response = await fetch("http://localhost:8080/api/contents/blog/주소/create", {
+      const response = await fetch(`/api/contents`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
 
+      // 응답 로깅
+      console.log('응답 상태:', response.status);
+      const responseData = await response.text();
+      console.log('응답 데이터:', responseData);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);
       }
 
-      const result = await response.json();
-      alert("저장 완료!");
+      alert("글이 성공적으로 저장되었습니다.");
+      
+      // 저장 완료 후 블로그 메인 페이지로 이동
+      router.push(`/`);  // 메인 페이지로 이동
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
       alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
@@ -220,6 +263,13 @@ function SaveButtons({ category, title }: {
     setError(null);
 
     try {
+      // 서브도메인 가져오기
+      const subdomain = getSubdomain();
+      if (!subdomain) {
+        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
+        return;
+      }
+
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = "";
@@ -234,7 +284,21 @@ function SaveButtons({ category, title }: {
         isDraft: true, // 임시 저장 플래그
       };
 
-      // 임시 저장 요청 (실제로는 다른 엔드포인트를 사용할 수 있음)
+      // 임시 저장 요청
+      const response = await fetch(`${BLOG_API_URL}/${subdomain}/temp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       alert('임시 저장 완료!');
     } catch (err) {
       setError(err instanceof Error ? err.message : '임시 저장 중 오류가 발생했습니다.');
@@ -357,8 +421,6 @@ export default function PostEditor() {
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
   const searchParams = useSearchParams();
-  // 테스트용으로 blogId를 1로 고정
-  const blogId = 1;
 
   const initialConfig = {
     namespace: "PostEditor",
@@ -388,7 +450,7 @@ export default function PostEditor() {
     <div className="min-h-screen bg-gray-50">
       <LexicalComposer initialConfig={initialConfig}>
         <ContentSizeMonitor />
-        <EditHeader blogId={blogId} />
+        <EditHeader />
         <div className="max-w-4xl mx-auto py-8 px-4 pb-20">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <EditorForm 

@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getContentByBlogIdAndSequence } from '../../tbContents';
+import { extractBlogId } from '../../utils/blogUtils';
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const blogId = parseInt(searchParams.get('blogId') || '1');
+    const blogId = await extractBlogId(request);
+    
+    // 블로그가 존재하지 않으면 404 반환
+    if (blogId === null) {
+      return NextResponse.json({
+        success: false,
+        message: '블로그를 찾을 수 없습니다.',
+        data: null
+      }, { status: 404 });
+    }
+    
     const params = await context.params;
     const sequence = parseInt(params.id);
 

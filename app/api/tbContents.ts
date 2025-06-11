@@ -11,6 +11,6 @@ export const getContentByBlogIdAndSequence = async (blogId: number, contentSeque
 };
 
 export const getContentsByBlogId = async (blogId: number) => {
-  const query = 'SELECT * FROM contents WHERE blog_id = ? ORDER BY content_sequence DESC';
+  const query = 'SELECT * FROM contents WHERE blog_id = ? ORDER BY sequence DESC';
   return await selectSQL(query, [blogId]);
 }; 

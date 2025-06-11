@@ -679,203 +679,6 @@ function ImageComponent({ src, alt, width, height, node }: {
   );
 }
 
-function VideoComponent({ src, alt, width, height, node }: { 
-  src: string; 
-  alt: string; 
-  width: string; 
-  height: string; 
-  node: any;
-}) {
-  const [editor] = useLexicalComposerContext();
-  const [showSizeMenu, setShowSizeMenu] = React.useState(false);
-  const [customWidth, setCustomWidth] = React.useState('');
-  const [showCustomInput, setShowCustomInput] = React.useState(false);
-  const menuRef = React.useRef<HTMLDivElement>(null);
-
-  const sizeOptions = [
-    { label: '작게 (25%)', value: '25%' },
-    { label: '보통 (50%)', value: '50%' },
-    { label: '크게 (75%)', value: '75%' },
-    { label: '최대 (100%)', value: '100%' },
-    { label: '자동', value: 'auto' },
-    { label: '사용자 정의', value: 'custom' }
-  ];
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowSizeMenu(false);
-        setShowCustomInput(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleVideoClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowSizeMenu(!showSizeMenu);
-  };
-
-  const handleSizeChange = (newWidth: string) => {
-    if (newWidth === 'custom') {
-      setShowCustomInput(true);
-      return;
-    }
-
-    editor.update(() => {
-      node.setSize(newWidth);
-    });
-    setShowSizeMenu(false);
-  };
-
-  const handleCustomSizeSubmit = () => {
-    if (customWidth) {
-      const width = /^\d+$/.test(customWidth) ? `${customWidth}px` : customWidth;
-      
-      editor.update(() => {
-        node.setSize(width);
-      });
-      setShowSizeMenu(false);
-      setShowCustomInput(false);
-      setCustomWidth('');
-    }
-  };
-
-  return (
-    <div className="relative inline-block group" style={{ margin: '20px 0', textAlign: 'center' }}>
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        <video
-          src={src}
-          controls
-          onClick={handleVideoClick}
-          style={{ 
-            width: width,
-            height: height,
-            maxWidth: '100%',
-            borderRadius: '8px',
-            border: showSizeMenu ? '3px solid #3B82F6' : '2px solid #e2e8f0',
-            cursor: 'pointer',
-            transition: 'border-color 0.2s ease'
-          }}
-        >
-          <source src={src} type="video/mp4" />
-          <source src={src} type="video/webm" />
-          <source src={src} type="video/ogg" />
-          {alt}
-        </video>
-        
-        {/* 크기 조절 메뉴 */}
-        {showSizeMenu && (
-          <div
-            ref={menuRef}
-            style={{
-              position: 'absolute',
-              top: '0px',
-              right: '-220px',
-              background: 'white',
-              border: '2px solid #ccc',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              padding: '12px',
-              zIndex: 9999,
-              minWidth: '200px'
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>비디오 크기</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {sizeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleSizeChange(option.value)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px',
-                    fontSize: '13px',
-                    border: 'none',
-                    borderRadius: '4px',
-                    background: width === option.value ? '#e3f2fd' : 'transparent',
-                    color: width === option.value ? '#1976d2' : '#333',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (width !== option.value) {
-                      (e.target as HTMLElement).style.background = '#f5f5f5';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (width !== option.value) {
-                      (e.target as HTMLElement).style.background = 'transparent';
-                    }
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            
-            {/* 사용자 정의 크기 입력 */}
-            {showCustomInput && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-                  사용자 정의 크기 (예: 300px, 50%, 20rem)
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={customWidth}
-                    onChange={(e) => setCustomWidth(e.target.value)}
-                    placeholder="300px"
-                    style={{
-                      flex: 1,
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px'
-                    }}
-                    onKeyPress={(e) => e.key === 'Enter' && handleCustomSizeSubmit()}
-                  />
-                  <button
-                    onClick={handleCustomSizeSubmit}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#2196f3',
-                      color: 'white',
-                      fontSize: '11px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    적용
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* 현재 크기 표시 */}
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '11px', color: '#666' }}>
-              현재 크기: {width} × {height}
-            </div>
-          </div>
-        )}
-      </div>
-      
-      <div style={{ 
-        fontSize: '14px', 
-        color: '#64748b', 
-        marginTop: '8px',
-        fontStyle: 'italic'
-      }}>
-        {alt}
-      </div>
-    </div>
-  );
-}
-
 // 커스텀 이미지 노드 생성
 export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   __src: string;
@@ -923,9 +726,9 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     
     // 크기 조절 메뉴 생성
     const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'fixed';
+    sizeMenu.style.position = 'absolute';
     sizeMenu.style.top = '0px';
-    sizeMenu.style.left = '0px';
+    sizeMenu.style.right = '-220px';
     sizeMenu.style.background = 'white';
     sizeMenu.style.border = '2px solid #ccc';
     sizeMenu.style.borderRadius = '8px';
@@ -1008,24 +811,6 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
       
       menuOpen = !menuOpen;
       if (menuOpen) {
-        // 메뉴 위치 동적 계산
-        const imgRect = img.getBoundingClientRect();
-        const menuWidth = 220;
-        const viewportWidth = window.innerWidth;
-        
-        // 오른쪽에 공간이 있으면 오른쪽에, 없으면 왼쪽에 표시
-        if (imgRect.right + menuWidth <= viewportWidth - 20) {
-          sizeMenu.style.position = 'fixed';
-          sizeMenu.style.left = `${imgRect.right + 10}px`;
-          sizeMenu.style.top = `${imgRect.top}px`;
-          sizeMenu.style.right = 'auto';
-        } else {
-          sizeMenu.style.position = 'fixed';
-          sizeMenu.style.right = `${viewportWidth - imgRect.left + 10}px`;
-          sizeMenu.style.top = `${imgRect.top}px`;
-          sizeMenu.style.left = 'auto';
-        }
-        
         sizeMenu.style.display = 'block';
         img.style.border = '3px solid #3B82F6';
       } else {
@@ -1035,35 +820,16 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     });
     
     // 외부 클릭시 메뉴 닫기
-    const handleOutsideClick = (e: Event) => {
-      if (!container.contains(e.target as Node) && !sizeMenu.contains(e.target as Node)) {
+    document.addEventListener('click', (e) => {
+      if (!container.contains(e.target as Node)) {
         sizeMenu.style.display = 'none';
         img.style.border = '2px solid transparent';
         menuOpen = false;
       }
-    };
-    
-    document.addEventListener('click', handleOutsideClick);
-    
-    // 컨테이너가 DOM에서 제거될 때 정리
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.removedNodes.forEach((node) => {
-          if (node === container || (node as Element).contains?.(container)) {
-            document.removeEventListener('click', handleOutsideClick);
-            if (sizeMenu.parentNode) {
-              sizeMenu.parentNode.removeChild(sizeMenu);
-            }
-            observer.disconnect();
-          }
-        });
-      });
     });
     
-    observer.observe(document.body, { childList: true, subtree: true });
-    
     container.appendChild(img);
-    document.body.appendChild(sizeMenu);
+    container.appendChild(sizeMenu);
     
     return container;
   }
@@ -1420,9 +1186,9 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     
     // 크기 조절 메뉴 (이미지와 유사)
     const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'fixed';
+    sizeMenu.style.position = 'absolute';
     sizeMenu.style.top = '0px';
-    sizeMenu.style.left = '0px';
+    sizeMenu.style.right = '-220px';
     sizeMenu.style.background = 'white';
     sizeMenu.style.border = '2px solid #ccc';
     sizeMenu.style.borderRadius = '8px';
@@ -1504,24 +1270,6 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       
       menuOpen = !menuOpen;
       if (menuOpen) {
-        // 메뉴 위치 동적 계산
-        const videoRect = videoCard.getBoundingClientRect();
-        const menuWidth = 220;
-        const viewportWidth = window.innerWidth;
-        
-        // 오른쪽에 공간이 있으면 오른쪽에, 없으면 왼쪽에 표시
-        if (videoRect.right + menuWidth <= viewportWidth - 20) {
-          sizeMenu.style.position = 'fixed';
-          sizeMenu.style.left = `${videoRect.right + 10}px`;
-          sizeMenu.style.top = `${videoRect.top}px`;
-          sizeMenu.style.right = 'auto';
-        } else {
-          sizeMenu.style.position = 'fixed';
-          sizeMenu.style.right = `${viewportWidth - videoRect.left + 10}px`;
-          sizeMenu.style.top = `${videoRect.top}px`;
-          sizeMenu.style.left = 'auto';
-        }
-        
         sizeMenu.style.display = 'block';
         videoCard.style.border = '3px solid #3B82F6';
       } else {
@@ -1531,35 +1279,16 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     });
     
     // 외부 클릭시 메뉴 닫기
-    const handleOutsideClick = (e: Event) => {
-      if (!container.contains(e.target as Node) && !sizeMenu.contains(e.target as Node)) {
+    document.addEventListener('click', (e) => {
+      if (!container.contains(e.target as Node)) {
         sizeMenu.style.display = 'none';
         videoCard.style.border = '2px solid #e5e5e5';
         menuOpen = false;
       }
-    };
-    
-    document.addEventListener('click', handleOutsideClick);
-    
-    // 컨테이너가 DOM에서 제거될 때 정리
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.removedNodes.forEach((node) => {
-          if (node === container || (node as Element).contains?.(container)) {
-            document.removeEventListener('click', handleOutsideClick);
-            if (sizeMenu.parentNode) {
-              sizeMenu.parentNode.removeChild(sizeMenu);
-            }
-            observer.disconnect();
-          }
-        });
-      });
     });
     
-    observer.observe(document.body, { childList: true, subtree: true });
-    
     container.appendChild(videoCard);
-    document.body.appendChild(sizeMenu);
+    container.appendChild(sizeMenu);
     
     return container;
   }
