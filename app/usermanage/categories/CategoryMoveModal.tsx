@@ -90,7 +90,7 @@ export function CategoryMoveModal({ isOpen, onClose, categories, selectedItem, o
                 >
                   <div className="flex items-center justify-between">
                     <span>{category.name}</span>
-                    {/*<span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800">하위로 이동 ({category.postCount}개의 글)</span>*/}
+                    {<span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800">하위로 이동 ({category.postCount}개의 글)</span>}
                   </div>
                 </div>
               ))
