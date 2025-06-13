@@ -15,9 +15,13 @@ interface CategoryItemProps {
 }
 
 
+
+
 export function CategoryItem({ category, depth, moveItem }: CategoryItemProps) {
   const isRoot = category.parentId === null;
   const ref = useRef<HTMLDivElement | null>(null);
+
+
 
   const [{ isDragging }, dragRef] = useDrag({
     type: 'CATEGORY',

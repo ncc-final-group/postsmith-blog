@@ -32,6 +32,34 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     if (dragId === targetId) return; // 같은 항목 드래그 무시
 
     const categoryMap = new Map<number, Category>();
+
+    //category[] -> CategoryDto[]
+    function flattenCategories(categories: Category[], blogId: number): CategoryDto[] {
+      const result: CategoryDto[] = [];
+
+      const traverse = (nodes: Category[], parentId: number | null) => {
+        nodes.forEach((node, index) => {
+          const { id, name, description } = node;
+
+          result.push({
+            id,
+            name,
+            description,
+            parentId,
+            sequence: index,
+            blogId,
+          });
+
+          if (node.children?.length) {
+            traverse(node.children, id);
+          }
+        });
+      };
+
+      traverse(categories, null);
+      return result;
+    }
+
     const buildMap = (list: Category[]) => {
       list.forEach((cat) => {
         categoryMap.set(cat.id, cat);

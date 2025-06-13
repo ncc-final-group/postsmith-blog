@@ -1,51 +1,44 @@
 'use client';
 
-import { Category, CategoryTree } from '@components/category/CategoryTree';
 
 import { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-function removeCategory(tree: Category[], id: number): [Category | null, Category[]] {
-  for (let i = 0; i < tree.length; i++) {
-    if (tree[i].id === id) {
-      const removed = tree[i];
-      return [removed, [...tree.slice(0, i), ...tree.slice(i + 1)]];
-    }
-    const [removed, newChildren] = removeCategory(tree[i].children || [], id);
-    if (removed) {
-      tree[i].children = newChildren;
-      return [removed, [...tree]];
-    }
-  }
-  return [null, tree];
-}
+import { Category, CategoryDto, CategoryTree } from '@components/category/CategoryTree';
 
-function insertCategory(tree: Category[], targetId: number | null, item: Category): Category[] {
-  if(targetId == null){
-    item.parentId = null;
-    return [...tree, item];
-  }
+//트리 구조를 평탄화 -> 안하면 tree구조로 저장되기때문에 평탄화.
+function flattenTree(categories: Category[], parentId: number | null = null): CategoryDto[] {
+  return categories.flatMap((cat, index) => {
+    const { id, name, description, blogId } = cat;
+    const flatItem: CategoryDto = {
+      id,
+      name,
+      description,
+      parentId,
+      sequence: index,
+      blogId,
+    };
 
-  return tree.map((node) => {
-    if (node.id === targetId) {
-      const newChildren = [...(node.children || []), item];
-
-      // sequence 다시 할당 -> 1부터 시작
-      const sortedChildren = newChildren
-        .map((child, idx) => ({ ...child, sequence: idx + 1 }));
-
-      return { ...node, children: sortedChildren };
-    }
-    return { ...node, children: insertCategory(node.children || [], targetId, item) };
+    const children = cat.children ? flattenTree(cat.children, id) : [];
+    return [flatItem, ...children];
   });
 }
+
+
+
 
 export default function CategoriesPage() {
 
   const [treeData, setTreeData] = useState<Category[]>([]);
+  const [savedData, setSavedData] = useState<Category[]>([]);
+  const [nextTempId, setNextTempId] = useState(-1); // 신규 생성 시 음수 ID 관리용
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  //저장할게 생기면 save 버튼 활성화 체크용 .
+  const isDirty = JSON.stringify(treeData) !== JSON.stringify(savedData);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -67,57 +60,38 @@ export default function CategoriesPage() {
   if (loading) return <div>로딩중...</div>;
   if (error) return <div>에러: {error}</div>;
 
-  // 부모 아이디 얻기
-  function getParentIdOf(tree: Category[], targetId: number, parentId: number | null = null): number | null {
-    for (const node of tree) {
-      if (node.id === targetId) {
-        return parentId;
+
+  function handleCreate(newCategoryData: Omit<Category, 'id' | 'children' | 'depth'>) {
+    const newCategory: Category = {
+      ...newCategoryData,
+      id: nextTempId, // 음수 ID 부여
+      children: [],
+      depth: 0, // 적절히 계산해서 넣기
+    };
+    setNextTempId(nextTempId - 1);
+    setTreeData([...treeData, newCategory]);
+  }
+
+  async function saveAll() {
+    try {
+      const res = await fetch('http://localhost:8080/api/categories/saveAll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(treeData),
+      });
+      if (!res.ok) throw new Error('저장 실패');
+      const savedCategories = await res.json();
+
+      setSavedData(savedCategories); // 성공 시 상태 동기화
+      alert('저장 완료!');
+    } catch (e) {
+      if (e instanceof Error) {
+        alert(`저장 오류: ${e.message}`);
+      } else {
+        alert('저장 오류: 알 수 없는 에러');
       }
-      const found = getParentIdOf(node.children || [], targetId, node.id);
-      if (found !== null) return found;
     }
-    return null;
   }
-  // reorder
-  function reorderCategoryWithinParent(
-    tree: Category[],
-    dragId: number,
-    targetId: number
-  ): Category[] {
-    return tree.map((node) => {
-      if (node.children) {
-        const ids = node.children.map((child) => child.id);
-        if (ids.includes(dragId) && ids.includes(targetId)) {
-          const newChildren = [...node.children];
-          const draggedIndex = newChildren.findIndex(c => c.id === dragId);
-          const targetIndex = newChildren.findIndex(c => c.id === targetId);
-          const [dragged] = newChildren.splice(draggedIndex, 1);
-          newChildren.splice(targetIndex, 0, dragged);
-
-          // ✅ sequence 재정렬
-          const reordered = newChildren.map((c, idx) => ({
-            ...c,
-            sequence: idx + 1,
-          }));
-
-          return {
-            ...node,
-            children: reordered,
-          };
-        } else {
-          return {
-            ...node,
-            children: reorderCategoryWithinParent(node.children, dragId, targetId),
-          };
-        }
-      }
-      return node;
-    });
-  }
-
-
-
-
 
 
   return (
@@ -129,6 +103,14 @@ export default function CategoriesPage() {
           onMoveItem={setTreeData} // ✅ 핵심
         />
       </div>
+      <button
+        disabled={!isDirty}
+        onClick={saveAll}
+        className={`fixed bottom-6 right-6 py-3 px-6 rounded-xl shadow-lg text-lg font-semibold
+        ${isDirty ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'}`}
+      >
+        저장
+      </button>
     </DndProvider>
   );
 }
