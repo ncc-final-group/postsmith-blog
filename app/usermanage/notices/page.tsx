@@ -281,7 +281,7 @@ export default function BoardSitePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-6xl">
+      <div className="max-w-none">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
             공지 관리

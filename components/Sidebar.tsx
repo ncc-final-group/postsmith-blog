@@ -1,9 +1,9 @@
 'use client';
 
+import { House } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { House } from 'lucide-react';
 
 interface MenuItem {
   key: string;
@@ -17,36 +17,42 @@ const menuItems: MenuItem[] = [
     key: 'write',
     label: '컨텐츠',
     subItems: [
-      { label: '글 관리', route: '/posts' },
-      { label: '페이지 관리', route: '/pages' },
-      { label: '카테고리 관리', route: '/categories' },
-      { label: '공지 관리', route: '/notices' },
+      { label: '글 관리', route: '/usermanage/posts' },
+      { label: '페이지 관리', route: '/usermanage/pages' },
+      { label: '카테고리 관리', route: '/usermanage/categories' },
+      { label: '공지 관리', route: '/usermanage/notices' },
+    ],
+  },
+  {
+    key: 'media',
+    label: '미디어',
+    subItems: [
+      { label: '미디어 관리', route: '/usermanage/media' },
+      { label: '파일 업로드', route: '/usermanage/media/upload' },
     ],
   },
   {
     key: 'comments',
     label: '댓글',
-    subItems: [
-      { label: '댓글 관리', route: '/comments' },
-    ],
+    subItems: [{ label: '댓글 관리', route: '/comments' }],
   },
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: '/customize/skin' }],
+    subItems: [
+      { label: '스킨', route: '/usermanage/customize/skin' },
+      { label: '메뉴 관리', route: '/usermanage/menus' },
+    ],
   },
   {
     key: 'plugins',
     label: '플러그인',
-    subItems: [{ label: '플러그인 관리', route: '/plugins'}],
-    route: 'usermanage/plugins',
+    subItems: [{ label: '플러그인 관리', route: '/plugins' }],
   },
   {
     key: 'admin',
     label: '관리',
-    subItems: [
-      { label: '블로그', route: '/admin/blog' },
-    ],
+    subItems: [{ label: '블로그', route: '/admin/blog' }],
   },
 ];
 
@@ -61,14 +67,7 @@ export default function Sidebar() {
       <div className="mb-1 w-53 flex-col justify-center">
         <div className="flex h-54 items-center justify-center border border-gray-300 bg-gray-200">
           <figure className="relative h-54 w-40">
-            <Image
-              fill
-              style={{ objectFit: 'contain' }}
-              src="/defaultProfile.png"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              alt=""
-              priority
-            />
+            <Image fill style={{ objectFit: 'contain' }} src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt="" priority />
           </figure>
         </div>
         <div className="flex h-18 flex-col border border-t-0 border-gray-300 bg-white px-5 py-3">
@@ -84,25 +83,32 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-col border border-gray-300">
-        <div className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-5">
-          <Link href="/usermanage/stats/visits" className="flex items-center text-sm font-medium space-x-1">
-            <House className='text-gray-400 w-5 y-5' />
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-5 hover:bg-gray-100">
+          <Link href="/usermanage/stats/visits" className="flex items-center space-x-1 text-sm font-medium">
+            <House className="y-5 w-5 text-gray-400" />
             <span>블로그 관리홈</span>
           </Link>
         </div>
 
-
         <nav className="bg-gray-50 text-sm font-medium">
           {menuItems.map((item) => (
             <div key={item.key} className="border-b border-solid border-gray-200">
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-100">
+              <div className="flex items-center justify-between bg-gray-100 px-4 py-3">
                 <span>{item.label}</span>
               </div>
 
               {item.subItems.length > 0 && (
                 <ul className="bg-white text-gray-700">
                   {item.subItems.map((subItem, index) => {
-                    const fullRoute = `/${name}/${subItem.route}`;
+                    // 현재 경로가 /usermanage인 경우와 /[name]/usermanage인 경우를 구분
+                    let fullRoute;
+                    if (pathname === '/usermanage' || pathname.startsWith('/usermanage/')) {
+                      // /usermanage 또는 /usermanage/* 경로인 경우
+                      fullRoute = subItem.route;
+                    } else {
+                      // /[name]/usermanage 경로인 경우
+                      fullRoute = `/${name}${subItem.route}`;
+                    }
                     const isActive = pathname === fullRoute;
                     return (
                       <li key={index}>
