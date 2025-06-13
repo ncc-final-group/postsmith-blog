@@ -1,9 +1,29 @@
-import { NextConfig } from 'next';
+import type { NextConfig } from 'next';
 
-const config: NextConfig = {
+const nextConfig: NextConfig = {
+  output: 'standalone',
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  reactStrictMode: true,
   images: {
-    domains: ['localhost', 'images.unsplash.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+        search: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kr.object.ncloudstorage.com',
+        port: '',
+        pathname: '/postsmith-bucket/**',
+        search: '',
+      },
+    ],
   },
 };
 
-export default config;
+export default nextConfig;
