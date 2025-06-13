@@ -115,9 +115,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: contentItem.thumbnail ? String(contentItem.thumbnail) : undefined,
         category: contentItem.category
           ? {
-            id: Number(contentItem.category.id),
-            name: String(contentItem.category.name),
-          }
+              id: Number(contentItem.category.id),
+              name: String(contentItem.category.name),
+            }
           : undefined,
         reply_count: Number(contentItem.reply_count ?? 0),
       })),
@@ -131,24 +131,24 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
-            id: Number(content.category.id),
-            name: String(content.category.name),
-          }
+              id: Number(content.category.id),
+              name: String(content.category.name),
+            }
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
         author: '블로그 관리자',
         tags: [], // 태그는 미구현
         prev_article: prevContent
           ? {
-            sequence: Number(prevContent.sequence),
-            title: String(prevContent.title),
-          }
+              sequence: Number(prevContent.sequence),
+              title: String(prevContent.title),
+            }
           : undefined,
         next_article: nextContent
           ? {
-            sequence: Number(nextContent.sequence),
-            title: String(nextContent.title),
-          }
+              sequence: Number(nextContent.sequence),
+              title: String(nextContent.title),
+            }
           : undefined,
       },
       recentReplies: recentReplies.map((reply) => ({

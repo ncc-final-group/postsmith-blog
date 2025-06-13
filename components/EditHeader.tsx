@@ -957,14 +957,14 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
 
   const getFileTypeLabel = () => {
     switch (fileType) {
-    case 'image':
-      return '이미지';
-    case 'video':
-      return '동영상';
-    case 'file':
-      return '파일';
-    default:
-      return '파일';
+      case 'image':
+        return '이미지';
+      case 'video':
+        return '동영상';
+      case 'file':
+        return '파일';
+      default:
+        return '파일';
     }
   };
 
@@ -1951,15 +1951,15 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
       };
 
       switch (type) {
-      case 'image':
-        setImageFormPosition(position);
-        break;
-      case 'file':
-        setFileFormPosition(position);
-        break;
-      case 'video':
-        setVideoFormPosition(position);
-        break;
+        case 'image':
+          setImageFormPosition(position);
+          break;
+        case 'file':
+          setFileFormPosition(position);
+          break;
+        case 'video':
+          setVideoFormPosition(position);
+          break;
       }
     }
   };

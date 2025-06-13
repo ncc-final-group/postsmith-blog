@@ -160,18 +160,18 @@ export default function MediaUploadPage() {
 
       // 파일 타입별 크기 제한
       switch (fileType) {
-      case 'image':
-        maxSize = 10 * 1024 * 1024; // 10MB
-        sizeName = '10MB';
-        break;
-      case 'video':
-      case 'file':
-        maxSize = 50 * 1024 * 1024; // 50MB
-        sizeName = '50MB';
-        break;
-      default:
-        maxSize = 50 * 1024 * 1024; // 50MB
-        sizeName = '50MB';
+        case 'image':
+          maxSize = 10 * 1024 * 1024; // 10MB
+          sizeName = '10MB';
+          break;
+        case 'video':
+        case 'file':
+          maxSize = 50 * 1024 * 1024; // 50MB
+          sizeName = '50MB';
+          break;
+        default:
+          maxSize = 50 * 1024 * 1024; // 50MB
+          sizeName = '50MB';
       }
 
       if (file.size > maxSize) {
@@ -238,17 +238,17 @@ export default function MediaUploadPage() {
       let result: UploadResponse;
 
       switch (item.type) {
-      case 'image':
-        result = await uploadImageToServer(item.file, item.altText, userId);
-        break;
-      case 'video':
-        result = await uploadVideoToServer(item.file, item.altText, userId);
-        break;
-      case 'file':
-        result = await uploadFileToServer(item.file, item.displayName, userId);
-        break;
-      default:
-        throw new Error('지원하지 않는 파일 타입입니다.');
+        case 'image':
+          result = await uploadImageToServer(item.file, item.altText, userId);
+          break;
+        case 'video':
+          result = await uploadVideoToServer(item.file, item.altText, userId);
+          break;
+        case 'file':
+          result = await uploadFileToServer(item.file, item.displayName, userId);
+          break;
+        default:
+          throw new Error('지원하지 않는 파일 타입입니다.');
       }
 
       updateItemField(item.id, 'result', result);
@@ -281,31 +281,31 @@ export default function MediaUploadPage() {
 
   const getStatusColor = (status: UploadItem['status']) => {
     switch (status) {
-    case 'pending':
-      return 'text-gray-600 bg-gray-100';
-    case 'uploading':
-      return 'text-blue-600 bg-blue-100';
-    case 'success':
-      return 'text-green-600 bg-green-100';
-    case 'error':
-      return 'text-red-600 bg-red-100';
-    default:
-      return 'text-gray-600 bg-gray-100';
+      case 'pending':
+        return 'text-gray-600 bg-gray-100';
+      case 'uploading':
+        return 'text-blue-600 bg-blue-100';
+      case 'success':
+        return 'text-green-600 bg-green-100';
+      case 'error':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
   const getStatusText = (status: UploadItem['status']) => {
     switch (status) {
-    case 'pending':
-      return '대기중';
-    case 'uploading':
-      return '업로드중';
-    case 'success':
-      return '완료';
-    case 'error':
-      return '실패';
-    default:
-      return '알 수 없음';
+      case 'pending':
+        return '대기중';
+      case 'uploading':
+        return '업로드중';
+      case 'success':
+        return '완료';
+      case 'error':
+        return '실패';
+      default:
+        return '알 수 없음';
     }
   };
 

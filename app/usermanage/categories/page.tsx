@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 'use client';
 
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';

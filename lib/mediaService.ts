@@ -39,52 +39,52 @@ function determineMimeType(filename: string, fileType: string): string {
 
   if (fileType === 'image') {
     switch (extension) {
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'png':
-      return 'image/png';
-    case 'gif':
-      return 'image/gif';
-    case 'webp':
-      return 'image/webp';
-    case 'svg':
-      return 'image/svg+xml';
-    default:
-      return 'image/jpeg';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'svg':
+        return 'image/svg+xml';
+      default:
+        return 'image/jpeg';
     }
   } else if (fileType === 'video') {
     switch (extension) {
-    case 'mp4':
-      return 'video/mp4';
-    case 'webm':
-      return 'video/webm';
-    case 'avi':
-      return 'video/avi';
-    case 'mov':
-      return 'video/quicktime';
-    default:
-      return 'video/mp4';
+      case 'mp4':
+        return 'video/mp4';
+      case 'webm':
+        return 'video/webm';
+      case 'avi':
+        return 'video/avi';
+      case 'mov':
+        return 'video/quicktime';
+      default:
+        return 'video/mp4';
     }
   } else {
     switch (extension) {
-    case 'pdf':
-      return 'application/pdf';
-    case 'doc':
-    case 'docx':
-      return 'application/msword';
-    case 'xls':
-    case 'xlsx':
-      return 'application/vnd.ms-excel';
-    case 'ppt':
-    case 'pptx':
-      return 'application/vnd.ms-powerpoint';
-    case 'zip':
-      return 'application/zip';
-    case 'txt':
-      return 'text/plain';
-    default:
-      return 'application/octet-stream';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+      case 'docx':
+        return 'application/msword';
+      case 'xls':
+      case 'xlsx':
+        return 'application/vnd.ms-excel';
+      case 'ppt':
+      case 'pptx':
+        return 'application/vnd.ms-powerpoint';
+      case 'zip':
+        return 'application/zip';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
     }
   }
 }

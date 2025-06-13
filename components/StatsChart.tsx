@@ -66,12 +66,12 @@ export default function StatsChart() {
   // 현재 기간에 따른 이동 단위 텍스트
   const getMoveUnitText = () => {
     switch (period) {
-    case 'daily':
-      return '30일';
-    case 'weekly':
-      return '15주';
-    case 'monthly':
-      return '12개월';
+      case 'daily':
+        return '30일';
+      case 'weekly':
+        return '15주';
+      case 'monthly':
+        return '12개월';
     }
   };
 
