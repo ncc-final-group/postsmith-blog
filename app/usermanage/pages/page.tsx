@@ -2,187 +2,374 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
-interface Post {
-  id: number;
+interface Page {
+  contentId: number;
+  userNickname: string;
+  contentType: string;
   title: string;
-  category: string;
-  author: string;
+  isPublic: boolean;
+  likes: number;
   createdAt: string;
-  hasIcon?: boolean;
-  isNotice?: boolean;
-  commentCount?: number;
-  viewCount?: number;
-  privacy?: 'public' | 'private';
+  categoryid?: string;
+  categoryName?: string;
+  categoryPath?: string;
+  totalViewCount: number;
+  totalRepliesCount: number;
 }
 
 interface BoardData {
-  posts: Post[];
+  pages: Page[];
   totalCount: number;
   currentPage: number;
   totalPages: number;
 }
 
-type SortType = 'latest' | 'oldest' | 'title' | 'author';
+type SortType = 'latest' | 'oldest';
 
 export default function BoardSitePage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortType>('latest');
+  const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [hoveredPageId, setHoveredPageId] = useState<number | null>(null);
   const [boardData, setBoardData] = useState<BoardData>({
-    posts: [
-      {
-        id: 1,
-        title: 'ㅁㄴㅇ',
-        category: '카테고리 없음',
-        author: '인생누비',
-        createdAt: '2025-05-08T15:21:00Z',
-        hasIcon: true,
-        viewCount: 42,
-        commentCount: 1,
-        privacy: 'public',
-      },
-      {
-        id: 2,
-        title: '환영합니다!',
-        category: '카테고리 없음',
-        author: '인생누비',
-        createdAt: '2023-09-14T09:36:00Z',
-        hasIcon: false,
-        viewCount: 156,
-        commentCount: 3,
-        privacy: 'private',
-      },
-    ],
-    totalCount: 2,
+    pages: [],
+    totalCount: 0,
     currentPage: 1,
     totalPages: 1,
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState<SortType>('latest');
-  const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
-  const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
+  const uniqueCategories = useMemo(() => {
+    return Array.from(new Set(boardData.pages.map((page) => page.categoryName).filter(Boolean)));
+  }, [boardData.pages]);
 
-  const formatDate = (dateString: string) => {
+  const filteredAndSortedPages = useMemo(() => {
+    let pages = [...boardData.pages];
+
+    // 🔍 제목 검색
+    if (searchTerm.trim() !== '') {
+      pages = pages.filter((page) => page.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    // 공개/비공개 필터
+    if (filterPrivacy !== 'all') {
+      pages = pages.filter((page) => String(page.isPublic) === filterPrivacy);
+    }
+    if (selectedCategory !== 'all') {
+      pages = pages.filter((page) => page.categoryName === selectedCategory);
+    }
+
+    // 정렬
+    pages.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      if (sortOrder === 'latest') return dateB - dateA;
+      if (sortOrder === 'oldest') return dateA - dateB;
+      return 0;
+    });
+
+    return pages;
+  }, [boardData.pages, sortOrder, filterPrivacy, selectedCategory, searchTerm]);
+
+  const PAGES_PER_PAGE = 5;
+  useEffect(() => {
+    setIsLoading(true);
+    fetch('http://localhost:8088/api/contents/PAGE')
+      .then((res) => {
+        if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
+        return res.json();
+      })
+      .then((data: Page[]) => {
+        const totalCount = data.length;
+        const totalPages = Math.ceil(totalCount / PAGES_PER_PAGE);
+        const currentPage = 1;
+
+        const paginatedPages = data.slice((currentPage - 1) * PAGES_PER_PAGE, currentPage * PAGES_PER_PAGE);
+
+        setBoardData({
+          pages: paginatedPages,
+          totalCount,
+          currentPage,
+          totalPages,
+        });
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('게시글을 불러오는 중 오류 발생:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  function formatDate(dateString: string) {
     const date = new Date(dateString);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(
       2,
       '0',
     )} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
+  }
 
-  const getPageNumbers = (): number[] => {
+  function getPageNumbers(): number[] {
     const { currentPage, totalPages } = boardData;
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
     return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
-  };
+  }
 
-  const handleCreatePost = () => {
+  function handleCreatePage() {
     alert('글쓰기 기능은 아직 구현되지 않았습니다.');
-  };
+  }
 
-  const handlePostClick = (post: Post) => {};
+  function handlePageClick(page: Page) {}
 
-  const handleSelectOne = (postId: number) => {
-    setSelectedPosts((prev) => {
-      const newSelectedPosts = new Set(prev);
-      if (newSelectedPosts.has(postId)) {
-        newSelectedPosts.delete(postId);
+  function handleSelectOne(pageId: number) {
+    setSelectedPages((prev) => {
+      const newSelectedPages = new Set(prev);
+      if (newSelectedPages.has(pageId)) {
+        newSelectedPages.delete(pageId);
       } else {
-        newSelectedPosts.add(postId);
+        newSelectedPages.add(pageId);
       }
-      return newSelectedPosts;
+      return newSelectedPages;
     });
-  };
-  const handleSelectAll = () => {
-    const allSelected = selectedPosts.size === boardData.posts.length;
+  }
+
+  function handleSelectAll() {
+    const allSelected = selectedPages.size === boardData.pages.length;
     if (allSelected) {
-      setSelectedPosts(new Set());
+      setSelectedPages(new Set());
     } else {
-      const allIds = boardData.posts.map((post) => post.id);
-      setSelectedPosts(new Set(allIds));
+      const allIds = boardData.pages.map((pages) => pages.contentId);
+      setSelectedPages(new Set(allIds));
     }
-  };
+  }
 
-  const handleEditPost = (post: Post) => {
-    alert(`수정: ${post.title}`);
-  };
+  function handleEditPage(page: Page) {
+    alert(`수정: ${page.title}`);
+  }
 
-  const handleDeletePost = (post: Post) => {
-    if (confirm(`정말 삭제하시겠습니까? (${post.title})`)) {
-      setBoardData((prev) => ({
-        ...prev,
-        posts: prev.posts.filter((p) => p.id !== post.id),
-      }));
-    }
-  };
+  function handleViewStats(page: Page) {
+    alert(`통계 보기: ${page.title}`);
+  }
 
-  const handleViewStats = (post: Post) => {
-    alert(`통계 보기: ${post.title}`);
-  };
+  const handlePageChange = (pageNum: number) => {
+    if (pageNum < 1 || pageNum > boardData.totalPages) return;
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= boardData.totalPages) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
+    const start = (pageNum - 1) * PAGES_PER_PAGE;
+    const end = pageNum * PAGES_PER_PAGE;
+
+    fetch('http://localhost:8088/api/contents/PAGE')
+      .then((res) => res.json())
+      .then((data: Page[]) => {
+        const filteredPages = data.filter((page) => page.contentType === 'PAGE');
+        const paginatedPages = filteredPages.slice(start, end);
+
         setBoardData((prev) => ({
           ...prev,
-          currentPage: page,
+          pages: paginatedPages,
+          currentPage: pageNum,
         }));
-      }, 500);
-    }
+      });
   };
 
-  const handlePrivacyChange = (e: React.ChangeEvent<HTMLSelectElement>, post: Post) => {
-    const newPrivacy = e.target.value as 'public' | 'private';
-    setBoardData((prev) => ({
-      ...prev,
-      posts: prev.posts.map((p) => (p.id === post.id ? { ...p, privacy: newPrivacy } : p)),
-    }));
-  };
+  async function handlePrivacyChange(e: React.ChangeEvent<HTMLSelectElement>, page: Page) {
+    const newPrivacy = e.target.value === 'true';
+
+    try {
+      const res = await fetch(`http://localhost:8088/api/contents/${page.contentId}/privacy?isPublic=${newPrivacy}`, { method: 'PATCH' });
+
+      if (!res.ok) {
+        throw new Error(`서버 응답 오류: ${res.status}`);
+      }
+
+      setBoardData((prev) => ({
+        ...prev,
+        pages: prev.pages.map((p) => (p.contentId === page.contentId ? { ...p, isPublic: newPrivacy } : p)),
+      }));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('공개 여부 변경 실패:', error);
+      alert('공개 여부 변경에 실패했습니다.');
+    }
+  }
+
+  async function handleDeletePage(page: Page) {
+    const confirmed = confirm(`정말 삭제하시겠습니까? (${page.title})`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`http://localhost:8088/api/contents/delete/${page.contentId}`, { method: 'DELETE' });
+
+      if (!res.ok) {
+        throw new Error(`서버 응답 오류: ${res.status}`);
+      }
+
+      // 프론트 상태 동기화
+      setBoardData((prev) => ({
+        ...prev,
+        pages: prev.pages.filter((p) => p.contentId !== page.contentId),
+      }));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('삭제 요청 실패:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  }
+
+  async function handleBulkAction(action: string) {
+    if (selectedPages.size === 0) {
+      alert('먼저 게시글을 선택하세요.');
+      return;
+    }
+
+    if (action === 'delete') {
+      if (!confirm('선택된 게시글을 삭제하시겠습니까?')) return;
+
+      try {
+        const idsToDelete = Array.from(selectedPages);
+
+        const res = await fetch('http://localhost:8088/api/contents/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(idsToDelete),
+        });
+
+        if (!res.ok) {
+          throw new Error(`서버 응답 오류: ${res.status}`);
+        }
+
+        setBoardData((prev) => ({
+          ...prev,
+          pages: prev.pages.filter((page) => !selectedPages.has(page.contentId)),
+        }));
+        setSelectedPages(new Set());
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('삭제 요청 실패:', error);
+        alert('삭제에 실패했습니다.');
+      }
+    } else if (action === 'makePublic' || action === 'makePrivate') {
+      const newPrivacy = action === 'makePublic';
+      const contentIds = Array.from(selectedPages);
+
+      try {
+        const res = await fetch('http://localhost:8088/api/contents/privacy', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentIds, isPublic: newPrivacy }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`서버 응답 오류: ${res.status}`);
+        }
+
+        // UI 반영
+        setBoardData((prev) => ({
+          ...prev,
+          pages: prev.pages.map((page) => (selectedPages.has(page.contentId) ? { ...page, isPublic: newPrivacy } : page)),
+        }));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('공개/비공개 변경 실패:', error);
+        alert('공개/비공개 변경에 실패했습니다.');
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <div className="max-w-6xl">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
             페이지 관리
             <span className="ml-1 rounded-full bg-gray-100 text-sm font-normal text-gray-500">{boardData.totalCount}</span>
+            <span className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-600">
+              {filterPrivacy === 'all' ? '전체' : filterPrivacy === 'true' ? '공개' : '비공개'} /{selectedCategory === 'all' ? '전체' : selectedCategory}
+            </span>
           </h1>
           <button
-            onClick={handleCreatePost}
+            onClick={handleCreatePage}
             className={clsx(
-              'flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2',
+              'flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2',
               'text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white',
             )}
           >
             <Edit className="h-4 w-4" />
-            페이지 작성
+            글쓰기
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-6xl pt-1">
-        {/* Search and Filter */}
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
-          {/* Select All */}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={selectedPosts.size === boardData.posts.length && boardData.posts.length > 0}
+              checked={selectedPages.size === boardData.pages.length && boardData.pages.length > 0}
               onChange={handleSelectAll}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-sm text-gray-600">전체선택</span>
+
+            <select
+              defaultValue=""
+              onChange={(e) => handleBulkAction(e.target.value)}
+              className={clsx(
+                'rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700',
+                'hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
+              )}
+            >
+              <option value="" disabled>
+                일괄 작업 선택
+              </option>
+              <option value="makePublic">공개</option>
+              <option value="makePrivate">비공개</option>
+              <option value="delete">삭제</option>
+            </select>
           </div>
 
-          {/* Sort & Search */}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex gap-2">
+              {/* 정렬 선택 */}
+              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortType)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
+                <option value="latest">최신순</option>
+                <option value="oldest">오래된순</option>
+              </select>
+
+              {/* 공개/비공개 필터 */}
+              <select
+                value={`${filterPrivacy}|${selectedCategory}`}
+                onChange={(e) => {
+                  const [privacy, category] = e.target.value.split('|');
+                  setFilterPrivacy(privacy as 'all' | 'true' | 'false');
+                  setSelectedCategory(category);
+                }}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <optgroup label="공개 설정">
+                  <option value="all|all">전체 보기</option>
+                  <option value="true|all">공개만 보기</option>
+                  <option value="false|all">비공개만 보기</option>
+                </optgroup>
+
+                <optgroup label="카테고리 필터">
+                  <option value={`${filterPrivacy}|all`}>전체 카테고리</option>
+                  {uniqueCategories.map((category) => (
+                    <option key={category} value={`${filterPrivacy}|${category}`}>
+                      {category}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
             <div className="relative">
               <input
                 type="text"
@@ -201,56 +388,57 @@ export default function BoardSitePage() {
           </div>
         </div>
 
-        {/* Posts List */}
         <div className="overflow-hidden rounded-lg border border-gray-300 bg-white">
           {isLoading ? (
             <div className="p-8 text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
               <p className="mt-2 text-sm text-gray-500">로딩 중...</p>
             </div>
-          ) : boardData.posts.length === 0 ? (
+          ) : boardData.pages.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p>게시글이 없습니다.</p>
             </div>
           ) : (
-            boardData.posts.map((post, index) => (
+            filteredAndSortedPages.map((page, index) => (
               <div
-                key={post.id}
-                className={`relative cursor-pointer border-b border-gray-200 p-4 transition-colors duration-150 hover:bg-gray-100 ${
-                  index === boardData.posts.length - 1 ? 'border-b-0' : ''
-                } ${post.isNotice ? 'border-blue-100 bg-blue-50' : ''}`}
-                onClick={() => handlePostClick(post)}
-                onMouseEnter={() => setHoveredPostId(post.id)}
-                onMouseLeave={() => setHoveredPostId(null)}
+                key={page.contentId}
+                className={`relative cursor-pointer border-b border-gray-200 p-4 transition-colors duration-150 hover:bg-gray-100 ${index === boardData.pages.length - 1 ? 'border-b-0' : ''}`}
+                onClick={() => handlePageClick(page)}
+                onMouseEnter={() => setHoveredPageId(page.contentId)}
+                onMouseLeave={() => setHoveredPageId(null)}
               >
                 <div className="flex items-center gap-4">
                   <input
                     type="checkbox"
-                    checked={selectedPosts.has(post.id)}
-                    onChange={() => handleSelectOne(post.id)}
+                    checked={selectedPages.has(page.contentId)}
+                    onChange={() => handleSelectOne(page.contentId)}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                   />
 
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
-                      {post.isNotice && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">공지</span>}
-                      <h3 className="relative truncate font-medium text-gray-900">{post.title}</h3>
-                      {post.privacy === 'private' && hoveredPostId !== post.id && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
+                      {page.contentType && <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">{page.contentType}</span>}
+                      <h3 className="relative truncate font-medium text-gray-900">{page.title}</h3>
+                      {page.isPublic === false && hoveredPageId !== page.contentId && <Lock className="absolute top-8 right-9 h-4 w-4 text-gray-400" />}
+
+                      {page.totalRepliesCount ? <span className="text-sm font-medium text-blue-600">[{page.totalRepliesCount}]</span> : null}
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="font-medium text-orange-600">{post.category}</span>
-                      <span>{post.author}</span>
-                      <span>{formatDate(post.createdAt)}</span>
+                      <span className="font-medium text-orange-600">{page.categoryPath || 'no category'}</span>
+
+                      <span>{page.userNickname}</span>
+                      <span>{formatDate(page.createdAt)}</span>
+                      {page.totalViewCount && <span>조회 {page.totalViewCount}</span>}
                     </div>
                   </div>
 
-                  {hoveredPostId === post.id && (
+                  {hoveredPageId === page.contentId && (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEditPost(post);
+                          handleEditPage(page);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="수정"
@@ -260,7 +448,7 @@ export default function BoardSitePage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeletePost(post);
+                          handleDeletePage(page);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="삭제"
@@ -270,7 +458,7 @@ export default function BoardSitePage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleViewStats(post);
+                          handleViewStats(page);
                         }}
                         className="rounded p-1 hover:bg-gray-200"
                         title="통계"
@@ -282,13 +470,13 @@ export default function BoardSitePage() {
                           'rounded border border-gray-300 px-2 py-1 text-sm text-gray-700',
                           'hover:border-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200 focus:outline-none',
                         )}
-                        value={post.privacy || 'public'}
-                        onChange={(e) => handlePrivacyChange(e, post)}
+                        value={page.isPublic === true ? 'true' : 'false'}
+                        onChange={(e) => handlePrivacyChange(e, page)}
                         onClick={(e) => e.stopPropagation()}
                         title="공개/비공개 설정"
                       >
-                        <option value="public">공개</option>
-                        <option value="private">비공개</option>
+                        <option value="true">공개</option>
+                        <option value="false">비공개</option>
                       </select>
                     </div>
                   )}
@@ -297,6 +485,7 @@ export default function BoardSitePage() {
             ))
           )}
         </div>
+
         <nav aria-label="Page navigation" className="mt-6 flex items-center justify-center gap-1">
           <button
             onClick={() => handlePageChange(boardData.currentPage - 1)}
@@ -316,6 +505,7 @@ export default function BoardSitePage() {
               {pageNum}
             </button>
           ))}
+
           <button
             onClick={() => handlePageChange(boardData.currentPage + 1)}
             disabled={boardData.currentPage === boardData.totalPages}

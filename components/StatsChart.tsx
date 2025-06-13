@@ -271,7 +271,7 @@ export default function StatsChart() {
       y: {
         beginAtZero: true,
         ticks: { display: false }, // ✅ Y축 숫자 라벨 제거
-        grid: {drawTicks: false,}, // ✅ 눈금 라인 끝에 작은 틱도 제거
+        grid: { drawTicks: false }, // ✅ 눈금 라인 끝에 작은 틱도 제거
       },
     },
     interaction: {
