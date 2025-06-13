@@ -26,7 +26,84 @@ interface CategoryTreeProps {
   onMoveItem: (newTree: Category[]) => void;
 }
 
+async function fetchNewTree(): Promise<Category[]> {
+  const res = await fetch('/api/categories/tree');
+  if (!res.ok) throw new Error('카테고리 트리 불러오기 실패');
+  return res.json();
+}
+
+
 export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
+
+  //생성
+  const handleAddChild = async (parentCategory: Category) => {
+    // 예시: 모달/폼 띄우고, 입력값 받아서
+    const name = prompt('하위 카테고리 이름을 입력하세요');
+    if (!name) return;
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        parentId: parentCategory.id,
+        blogId: parentCategory.blogId,
+        sequence: (parentCategory.children?.length ?? 0) + 1,
+      }),
+    });
+    if (res.ok) {
+      onMoveItem(await fetchNewTree());
+    }
+  };
+  // 카테고리 수정
+  const handleEdit = async (category: Category) => {
+    const name = prompt('카테고리 이름을 수정하세요', category.name);
+    if (!name) return;
+    const description = prompt('설명(선택)을 수정하세요', category.description ?? '');
+    const res = await fetch(`/api/categories/${category.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        description,
+        blogId: category.blogId,
+        parentId: category.parentId,
+        sequence: category.sequence,
+      }),
+    });
+    if (res.ok) {
+      onMoveItem(await fetchNewTree());
+    }
+  };
+
+  // 카테고리 삭제
+  const handleDelete = async (category: Category) => {
+    if (!confirm(`정말 삭제하시겠습니까? (${category.name})\n하위 카테고리도 함께 삭제됩니다.`)) return;
+    const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE',});
+    if (res.ok) {
+      onMoveItem(await fetchNewTree());
+    }
+  };
+
+  // 카테고리 이동 (예시: 부모를 변경)
+  const handleMove = async (category: Category) => {
+    const targetIdStr = prompt('이동할 대상 카테고리 ID를 입력하세요 (루트로 이동하려면 비워두세요):');
+    let targetId: number | null = null;
+    if (targetIdStr && targetIdStr.trim() !== '') {
+      targetId = Number(targetIdStr);
+      if (isNaN(targetId)) {
+        alert('숫자를 입력하세요.');
+        return;
+      }
+    }
+    const url = `/api/categories/${category.id}/move${targetId !== null ? `?targetId=${targetId}` : ''}`;
+    const res = await fetch(url, { method: 'PUT',});
+    if (res.ok) {
+      onMoveItem(await fetchNewTree());
+    }
+  };
+
+
+
   //드래그 이동 관련
   const moveItem = (dragId: number, targetId: number | null) => {
     if (dragId === targetId) return; // 같은 항목 드래그 무시
@@ -204,6 +281,8 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     setExpandedMap({});
   };
 
+
+
   const handleDropToRoot = (dragId: number) => moveItem(dragId, null);
 
   return (
@@ -244,7 +323,16 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
           {categories
             .sort((a, b) => a.sequence - b.sequence)
             .map((category) => (
-              <CategoryItem key={category.id} category={category} depth={0} moveItem={moveItem} />
+              <CategoryItem
+                key={category.id}
+                category={category}
+                depth={0}
+                moveItem={moveItem}
+                onAdd={() => handleAddChild(category)}
+                onEdit={() => handleEdit(category)}
+                onDelete={() => handleDelete(category)}
+                onMove={() => handleMove(category)}
+              />
             ))}
         </div>
       </div>
