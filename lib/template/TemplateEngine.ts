@@ -216,25 +216,13 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   result = result.replace(/\[##_blog_image_##\]/g, data.blog.logo_image ? `<img src="${data.blog.logo_image}" alt="${data.blog.nickname}" class="blog-logo" />` : '');
 
   // 블로그 메뉴 치환 (데이터베이스에서 가져온 메뉴)
-  const blogMenuHtml =
-    data.menus.length > 0
-      ? `
-    <ul>
-      ${data.menus
+  const menus = data.menus
     .map((menu) => {
       const target = menu.is_blank ? ' target="_blank"' : '';
       return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
     })
-    .join('')}
-    </ul>
-  `
-      : `
-    <ul>
-      <li><a href="/">홈</a></li>
-      <li><a href="/about">소개</a></li>
-      <li><a href="/contact">연락처</a></li>
-    </ul>
-  `;
+    .join('');
+  const blogMenuHtml = `<ul>${menus}</ul>`;
   result = result.replace(/\[##_blog_menu_##\]/g, blogMenuHtml);
 
   // 계층형 카테고리 HTML 생성

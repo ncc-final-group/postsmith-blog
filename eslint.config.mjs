@@ -22,7 +22,7 @@ const eslintConfig = [
       'no-underscore-dangle': 'off',
       'dot-notation': 'off',
       'max-len': ['warn', { code: 180, ignoreComments: true }],
-      indent: ['error', 2, { offsetTernaryExpressions: true, SwitchCase: 1 }],
+      indent: ['warn', 2, { flatTernaryExpressions: true, offsetTernaryExpressions: true, SwitchCase: 1 }],
       'no-plusplus': 'off',
       'object-curly-newline': ['error', { multiline: true }],
       'no-extra-semi': 'warn',
