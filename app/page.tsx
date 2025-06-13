@@ -125,9 +125,9 @@ export default async function HomePage() {
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
-            id: Number(content.category.id),
-            name: String(content.category.name),
-          }
+              id: Number(content.category.id),
+              name: String(content.category.name),
+            }
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
       })),

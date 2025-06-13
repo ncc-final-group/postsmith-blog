@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable no-console */
+ 
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
@@ -79,19 +79,21 @@ function PageForm({
 }) {
   // 제목이 변경될 때 자동으로 slug 생성
   const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .trim()
-      // 특수문자 제거 (한글, 영문, 숫자, 공백, 하이픈만 유지)
-      .replace(/[^a-z0-9가-힣\s-]/g, '')
-      // 연속된 공백을 하나로
-      .replace(/\s+/g, ' ')
-      // 공백을 하이픈으로 변환
-      .replace(/\s/g, '-')
-      // 연속된 하이픈을 하나로
-      .replace(/-+/g, '-')
-      // 앞뒤 하이픈 제거
-      .replace(/^-+|-+$/g, '');
+    return (
+      title
+        .toLowerCase()
+        .trim()
+        // 특수문자 제거 (한글, 영문, 숫자, 공백, 하이픈만 유지)
+        .replace(/[^a-z0-9가-힣\s-]/g, '')
+        // 연속된 공백을 하나로
+        .replace(/\s+/g, ' ')
+        // 공백을 하이픈으로 변환
+        .replace(/\s/g, '-')
+        // 연속된 하이픈을 하나로
+        .replace(/-+/g, '-')
+        // 앞뒤 하이픈 제거
+        .replace(/^-+|-+$/g, '')
+    );
   };
 
   const handleTitleChange = (newTitle: string) => {
@@ -120,16 +122,12 @@ function PageForm({
       {/* URL 미리보기 */}
       {title && (
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            페이지 URL 미리보기
-          </label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">페이지 URL 미리보기</label>
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
             <span className="text-sm text-gray-600">/page/</span>
             <span className="text-sm font-medium text-gray-900">{slug}</span>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
-            ✨ 페이지 제목에서 자동으로 생성됩니다
-          </p>
+          <p className="mt-1 text-xs text-gray-500">✨ 페이지 제목에서 자동으로 생성됩니다</p>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable no-console */
+ 
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';

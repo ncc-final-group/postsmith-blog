@@ -23,18 +23,18 @@ function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
   const rootReplies: HierarchicalReply[] = [];
 
   // 모든 댓글을 맵에 저장하고 children 배열 초기화
-  replies.forEach(reply => {
+  replies.forEach((reply) => {
     replyMap.set(reply.id, {
       ...reply,
       children: [],
-      depth: 0
+      depth: 0,
     });
   });
 
   // 부모-자식 관계 설정
-  replies.forEach(reply => {
+  replies.forEach((reply) => {
     const currentReply = replyMap.get(reply.id)!;
-    
+
     if (reply.reply_id && replyMap.has(reply.reply_id)) {
       // 대댓글인 경우
       const parentReply = replyMap.get(reply.reply_id)!;
@@ -49,7 +49,7 @@ function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
   // 각 레벨에서 시간순으로 정렬 (오래된 순)
   const sortReplies = (replies: HierarchicalReply[]) => {
     replies.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    replies.forEach(reply => {
+    replies.forEach((reply) => {
       if (reply.children.length > 0) {
         sortReplies(reply.children);
       }
@@ -63,16 +63,16 @@ function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
 // 계층 구조를 평면 배열로 변환 (렌더링용)
 function flattenReplies(hierarchicalReplies: HierarchicalReply[]): HierarchicalReply[] {
   const result: HierarchicalReply[] = [];
-  
+
   const traverse = (replies: HierarchicalReply[]) => {
-    replies.forEach(reply => {
+    replies.forEach((reply) => {
       result.push(reply);
       if (reply.children.length > 0) {
         traverse(reply.children);
       }
     });
   };
-  
+
   traverse(hierarchicalReplies);
   return result;
 }
@@ -196,9 +196,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: contentItem.thumbnail ? String(contentItem.thumbnail) : undefined,
         category: contentItem.category
           ? {
-            id: Number(contentItem.category.id),
-            name: String(contentItem.category.name),
-          }
+              id: Number(contentItem.category.id),
+              name: String(contentItem.category.name),
+            }
           : undefined,
         reply_count: Number(contentItem.reply_count ?? 0),
       })),
@@ -212,24 +212,24 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
-            id: Number(content.category.id),
-            name: String(content.category.name),
-          }
+              id: Number(content.category.id),
+              name: String(content.category.name),
+            }
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
         author: '블로그 관리자',
         tags: [], // 태그는 미구현
         prev_article: prevContent
           ? {
-            sequence: Number(prevContent.sequence),
-            title: String(prevContent.title),
-          }
+              sequence: Number(prevContent.sequence),
+              title: String(prevContent.title),
+            }
           : undefined,
         next_article: nextContent
           ? {
-            sequence: Number(nextContent.sequence),
-            title: String(nextContent.title),
-          }
+              sequence: Number(nextContent.sequence),
+              title: String(nextContent.title),
+            }
           : undefined,
       },
       recentReplies: recentReplies.map((reply) => ({
