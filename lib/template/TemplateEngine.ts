@@ -17,6 +17,13 @@ interface TemplateData {
     post_count: number;
     category_id: number | null;
   }>;
+  menus: Array<{
+    id: number;
+    name: string;
+    type: string;
+    uri: string;
+    is_blank: boolean;
+  }>;
   contents: Array<{
     sequence: number;
     title: string;
@@ -81,8 +88,10 @@ interface TemplateData {
   replies: Array<{
     id: number;
     content_id: number;
+    reply_id?: number | null;
     content: string;
     created_at: string;
+    depth?: number;
     user: {
       nickname: string;
     };
@@ -206,8 +215,15 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 블로그 이미지 치환
   result = result.replace(/\[##_blog_image_##\]/g, data.blog.logo_image ? `<img src="${data.blog.logo_image}" alt="${data.blog.nickname}" class="blog-logo" />` : '');
 
-  // 블로그 메뉴 치환 (기본 메뉴)
-  const blogMenuHtml = `
+  // 블로그 메뉴 치환 (데이터베이스에서 가져온 메뉴)
+  const blogMenuHtml = data.menus.length > 0 ? `
+    <ul>
+      ${data.menus.map(menu => {
+        const target = menu.is_blank ? ' target="_blank"' : '';
+        return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
+      }).join('')}
+    </ul>
+  ` : `
     <ul>
       <li><a href="/">홈</a></li>
       <li><a href="/about">소개</a></li>
@@ -378,13 +394,35 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   data.replies.forEach((reply) => {
     const replyTemplate = result.match(repliesPattern)?.[0]?.replace(/\[##_rp_rep_##\]|\[\/##_rp_rep_##\]/g, '') || '';
     if (replyTemplate) {
+      // depth에 따른 들여쓰기 계산 (각 레벨당 20px)
+      const depth = reply.depth ?? 0;
+      const indentStyle = depth > 0 ? `margin-left: ${depth * 20}px; padding-left: 15px; border-left: 2px solid #e5e7eb;` : '';
+      
+      // depth에 따른 CSS 클래스 생성
+      let depthClass = '';
+      if (depth > 0) {
+        depthClass = depth <= 3 ? `reply-depth-${depth}` : 'reply-depth-3';
+      }
+      
       let replyHtml = replyTemplate
         .replace(/\[##_rp_rep_id_##\]/g, String(reply.id))
         .replace(/\[##_rp_rep_name_##\]/g, reply.user.nickname)
         .replace(/\[##_rp_rep_content_##\]/g, reply.content)
         .replace(/\[##_rp_rep_date_##\]/g, formatDateTime(reply.created_at))
         .replace(/\[##_rp_rep_time_##\]/g, formatSimpleDate(reply.created_at))
-        .replace(/\[##_rp_rep_link_##\]/g, `#reply-${reply.id}`);
+        .replace(/\[##_rp_rep_link_##\]/g, `#reply-${reply.id}`)
+        .replace(/\[##_rp_rep_depth_##\]/g, String(depth))
+        .replace(/\[##_rp_rep_depth_class_##\]/g, depthClass)
+        .replace(/\[##_rp_rep_indent_style_##\]/g, indentStyle);
+
+      // 댓글 아이템에 depth 클래스 추가
+      if (depth > 0) {
+        // comment-item 클래스에 reply 클래스와 depth 클래스 추가
+        replyHtml = replyHtml.replace(
+          /(<div[^>]*class="[^"]*comment-item[^"]*")/g,
+          `$1 reply ${depthClass}"`
+        );
+      }
 
       repliesHtml += replyHtml;
     }

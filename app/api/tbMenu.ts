@@ -35,7 +35,12 @@ export async function getMenusByBlogId(blogId: number): Promise<Menu[]> {
       is_blank: Boolean(row.is_blank),
     }));
   } catch (error) {
-    return [];
+    // 메뉴 테이블이 없는 경우 기본 메뉴 반환
+    return [
+      { id: 1, blog_id: blogId, name: '홈', type: 'link', uri: '/', is_blank: false },
+      { id: 2, blog_id: blogId, name: '소개', type: 'link', uri: '/about', is_blank: false },
+      { id: 3, blog_id: blogId, name: '연락처', type: 'link', uri: '/contact', is_blank: false },
+    ];
   }
 }
 

@@ -53,9 +53,9 @@ export const getContentByBlogIdAndSequence = async (blogId: number, contentSeque
     ...content,
     category: content.category_id
       ? {
-          id: content.category_id,
-          name: content.category_name,
-        }
+        id: content.category_id,
+        name: content.category_name,
+      }
       : undefined,
   };
 };
@@ -80,9 +80,9 @@ export const getContentsByBlogId = async (blogId: number): Promise<Content[]> =>
     ...content,
     category: content.category_id
       ? {
-          id: content.category_id,
-          name: content.category_name,
-        }
+        id: content.category_id,
+        name: content.category_name,
+      }
       : undefined,
   }));
 };
@@ -108,11 +108,11 @@ export const getRecentContents = async (blogId: number, limit: number = 5): Prom
     ...row,
     category: row.category_id
       ? {
-          id: row.category_id,
-          name: row.category_name,
-          sequence: row.category_sequence,
-          description: row.category_description,
-        }
+        id: row.category_id,
+        name: row.category_name,
+        sequence: row.category_sequence,
+        description: row.category_description,
+      }
       : undefined,
   }));
 };
@@ -141,9 +141,9 @@ export const getContentById = async (id: number): Promise<Content | null> => {
     ...content,
     category: content.category_id
       ? {
-          id: content.category_id,
-          name: content.category_name,
-        }
+        id: content.category_id,
+        name: content.category_name,
+      }
       : undefined,
   };
 };
@@ -172,9 +172,9 @@ export const getContentBySequence = async (blogId: number, sequence: number): Pr
     ...content,
     category: content.category_id
       ? {
-          id: content.category_id,
-          name: content.category_name,
-        }
+        id: content.category_id,
+        name: content.category_name,
+      }
       : undefined,
   };
 };

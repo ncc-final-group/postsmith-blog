@@ -43,34 +43,34 @@ export default function EditSelectPage() {
 
   const getColorClasses = (color: string) => {
     switch (color) {
-      case 'blue':
-        return {
-          bg: 'bg-blue-50 hover:bg-blue-100',
-          border: 'border-blue-200 hover:border-blue-300',
-          text: 'text-blue-800',
-          button: 'bg-blue-600 hover:bg-blue-700',
-        };
-      case 'red':
-        return {
-          bg: 'bg-red-50 hover:bg-red-100',
-          border: 'border-red-200 hover:border-red-300',
-          text: 'text-red-800',
-          button: 'bg-red-600 hover:bg-red-700',
-        };
-      case 'green':
-        return {
-          bg: 'bg-green-50 hover:bg-green-100',
-          border: 'border-green-200 hover:border-green-300',
-          text: 'text-green-800',
-          button: 'bg-green-600 hover:bg-green-700',
-        };
-      default:
-        return {
-          bg: 'bg-gray-50 hover:bg-gray-100',
-          border: 'border-gray-200 hover:border-gray-300',
-          text: 'text-gray-800',
-          button: 'bg-gray-600 hover:bg-gray-700',
-        };
+    case 'blue':
+      return {
+        bg: 'bg-blue-50 hover:bg-blue-100',
+        border: 'border-blue-200 hover:border-blue-300',
+        text: 'text-blue-800',
+        button: 'bg-blue-600 hover:bg-blue-700',
+      };
+    case 'red':
+      return {
+        bg: 'bg-red-50 hover:bg-red-100',
+        border: 'border-red-200 hover:border-red-300',
+        text: 'text-red-800',
+        button: 'bg-red-600 hover:bg-red-700',
+      };
+    case 'green':
+      return {
+        bg: 'bg-green-50 hover:bg-green-100',
+        border: 'border-green-200 hover:border-green-300',
+        text: 'text-green-800',
+        button: 'bg-green-600 hover:bg-green-700',
+      };
+    default:
+      return {
+        bg: 'bg-gray-50 hover:bg-gray-100',
+        border: 'border-gray-200 hover:border-gray-300',
+        text: 'text-gray-800',
+        button: 'bg-gray-600 hover:bg-gray-700',
+      };
     }
   };
 

@@ -5,6 +5,7 @@ import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId } from '../../api/tbContents';
+import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
 import BlogLayout from '../../components/BlogLayout';
@@ -33,6 +34,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const allContents = await getContentsByBlogId(blog.id);
   const contents = allContents.filter((c) => c.category && c.category.id === category.id);
   const recentReplies = await getRecentReplies(blog.id);
+  const menus = await getMenusByBlogId(blog.id);
 
   const templateData = {
     blog: {
@@ -47,6 +49,13 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       name: String(cat.name),
       post_count: Number(cat.post_count),
       category_id: cat.category_id == null ? null : Number(cat.category_id),
+    })),
+    menus: menus.map((menu) => ({
+      id: Number(menu.id),
+      name: String(menu.name),
+      type: String(menu.type),
+      uri: String(menu.uri),
+      is_blank: Boolean(menu.is_blank),
     })),
     // 전체 글 목록을 포함 (최근 글, 인기글 표시용)
     contents: allContents.map((content) => ({

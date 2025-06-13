@@ -6,6 +6,7 @@ import React from 'react';
 import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getContentsByBlogId } from './api/tbContents';
+import { getMenusByBlogId } from './api/tbMenu';
 import { getRecentReplies } from './api/tbReplies';
 import { getActiveThemeByBlogId } from './api/tbThemes';
 import BlogLayout from './components/BlogLayout';
@@ -92,6 +93,7 @@ export default async function HomePage() {
     const categories = await getCategoriesByBlogId(blog.id);
     const contents = await getContentsByBlogId(blog.id);
     const recentReplies = await getRecentReplies(blog.id);
+    const menus = await getMenusByBlogId(blog.id);
 
     const templateData = {
       blog: {
@@ -107,6 +109,13 @@ export default async function HomePage() {
         post_count: Number(category.post_count),
         category_id: category.category_id == null ? null : Number(category.category_id),
       })),
+      menus: menus.map((menu) => ({
+        id: Number(menu.id),
+        name: String(menu.name),
+        type: String(menu.type),
+        uri: String(menu.uri),
+        is_blank: Boolean(menu.is_blank),
+      })),
       contents: contents.map((content) => ({
         sequence: Number(content.sequence),
         title: String(content.title),
@@ -116,9 +125,9 @@ export default async function HomePage() {
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
-              id: Number(content.category.id),
-              name: String(content.category.name),
-            }
+            id: Number(content.category.id),
+            name: String(content.category.name),
+          }
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
       })),

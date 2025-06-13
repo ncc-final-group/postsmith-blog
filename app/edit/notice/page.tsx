@@ -163,19 +163,13 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
 
       const requestBody = {
         blogId,
-        category: 0, // 공지사항은 카테고리 없음
         title,
         content: html,
-        type: 'notice', // 공지사항 타입
         isImportant, // 중요 공지사항 여부
       };
 
-      // 디버깅을 위한 로그 추가
-      console.log('요청 URL:', `/api/contents`);
-      console.log('요청 데이터:', requestBody);
-
-      // 서버로 POST 요청
-      const response = await fetch(`/api/contents`, {
+      // 서버로 POST 요청 (공지사항 전용 API 엔드포인트)
+      const response = await fetch(`/api/notices`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,19 +177,21 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
         body: JSON.stringify(requestBody),
       });
 
-      // 응답 로깅
-      console.log('응답 상태:', response.status);
-      const responseData = await response.text();
-      console.log('응답 데이터:', responseData);
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);
+        const errorData = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
+
+      const responseData = await response.json();
 
       alert('공지사항이 성공적으로 저장되었습니다.');
 
-      // 저장 완료 후 블로그 메인 페이지로 이동
-      router.push(`/`); // 메인 페이지로 이동
+      // 저장 완료 후 생성된 공지사항으로 이동 (sequence 사용)
+      if (responseData.data?.sequence) {
+        router.push(`/posts/${responseData.data.sequence}`);
+      } else {
+        router.push(`/`); // 메인 페이지로 이동
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
       alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');

@@ -47,7 +47,10 @@ const menuItems: MenuItem[] = [
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: '/usermanage/customize/skin' }],
+    subItems: [
+      { label: '스킨', route: '/usermanage/customize/skin' },
+      { label: '메뉴 관리', route: '/usermanage/menus' },
+    ],
   },
   {
     key: 'plugins',
@@ -119,7 +122,15 @@ export default function Sidebar() {
               {expandedMenu === item.key && item.subItems.length > 0 && (
                 <ul className="bg-white text-gray-700">
                   {item.subItems.map((subItem, index) => {
-                    const fullRoute = `/${name}/${subItem.route}`;
+                    // 현재 경로가 /usermanage인 경우와 /[name]/usermanage인 경우를 구분
+                    let fullRoute;
+                    if (pathname === '/usermanage' || pathname.startsWith('/usermanage/')) {
+                      // /usermanage 또는 /usermanage/* 경로인 경우
+                      fullRoute = subItem.route;
+                    } else {
+                      // /[name]/usermanage 경로인 경우
+                      fullRoute = `/${name}${subItem.route}`;
+                    }
                     const isActive = pathname === fullRoute;
 
                     return (

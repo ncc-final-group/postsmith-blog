@@ -81,17 +81,23 @@ function PageForm({
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
-      .replace(/[^a-z0-9가-힣\s-]/g, '') // 특수문자 제거
-      .replace(/\s+/g, '-') // 공백을 하이픈으로
-      .replace(/-+/g, '-') // 연속된 하이픈 제거
-      .trim();
+      .trim()
+      // 특수문자 제거 (한글, 영문, 숫자, 공백, 하이픈만 유지)
+      .replace(/[^a-z0-9가-힣\s-]/g, '')
+      // 연속된 공백을 하나로
+      .replace(/\s+/g, ' ')
+      // 공백을 하이픈으로 변환
+      .replace(/\s/g, '-')
+      // 연속된 하이픈을 하나로
+      .replace(/-+/g, '-')
+      // 앞뒤 하이픈 제거
+      .replace(/^-+|-+$/g, '');
   };
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    if (!slug || slug === generateSlug(title)) {
-      setSlug(generateSlug(newTitle));
-    }
+    // 항상 제목에서 자동으로 슬러그 생성
+    setSlug(generateSlug(newTitle));
   };
 
   return (
@@ -111,25 +117,21 @@ function PageForm({
         />
       </div>
 
-      <div className="mb-4">
-        <label htmlFor="slug" className="mb-2 block text-sm font-medium text-gray-700">
-          페이지 URL (슬러그)
-        </label>
-        <div className="flex items-center">
-          <span className="mr-2 text-sm text-gray-500">/page/</span>
-          <input
-            type="text"
-            id="slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 p-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-            placeholder="page-url"
-            pattern="[a-z0-9가-힣-]+"
-            title="영문 소문자, 숫자, 한글, 하이픈만 사용 가능합니다"
-          />
+      {/* URL 미리보기 */}
+      {title && (
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            페이지 URL 미리보기
+          </label>
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+            <span className="text-sm text-gray-600">/page/</span>
+            <span className="text-sm font-medium text-gray-900">{slug}</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            ✨ 페이지 제목에서 자동으로 생성됩니다
+          </p>
         </div>
-        <p className="mt-1 text-xs text-gray-500">영문 소문자, 숫자, 한글, 하이픈만 사용 가능합니다. 예: about-us, 소개</p>
-      </div>
+      )}
 
       <div className="mb-4">
         <label className="flex items-center gap-2">
@@ -217,13 +219,8 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         title,
         content: html,
         slug: slug.trim(),
-        type: 'page', // 페이지 타입
         showInMenu, // 메뉴 표시 여부
       };
-
-      // 디버깅을 위한 로그 추가
-      console.log('요청 URL:', `/api/pages`);
-      console.log('요청 데이터:', requestBody);
 
       // 서버로 POST 요청 (페이지 전용 API 엔드포인트)
       const response = await fetch(`/api/pages`, {
@@ -234,19 +231,21 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         body: JSON.stringify(requestBody),
       });
 
-      // 응답 로깅
-      console.log('응답 상태:', response.status);
-      const responseData = await response.text();
-      console.log('응답 데이터:', responseData);
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);
+        const errorData = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
+
+      const responseData = await response.json();
 
       alert('페이지가 성공적으로 저장되었습니다.');
 
-      // 저장 완료 후 생성된 페이지로 이동
-      router.push(`/page/${slug}`);
+      // 저장 완료 후 생성된 페이지로 이동 (sequence 사용)
+      if (responseData.data?.sequence) {
+        router.push(`/posts/${responseData.data.sequence}`);
+      } else {
+        router.push(`/page/${slug}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
       alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');

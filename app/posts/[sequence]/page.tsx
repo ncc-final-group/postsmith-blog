@@ -5,10 +5,77 @@ import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentByBlogIdAndSequence, getContentsByBlogId, getNextContent, getPrevContent } from '../../api/tbContents';
-import { getRecentReplies, getRepliesByContentId } from '../../api/tbReplies';
+import { getMenusByBlogId } from '../../api/tbMenu';
+import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
+
+// 댓글 계층 구조 인터페이스
+interface HierarchicalReply extends Reply {
+  children: HierarchicalReply[];
+  depth: number;
+}
+
+// 댓글을 계층 구조로 변환하는 함수
+function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
+  const replyMap = new Map<number, HierarchicalReply>();
+  const rootReplies: HierarchicalReply[] = [];
+
+  // 모든 댓글을 맵에 저장하고 children 배열 초기화
+  replies.forEach(reply => {
+    replyMap.set(reply.id, {
+      ...reply,
+      children: [],
+      depth: 0
+    });
+  });
+
+  // 부모-자식 관계 설정
+  replies.forEach(reply => {
+    const currentReply = replyMap.get(reply.id)!;
+    
+    if (reply.reply_id && replyMap.has(reply.reply_id)) {
+      // 대댓글인 경우
+      const parentReply = replyMap.get(reply.reply_id)!;
+      currentReply.depth = parentReply.depth + 1;
+      parentReply.children.push(currentReply);
+    } else {
+      // 최상위 댓글인 경우
+      rootReplies.push(currentReply);
+    }
+  });
+
+  // 각 레벨에서 시간순으로 정렬 (오래된 순)
+  const sortReplies = (replies: HierarchicalReply[]) => {
+    replies.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    replies.forEach(reply => {
+      if (reply.children.length > 0) {
+        sortReplies(reply.children);
+      }
+    });
+  };
+
+  sortReplies(rootReplies);
+  return rootReplies;
+}
+
+// 계층 구조를 평면 배열로 변환 (렌더링용)
+function flattenReplies(hierarchicalReplies: HierarchicalReply[]): HierarchicalReply[] {
+  const result: HierarchicalReply[] = [];
+  
+  const traverse = (replies: HierarchicalReply[]) => {
+    replies.forEach(reply => {
+      result.push(reply);
+      if (reply.children.length > 0) {
+        traverse(reply.children);
+      }
+    });
+  };
+  
+  traverse(hierarchicalReplies);
+  return result;
+}
 
 async function getBlogAddress(): Promise<string> {
   try {
@@ -91,7 +158,14 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     // 10. 해당 글의 댓글 조회
     const contentReplies = await getRepliesByContentId(content.id);
 
-    // 11. 템플릿 데이터 구성
+    // 10-1. 댓글을 계층 구조로 변환
+    const hierarchicalReplies = buildReplyHierarchy(contentReplies);
+    const flattenedReplies = flattenReplies(hierarchicalReplies);
+
+    // 11. 메뉴 정보 조회
+    const menus = await getMenusByBlogId(blog.id);
+
+    // 12. 템플릿 데이터 구성
     const templateData = {
       blog: {
         nickname: String(blog.nickname),
@@ -106,6 +180,13 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         post_count: Number(category.post_count),
         category_id: category.category_id == null ? null : Number(category.category_id),
       })),
+      menus: menus.map((menu) => ({
+        id: Number(menu.id),
+        name: String(menu.name),
+        type: String(menu.type),
+        uri: String(menu.uri),
+        is_blank: Boolean(menu.is_blank),
+      })),
       contents: allContents.map((contentItem) => ({
         sequence: Number(contentItem.sequence),
         title: String(contentItem.title),
@@ -115,9 +196,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: contentItem.thumbnail ? String(contentItem.thumbnail) : undefined,
         category: contentItem.category
           ? {
-              id: Number(contentItem.category.id),
-              name: String(contentItem.category.name),
-            }
+            id: Number(contentItem.category.id),
+            name: String(contentItem.category.name),
+          }
           : undefined,
         reply_count: Number(contentItem.reply_count ?? 0),
       })),
@@ -131,24 +212,24 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
-              id: Number(content.category.id),
-              name: String(content.category.name),
-            }
+            id: Number(content.category.id),
+            name: String(content.category.name),
+          }
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
         author: '블로그 관리자',
         tags: [], // 태그는 미구현
         prev_article: prevContent
           ? {
-              sequence: Number(prevContent.sequence),
-              title: String(prevContent.title),
-            }
+            sequence: Number(prevContent.sequence),
+            title: String(prevContent.title),
+          }
           : undefined,
         next_article: nextContent
           ? {
-              sequence: Number(nextContent.sequence),
-              title: String(nextContent.title),
-            }
+            sequence: Number(nextContent.sequence),
+            title: String(nextContent.title),
+          }
           : undefined,
       },
       recentReplies: recentReplies.map((reply) => ({
@@ -159,19 +240,21 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         content_sequence: Number(reply.content_sequence),
         user: { nickname: String(reply.user_nickname ?? '익명') },
       })),
-      replies: contentReplies.map((reply) => ({
+      replies: flattenedReplies.map((reply) => ({
         id: Number(reply.id),
         content_id: Number(reply.content_id),
+        reply_id: reply.reply_id,
         content: String(reply.content),
         created_at: String(reply.created_at),
+        depth: reply.depth,
         user: { nickname: String(reply.user_nickname ?? '익명') },
       })),
     };
 
-    // 12. 템플릿 렌더링
+    // 13. 템플릿 렌더링
     const html = renderTemplate(theme.html, theme.css, templateData);
 
-    // 13. 블로그 정보 구성
+    // 14. 블로그 정보 구성
     const blogInfo = {
       id: blog.id,
       nickname: blog.nickname,
