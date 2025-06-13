@@ -286,7 +286,11 @@ export default function StatsChart() {
         grid: { display: true },
         ticks: { display: false },
       },
-      y: { beginAtZero: true },
+      y: {
+        beginAtZero: true,
+        ticks: { display: false }, // ✅ Y축 숫자 라벨 제거
+        grid: { drawTicks: false }, // ✅ 눈금 라인 끝에 작은 틱도 제거
+      },
     },
     interaction: {
       mode: 'index' as const,
