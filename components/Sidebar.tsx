@@ -17,10 +17,18 @@ const menuItems: MenuItem[] = [
     key: 'write',
     label: '컨텐츠',
     subItems: [
-      { label: '글 관리', route: '/posts' },
-      { label: '페이지 관리', route: '/pages' },
-      { label: '카테고리 관리', route: '/categories' },
-      { label: '공지 관리', route: '/notices' },
+      { label: '글 관리', route: '/usermanage/posts' },
+      { label: '페이지 관리', route: '/usermanage/pages' },
+      { label: '카테고리 관리', route: '/usermanage/categories' },
+      { label: '공지 관리', route: '/usermanage/notices' },
+    ],
+  },
+  {
+    key: 'media',
+    label: '미디어',
+    subItems: [
+      { label: '미디어 관리', route: '/usermanage/media' },
+      { label: '파일 업로드', route: '/usermanage/media/upload' },
     ],
   },
   {
@@ -31,13 +39,15 @@ const menuItems: MenuItem[] = [
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: '/customize/skin' }],
+    subItems: [
+      { label: '스킨', route: '/usermanage/customize/skin' },
+      { label: '메뉴 관리', route: '/usermanage/menus' },
+    ],
   },
   {
     key: 'plugins',
     label: '플러그인',
     subItems: [{ label: '플러그인 관리', route: '/plugins' }],
-    route: 'usermanage/plugins',
   },
   {
     key: 'admin',
@@ -90,7 +100,15 @@ export default function Sidebar() {
               {item.subItems.length > 0 && (
                 <ul className="bg-white text-gray-700">
                   {item.subItems.map((subItem, index) => {
-                    const fullRoute = `/${name}/${subItem.route}`;
+                    // 현재 경로가 /usermanage인 경우와 /[name]/usermanage인 경우를 구분
+                    let fullRoute;
+                    if (pathname === '/usermanage' || pathname.startsWith('/usermanage/')) {
+                      // /usermanage 또는 /usermanage/* 경로인 경우
+                      fullRoute = subItem.route;
+                    } else {
+                      // /[name]/usermanage 경로인 경우
+                      fullRoute = `/${name}${subItem.route}`;
+                    }
                     const isActive = pathname === fullRoute;
                     return (
                       <li key={index}>

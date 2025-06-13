@@ -1,22 +1,9 @@
-import type { NextConfig } from 'next';
+import { NextConfig } from 'next';
 
-const nextConfig: NextConfig = {
-  output: 'standalone',
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  reactStrictMode: true,
+const config: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-        search: '',
-      },
-    ],
+    domains: ['localhost', 'images.unsplash.com'],
   },
 };
 
-export default nextConfig;
+export default config;

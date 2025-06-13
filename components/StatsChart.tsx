@@ -2,10 +2,18 @@
 
 import { CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js';
 import crosshairPlugin from 'chartjs-plugin-crosshair';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
+// Register chart components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, crosshairPlugin);
+
+// Dynamic import for zoom plugin
+if (typeof window !== 'undefined') {
+  import('chartjs-plugin-zoom').then((zoomPlugin) => {
+    ChartJS.register(zoomPlugin.default);
+  });
+}
 
 interface StatsData {
   date: string;
@@ -20,13 +28,16 @@ export default function StatsChart() {
   const [statsData, setStatsData] = useState<StatsData[]>([]);
   const [period, setPeriod] = useState<PeriodType>('daily');
   const [statType, setStatType] = useState<StatType>('views');
+  const [timeOffset, setTimeOffset] = useState(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const chartRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const response = await fetch('/api/stats');
         const data = await response.json();
-        setStatsData(data);
+        setStatsData(data.data);
       } catch (error) {
         throw new Error('Failed to fetch stats: ' + error);
       }
@@ -43,24 +54,25 @@ export default function StatsChart() {
     return `${year}-${month}-${day}`;
   };
 
-  // 날짜에서 일(day)만 추출하는 함수
-  const getDayFromDate = (dateStr: string) => {
-    return new Date(dateStr).getDate().toString();
+  // 시간 이동 함수
+  const moveTime = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setTimeOffset((prev) => prev + 1);
+    } else {
+      setTimeOffset((prev) => Math.max(0, prev - 1));
+    }
   };
 
-  // 날짜에서 "MM월" 형식의 문자열을 반환하는 함수
-  const getMonthLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월`;
-  };
-
-  // 주차 계산 함수 (월요일 기준)
-  const getWeekLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // 월요일로 조정
-    const monday = new Date(date.setDate(diff));
-    return monday.getDate().toString();
+  // 현재 기간에 따른 이동 단위 텍스트
+  const getMoveUnitText = () => {
+    switch (period) {
+      case 'daily':
+        return '30일';
+      case 'weekly':
+        return '15주';
+      case 'monthly':
+        return '12개월';
+    }
   };
 
   // 기간별 데이터 처리
@@ -80,6 +92,7 @@ export default function StatsChart() {
 
       // 최근 30일의 날짜 배열 생성
       const today = new Date();
+      today.setDate(today.getDate() - timeOffset * 30); // 30일 단위로 이동
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date(today);
         date.setDate(date.getDate() - (29 - i));
@@ -112,7 +125,8 @@ export default function StatsChart() {
     } else if (period === 'weekly') {
       // 최근 15주 데이터
       const weeklyData = statsData.reduce((acc: { [key: string]: { views: number; visitors: number } }, curr) => {
-        const weekKey = getWeekLabel(curr.date);
+        const date = new Date(curr.date);
+        const weekKey = formatDate(date);
         if (!acc[weekKey]) {
           acc[weekKey] = { views: 0, visitors: 0 };
         }
@@ -121,13 +135,24 @@ export default function StatsChart() {
         return acc;
       }, {});
 
-      const weeks = Object.keys(weeklyData).slice(-15);
+      // 기준 날짜 설정 (timeOffset 고려)
+      const baseDate = new Date();
+      baseDate.setDate(baseDate.getDate() - timeOffset * 105); // 15주 단위로 이동 (15 * 7 = 105일)
+
+      // 날짜 배열 생성
+      const weekDates = Array.from({ length: 15 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + i * 7);
+        return formatDate(date);
+      });
 
       // 월이 바뀌는 지점 찾기
-      const monthLabels = weeks.reduce((acc: { [key: string]: number }, week, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (14 - index) * 7);
+      const monthLabels = Array.from({ length: 15 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + i * 7);
         const month = date.getMonth() + 1;
+        return { month, index: i };
+      }).reduce((acc: { [key: string]: number }, { month, index }) => {
         if (!acc[month]) {
           acc[month] = index;
         }
@@ -136,28 +161,29 @@ export default function StatsChart() {
 
       // 날짜를 순차적으로 표시하기 위한 배열 생성
       const sequentialDates = Array.from({ length: 15 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (14 - i) * 7);
-        return date.getDate().toString();
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() + i * 7);
+        return {
+          day: date.getDate().toString(),
+          month: date.getMonth() + 1,
+        };
       });
 
       return {
-        labels: sequentialDates.map((date, index) => {
-          const currentDate = new Date();
-          currentDate.setDate(currentDate.getDate() - (14 - index) * 7);
-          const month = currentDate.getMonth() + 1;
+        labels: sequentialDates.map(({ day, month }, index) => {
           if (monthLabels[month] === index) {
-            return [`${date}`, `${month}월`];
+            return [`${day}`, `${month}월`];
           }
-          return date;
+          return day;
         }),
-        data: weeks.map((week) => weeklyData[week][statType]),
+        data: weekDates.map((date) => weeklyData[date]?.[statType] || 0),
         monthLabels,
       };
     } else {
       // 최근 12개월 데이터
       const monthlyData = statsData.reduce((acc: { [key: string]: { views: number; visitors: number } }, curr) => {
-        const monthKey = getMonthLabel(curr.date);
+        const date = new Date(curr.date);
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
         if (!acc[monthKey]) {
           acc[monthKey] = { views: 0, visitors: 0 };
         }
@@ -166,13 +192,23 @@ export default function StatsChart() {
         return acc;
       }, {});
 
-      const months = Object.keys(monthlyData).slice(-12);
+      // 기준 날짜 설정 (timeOffset 고려)
+      const baseDate = new Date();
+      baseDate.setMonth(baseDate.getMonth() - timeOffset * 12); // 12개월 단위로 이동
+
+      // 월별 데이터 배열 생성
+      const monthDates = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(baseDate);
+        date.setMonth(date.getMonth() + i);
+        return {
+          key: `${date.getFullYear()}-${date.getMonth() + 1}`,
+          label: `${date.getMonth() + 1}월`,
+          year: date.getFullYear(),
+        };
+      });
 
       // 연도가 바뀌는 지점 찾기
-      const baseDate = new Date();
-      const yearLabels = months.reduce((acc: { [key: string]: number }, month, index) => {
-        const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 11 + index);
-        const year = date.getFullYear().toString();
+      const yearLabels = monthDates.reduce((acc: { [key: string]: number }, { year }, index) => {
         if (!acc[year]) {
           acc[year] = index;
         }
@@ -180,8 +216,13 @@ export default function StatsChart() {
       }, {});
 
       return {
-        labels: months,
-        data: months.map((month) => monthlyData[month][statType]),
+        labels: monthDates.map(({ label, year }, index) => {
+          if (yearLabels[year] === index) {
+            return [label, `${year}년`];
+          }
+          return label;
+        }),
+        data: monthDates.map(({ key }) => monthlyData[key]?.[statType] || 0),
         yearLabels,
       };
     }
@@ -189,18 +230,23 @@ export default function StatsChart() {
 
   const processedData = processDataByPeriod();
 
+  // 한 칸의 너비 계산
+  const blockWidth = 30; // 기본 블록 너비
+  const totalBlocks = processedData.labels.length;
+  const chartWidth = `calc(100% - ${blockWidth}px)`; // 차트 전체 너비
+
   const chartData = {
-    labels: processedData.labels.map((label) => (Array.isArray(label) ? label[0] : label)),
+    labels: processedData.labels.map(() => ''),
     datasets: [
       {
         data: processedData.data,
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        backgroundColor: processedData.data.map((_, index) => (index === hoveredIndex ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.6)')),
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 2,
-        pointRadius: 5,
-        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+        pointRadius: processedData.data.map((_, index) => (index === hoveredIndex ? 7 : 5)),
+        pointBackgroundColor: processedData.data.map((_, index) => (index === hoveredIndex ? 'rgba(75, 192, 192, 1)' : 'rgba(75, 192, 192, 1)')),
         pointBorderColor: '#fff',
-        pointBorderWidth: 2,
+        pointBorderWidth: processedData.data.map((_, index) => (index === hoveredIndex ? 3 : 2)),
         pointHoverRadius: 7,
         pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)',
         pointHoverBorderColor: '#fff',
@@ -237,36 +283,8 @@ export default function StatsChart() {
     },
     scales: {
       x: {
-        grid: {
-          display: true,
-          drawOnChartArea: true,
-        },
-        ticks: {
-          callback: function (this: { getLabelForValue: (value: any) => string }, value: any, index: number): string | string[] {
-            if (period === 'daily') {
-              const label = processedData.labels[index];
-              return Array.isArray(label) ? label : label;
-            } else if (period === 'weekly' && processedData.monthLabels) {
-              const label = processedData.labels[index];
-              if (Array.isArray(label)) {
-                return label;
-              }
-              return label;
-            } else if (period === 'monthly' && processedData.yearLabels) {
-              const baseDate = new Date();
-              const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 11 + index);
-              const year = date.getFullYear().toString();
-              if (processedData.yearLabels[year] === index) {
-                const label = this.getLabelForValue(value);
-                return [`${label}`, `${year}년`];
-              }
-            }
-            return this.getLabelForValue(value);
-          },
-          maxRotation: 0,
-          minRotation: 0,
-          padding: 10,
-        },
+        grid: { display: true },
+        ticks: { display: false },
       },
       y: {
         beginAtZero: true,
@@ -285,49 +303,111 @@ export default function StatsChart() {
     },
   };
 
-  const buttonStyle = 'px-4 py-2 text-sm font-medium rounded-md transition-colors';
-  const activeButtonStyle = 'bg-teal-500 text-white';
-  const inactiveButtonStyle = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+  const handleTimeBlockHover = (index: number | null) => {
+    setHoveredIndex(index);
 
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayOfWeek = days[today.getDay()];
-    return `${year}.${month}.${day} ${dayOfWeek}`;
+    if (chartRef.current && index !== null) {
+      const chart = chartRef.current;
+
+      // 차트의 getDatasetMeta를 사용하여 데이터 포인트의 위치 정보를 가져옵니다
+      const meta = chart.getDatasetMeta(0);
+      if (meta.data[index]) {
+        const element = meta.data[index];
+        chart.setActiveElements([
+          {
+            datasetIndex: 0,
+            index: index,
+            element: element,
+          },
+        ]);
+
+        chart.tooltip.setActiveElements(
+          [
+            {
+              datasetIndex: 0,
+              index: index,
+            },
+          ],
+          {
+            x: element.x,
+            y: element.y,
+          },
+        );
+      }
+
+      chart.update('none'); // 'none' 모드로 업데이트하여 성능 최적화
+    }
   };
 
   return (
-    <div className="h-full w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="text-lg font-medium text-gray-700">{getTodayDate()}</div>
-        <div className="flex space-x-6">
-          <div className="space-x-2">
-            <button className={`${buttonStyle} ${period === 'daily' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('daily')}>
-              일간
+    <div className="flex w-full flex-col items-center">
+      <div className="mb-4 flex gap-4">
+        <select
+          value={period}
+          onChange={(e) => {
+            setPeriod(e.target.value as PeriodType);
+            setTimeOffset(0);
+          }}
+          className="rounded-lg border px-4 py-2"
+        >
+          <option value="daily">일간</option>
+          <option value="weekly">주간</option>
+          <option value="monthly">월간</option>
+        </select>
+        <select value={statType} onChange={(e) => setStatType(e.target.value as StatType)} className="rounded-lg border px-4 py-2">
+          <option value="views">조회수</option>
+          <option value="visitors">방문자</option>
+        </select>
+      </div>
+      <div className="relative w-full">
+        <div className="h-[400px] w-full" style={{ width: chartWidth }}>
+          <Line ref={chartRef} data={chartData} options={options} />
+        </div>
+        <div className="mt-4 w-full">
+          <div className="flex items-center">
+            <button onClick={() => moveTime('prev')} className="rounded-full py-2 transition-colors hover:bg-gray-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-            <button className={`${buttonStyle} ${period === 'weekly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('weekly')}>
-              주간
-            </button>
-            <button className={`${buttonStyle} ${period === 'monthly' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setPeriod('monthly')}>
-              월간
-            </button>
-          </div>
-          <div className="space-x-2">
-            <button className={`${buttonStyle} ${statType === 'views' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('views')}>
-              조회수
-            </button>
-            <button className={`${buttonStyle} ${statType === 'visitors' ? activeButtonStyle : inactiveButtonStyle}`} onClick={() => setStatType('visitors')}>
-              방문자수
+            <div
+              className="grid flex-1"
+              style={{
+                gridTemplateColumns: `repeat(${totalBlocks}, minmax(${blockWidth}px, 1fr))`,
+                width: chartWidth,
+                columnGap: '0',
+              }}
+            >
+              {processedData.labels.map((label, index) => {
+                const displayLabel = Array.isArray(label) ? label[0] : label;
+                const monthLabel = Array.isArray(label) ? label[1] : null;
+
+                return (
+                  <div
+                    key={index}
+                    className={`flex cursor-pointer flex-col items-center transition-colors ${hoveredIndex === index ? 'bg-gray-50' : ''}`}
+                    onMouseEnter={() => handleTimeBlockHover(index)}
+                    onMouseLeave={() => handleTimeBlockHover(null)}
+                  >
+                    <span className="text-sm text-gray-600">{displayLabel}</span>
+                    {monthLabel && <span className="mt-1 text-sm font-medium text-gray-800">{monthLabel}</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => moveTime('next')}
+              disabled={timeOffset === 0}
+              className={`rounded-full py-2 transition-colors ${timeOffset === 0 ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </div>
       </div>
-      <div className="h-[calc(100%-3rem)]">
-        <Line data={chartData} options={options} />
-      </div>
+      {timeOffset > 0 && <div className="mt-4 text-sm text-gray-500">{getMoveUnitText()} 전 데이터</div>}
     </div>
   );
 }
