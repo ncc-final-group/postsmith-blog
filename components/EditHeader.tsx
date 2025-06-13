@@ -1,27 +1,28 @@
-"use client";
+'use client';
 
+import { $createCodeNode } from '@lexical/code';
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
+import { $createLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListNode } from '@lexical/list';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
+import { $patchStyleText, $setBlocksType } from '@lexical/selection';
 import { $isTextNode, COMMAND_PRIORITY_LOW, createCommand, ElementFormatType, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, TextFormatType } from 'lexical';
 import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, TextNode } from 'lexical';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $patchStyleText, $setBlocksType } from '@lexical/selection';
-import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListNode } from '@lexical/list';
-import { $createLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
-import { $createCustomHRNode } from '../components/CustomHRNode';
-import { $createHeadingNode, HeadingTagType } from '@lexical/rich-text';
-import { $createCodeNode } from '@lexical/code';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import "bootstrap-icons/font/bootstrap-icons.css";
+
+import { $createCustomHRNode } from './CustomHRNode';
+
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import React from 'react';
 import { $getRoot } from 'lexical';
+
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
 import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './Editor';
-import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
-import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
 import { getMediaFiles, type MediaFile } from '../lib/mediaService';
-
-
+import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
 
 // 파일 크기 포맷팅
 const formatFileSize = (bytes: number): string => {
@@ -59,24 +60,24 @@ const fontFamilyOptions = [
 // 툴팁 정보 정의
 const getToolTipInfo = (format: string): { title: string; description: string } => {
   const tooltips: Record<string, { title: string; description: string }> = {
-    'image': { title: '파일', description: '이미지, 동영상, 파일 삽입' },
-    'bold': { title: '굵게', description: '텍스트를 굵게 표시' },
-    'italic': { title: '기울임', description: '텍스트를 기울임꼴로 표시' },
-    'underline': { title: '밑줄', description: '텍스트에 밑줄 추가' },
-    'strikethrough': { title: '취소선', description: '텍스트에 취소선 추가' },
-    'textColor': { title: '글자 색상', description: '텍스트 색상 변경' },
-    'bgColor': { title: '배경 색상', description: '텍스트 배경색 변경' },
-    'left': { title: '왼쪽 정렬', description: '텍스트를 왼쪽으로 정렬' },
-    'center': { title: '가운데 정렬', description: '텍스트를 가운데로 정렬' },
-    'right': { title: '오른쪽 정렬', description: '텍스트를 오른쪽으로 정렬' },
-    'justify': { title: '양쪽 정렬', description: '텍스트를 양쪽으로 정렬' },
-    'list': { title: '목록', description: '목록 형식 삽입' },
-    'link': { title: '링크', description: '하이퍼링크 삽입' },
-    'divider': { title: '구분선', description: '수평선 삽입' },
-    'code': { title: '코드', description: '코드 블록 삽입' },
-    'plugin': { title: '플러그인', description: '플러그인 텍스트 삽입' },
+    image: { title: '파일', description: '이미지, 동영상, 파일 삽입' },
+    bold: { title: '굵게', description: '텍스트를 굵게 표시' },
+    italic: { title: '기울임', description: '텍스트를 기울임꼴로 표시' },
+    underline: { title: '밑줄', description: '텍스트에 밑줄 추가' },
+    strikethrough: { title: '취소선', description: '텍스트에 취소선 추가' },
+    textColor: { title: '글자 색상', description: '텍스트 색상 변경' },
+    bgColor: { title: '배경 색상', description: '텍스트 배경색 변경' },
+    left: { title: '왼쪽 정렬', description: '텍스트를 왼쪽으로 정렬' },
+    center: { title: '가운데 정렬', description: '텍스트를 가운데로 정렬' },
+    right: { title: '오른쪽 정렬', description: '텍스트를 오른쪽으로 정렬' },
+    justify: { title: '양쪽 정렬', description: '텍스트를 양쪽으로 정렬' },
+    list: { title: '목록', description: '목록 형식 삽입' },
+    link: { title: '링크', description: '하이퍼링크 삽입' },
+    divider: { title: '구분선', description: '수평선 삽입' },
+    code: { title: '코드', description: '코드 블록 삽입' },
+    plugin: { title: '플러그인', description: '플러그인 텍스트 삽입' },
   };
-  
+
   return tooltips[format] || { title: format, description: '' };
 };
 
@@ -143,33 +144,29 @@ const ToolbarButton = ({
         onMouseDown={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`px-2 py-1 border border-black rounded mx-1 transition-all duration-200 text-black ${
-          isActive 
-            ? 'bg-gray-200 shadow-inner' 
-            : 'bg-white hover:bg-gray-100 hover:shadow-md'
+        className={`mx-1 rounded border border-black px-2 py-1 text-black transition-all duration-200 ${
+          isActive ? 'bg-gray-200 shadow-inner' : 'bg-white hover:bg-gray-100 hover:shadow-md'
         }`}
         aria-label={format}
         style={style}
       >
         {icon}
       </button>
-      
+
       {/* 툴팁 - fixed 위치로 동적 계산 */}
       {showTooltip && (
-        <div 
-          className="fixed z-50 transform -translate-x-1/2"
+        <div
+          className="fixed z-50 -translate-x-1/2 transform"
           style={{
             top: `${tooltipPosition.top}px`,
             left: `${tooltipPosition.left}px`,
           }}
         >
-          <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+          <div className="rounded-lg bg-gray-800 px-3 py-2 text-xs whitespace-nowrap text-white shadow-lg">
             <div className="font-medium">{tooltipInfo.title}</div>
-            {tooltipInfo.description && (
-              <div className="text-gray-300 text-xs mt-1">{tooltipInfo.description}</div>
-            )}
+            {tooltipInfo.description && <div className="mt-1 text-xs text-gray-300">{tooltipInfo.description}</div>}
             {/* 위쪽 화살표 */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-b-gray-800"></div>
           </div>
         </div>
       )}
@@ -204,38 +201,35 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
-      style={{ 
+      className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">텍스트</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">텍스트</label>
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="링크에 표시될 텍스트"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">URL</label>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="https://example.com"
           />
         </div>
         <div className="flex justify-end space-x-2 pt-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">
             취소
           </button>
           <button
@@ -246,7 +240,7 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
                 setUrl('');
               }
             }}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
           >
             확인
           </button>
@@ -263,36 +257,36 @@ interface HrFormProps {
 }
 
 const hrStyles = [
-  { 
+  {
     id: 'solid',
     name: '실선',
     style: 'border-t border-black my-4',
-    previewStyle: 'border-t-2 border-black'
+    previewStyle: 'border-t-2 border-black',
   },
   {
     id: 'dashed',
     name: '점선',
     style: 'border-t border-dashed border-black my-4',
-    previewStyle: 'border-t-2 border-dashed border-black'
+    previewStyle: 'border-t-2 border-dashed border-black',
   },
   {
     id: 'dotted',
     name: '점선 (둥근점)',
     style: 'border-t border-dotted border-black my-4',
-    previewStyle: 'border-t-2 border-dotted border-black'
+    previewStyle: 'border-t-2 border-dotted border-black',
   },
   {
     id: 'double',
     name: '이중선',
     style: 'border-t-4 border-double border-black my-4 h-3',
-    previewStyle: 'border-t-4 border-double border-black'
+    previewStyle: 'border-t-4 border-double border-black',
   },
   {
     id: 'thick',
     name: '두꺼운 실선',
     style: 'border-t-2 border-black my-4',
-    previewStyle: 'border-t-4 border-black'
-  }
+    previewStyle: 'border-t-4 border-black',
+  },
 ];
 
 const HrForm = ({ onSubmit, onClose, position }: HrFormProps) => {
@@ -314,22 +308,18 @@ const HrForm = ({ onSubmit, onClose, position }: HrFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
-      style={{ 
+      className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-700">구분선 스타일 선택</h3>
         <div className="space-y-2">
           {hrStyles.map((style) => (
-            <button
-              key={style.id}
-              onClick={() => onSubmit(style.style)}
-              className="w-full p-2 hover:bg-gray-50 rounded-md text-left flex items-center"
-            >
-              <div className={`flex-1 h-0.5 mx-2 ${style.previewStyle}`} />
+            <button key={style.id} onClick={() => onSubmit(style.style)} className="flex w-full items-center rounded-md p-2 text-left hover:bg-gray-50">
+              <div className={`mx-2 h-0.5 flex-1 ${style.previewStyle}`} />
               <span className="ml-2 text-sm text-gray-600">{style.name}</span>
             </button>
           ))}
@@ -394,50 +384,34 @@ const ColorForm = ({ onSubmit, onClose, position, title }: ColorFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72"
-      style={{ 
+      className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="grid grid-cols-3 gap-2">
           {colorList.map((color, index) => (
-            <button
-              key={index}
-              onClick={() => onSubmit(color.value)}
-              className="flex items-center justify-center p-2 rounded hover:bg-gray-50"
-            >
-              <div
-                className={`w-6 h-6 rounded ${color.preview}`}
-              />
+            <button key={index} onClick={() => onSubmit(color.value)} className="flex items-center justify-center rounded p-2 hover:bg-gray-50">
+              <div className={`h-6 w-6 rounded ${color.preview}`} />
               <span className="ml-2 text-sm text-gray-600">{color.label}</span>
             </button>
           ))}
         </div>
         <div className="border-t border-gray-200 pt-3">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            사용자 정의 색상
-          </label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">사용자 정의 색상</label>
           <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={customColor || '#000000'}
-              onChange={(e) => setCustomColor(e.target.value)}
-              className="w-8 h-8 p-0 border border-gray-300 rounded"
-            />
+            <input type="color" value={customColor || '#000000'} onChange={(e) => setCustomColor(e.target.value)} className="h-8 w-8 rounded border border-gray-300 p-0" />
             <input
               type="text"
               value={customColor || ''}
               onChange={(e) => setCustomColor(e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
               placeholder="#000000"
             />
-            <button
-              onClick={() => onSubmit(customColor)}
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-            >
+            <button onClick={() => onSubmit(customColor)} className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
               적용
             </button>
           </div>
@@ -454,48 +428,48 @@ interface ListFormProps {
 }
 
 const listTypes = [
-  { 
+  {
     id: 'bullet',
     name: '글머리 기호',
     type: 'bullet' as const,
     icon: 'bi-dot',
-    preview: '• 항목 1\n• 항목 2\n• 항목 3'
+    preview: '• 항목 1\n• 항목 2\n• 항목 3',
   },
   {
     id: 'number',
     name: '번호 매기기',
     type: 'number' as const,
     icon: 'bi-list-ol',
-    preview: '1. 항목 1\n2. 항목 2\n3. 항목 3'
+    preview: '1. 항목 1\n2. 항목 2\n3. 항목 3',
   },
   {
     id: 'checkbox',
     name: '체크박스 목록',
     type: 'checkbox' as const,
     icon: 'bi-check-square',
-    preview: '☐ 할 일 1\n☐ 할 일 2\n☐ 할 일 3'
+    preview: '☐ 할 일 1\n☐ 할 일 2\n☐ 할 일 3',
   },
   {
     id: 'dash',
     name: '대시 목록',
     type: 'dash' as const,
     icon: 'bi-dash',
-    preview: '- 항목 1\n- 항목 2\n- 항목 3'
+    preview: '- 항목 1\n- 항목 2\n- 항목 3',
   },
   {
     id: 'arrow',
     name: '화살표 목록',
     type: 'arrow' as const,
     icon: 'bi-arrow-right',
-    preview: '→ 항목 1\n→ 항목 2\n→ 항목 3'
+    preview: '→ 항목 1\n→ 항목 2\n→ 항목 3',
   },
   {
     id: 'roman',
     name: '로마 숫자',
     type: 'roman' as const,
     icon: 'bi-list-nested',
-    preview: 'i. 항목 1\nii. 항목 2\niii. 항목 3'
-  }
+    preview: 'i. 항목 1\nii. 항목 2\niii. 항목 3',
+  },
 ];
 
 const ListForm = ({ onSubmit, onClose, position }: ListFormProps) => {
@@ -517,27 +491,25 @@ const ListForm = ({ onSubmit, onClose, position }: ListFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64"
-      style={{ 
+      className="fixed z-50 w-64 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-700 px-1">리스트 타입 선택</h3>
-        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+        <h3 className="px-1 text-sm font-medium text-gray-700">리스트 타입 선택</h3>
+        <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
           {listTypes.map((listType) => (
             <button
               key={listType.id}
               onClick={() => onSubmit(listType.type)}
-              className="w-full p-2 hover:bg-gray-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+              className="flex w-full items-center rounded-md border border-gray-100 p-2 text-left transition-colors hover:bg-gray-50"
             >
-              <i className={`bi ${listType.icon} text-base mr-2 flex-shrink-0`}></i>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-xs">{listType.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-line leading-tight">
-                  {listType.preview}
-                </div>
+              <i className={`bi ${listType.icon} mr-2 flex-shrink-0 text-base`}></i>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium">{listType.name}</div>
+                <div className="mt-0.5 text-xs leading-tight whitespace-pre-line text-gray-500">{listType.preview}</div>
               </div>
             </button>
           ))}
@@ -608,17 +580,17 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
       // 즉시 미리보기를 위한 Object URL 생성
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
-      
+
       // 서버에 파일 업로드
       try {
         const fileName = file.name.split('.')[0] || '';
         // eslint-disable-next-line no-console
         console.log('이미지 업로드 시작:', { fileName, fileSize: file.size });
-        
+
         const result = await uploadImageToServer(file, fileName, undefined, blogId);
         // eslint-disable-next-line no-console
         console.log('이미지 업로드 결과:', result);
-        
+
         if (result.success && result.url) {
           // eslint-disable-next-line no-console
           console.log('이미지 URL 설정:', result.url);
@@ -669,31 +641,27 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
-      style={{ 
+      className="fixed z-50 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700">이미지 추가</h3>
-        
+
         {/* 디버그 정보 */}
-        <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded">
+        <div className="rounded bg-gray-50 p-2 text-xs text-gray-400">
           디버그: URL={imageUrl ? '있음' : '없음'}, 미리보기={previewUrl ? '있음' : '없음'}, 타입={uploadType}
         </div>
-        
+
         {/* 업로드 타입 선택 */}
         <div className="flex space-x-2">
           <button
             onClick={() => {
               setUploadType('url');
             }}
-            className={`px-3 py-1.5 text-sm rounded ${
-              uploadType === 'url' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`rounded px-3 py-1.5 text-sm ${uploadType === 'url' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             URL
           </button>
@@ -701,11 +669,7 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
             onClick={() => {
               setUploadType('file');
             }}
-            className={`px-3 py-1.5 text-sm rounded ${
-              uploadType === 'file' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`rounded px-3 py-1.5 text-sm ${uploadType === 'file' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             파일 업로드
           </button>
@@ -713,7 +677,7 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
 
         {uploadType === 'url' ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이미지 URL</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">이미지 URL</label>
             <input
               type="url"
               value={imageUrl}
@@ -723,31 +687,31 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
                 // eslint-disable-next-line no-console
                 console.log('URL 입력 변경:', url);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="https://example.com/image.jpg"
             />
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">파일 선택</label>
             <input
               key={uploadType}
               ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">대체 텍스트</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">대체 텍스트</label>
           <input
             type="text"
             value={altText}
             onChange={(e) => setAltText(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="이미지 설명"
           />
         </div>
@@ -755,15 +719,15 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
         {/* 이미지 미리보기 */}
         {(imageUrl || previewUrl) && (
           <div className="mt-3">
-            <p className="text-sm text-gray-600 mb-2">미리보기:</p>
+            <p className="mb-2 text-sm text-gray-600">미리보기:</p>
             <div className="relative">
-              <div className="relative w-full h-24 rounded border overflow-hidden">
+              <div className="relative h-24 w-full overflow-hidden rounded border">
                 {previewUrl ? (
                   // 파일 업로드 중일 때는 Object URL 사용
-                  <img 
-                    src={previewUrl} 
-                    alt={altText || '미리보기'} 
-                    className="w-full h-full object-cover"
+                  <img
+                    src={previewUrl}
+                    alt={altText || '미리보기'}
+                    className="h-full w-full object-cover"
                     onLoad={() => {
                       // eslint-disable-next-line no-console
                       console.log('미리보기 로드 성공:', previewUrl);
@@ -771,10 +735,10 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
                   />
                 ) : (
                   // 서버 업로드 완료 후 이미지 표시
-                  <img 
-                    src={imageUrl} 
-                    alt={altText || '미리보기'} 
-                    className="w-full h-full object-cover"
+                  <img
+                    src={imageUrl}
+                    alt={altText || '미리보기'}
+                    className="h-full w-full object-cover"
                     onLoad={() => {
                       // eslint-disable-next-line no-console
                       console.log('이미지 로드 성공:', imageUrl);
@@ -786,7 +750,7 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
                   />
                 )}
               </div>
-              <div className="mt-1 text-xs text-gray-500 break-all">
+              <div className="mt-1 text-xs break-all text-gray-500">
                 URL: {previewUrl || imageUrl}
                 {previewUrl && <span className="ml-2 text-orange-500">(업로드 중...)</span>}
               </div>
@@ -795,16 +759,13 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
         )}
 
         <div className="flex justify-end space-x-2 pt-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={!imageUrl}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             추가
           </button>
@@ -814,30 +775,28 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
   );
 };
 
-
-
 const mediaOptions = [
-  { 
+  {
     id: 'image',
     name: '사진',
     type: 'image' as const,
     icon: 'bi-image',
-    description: 'JPG, PNG, GIF 등의 이미지 파일'
+    description: 'JPG, PNG, GIF 등의 이미지 파일',
   },
   {
     id: 'file',
     name: '파일',
     type: 'file' as const,
     icon: 'bi-file-earmark',
-    description: 'PDF, DOC, TXT 등의 일반 파일'
+    description: 'PDF, DOC, TXT 등의 일반 파일',
   },
   {
     id: 'video',
     name: '영상',
     type: 'video' as const,
     icon: 'bi-camera-video',
-    description: 'MP4, AVI, MOV 등의 동영상 파일'
-  }
+    description: 'MP4, AVI, MOV 등의 동영상 파일',
+  },
 ];
 
 // 미디어 선택 드롭다운 개선
@@ -867,30 +826,28 @@ const MediaDropdown = ({ onSelect, onExistingSelect, onClose, position }: MediaD
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-72"
-      style={{ 
+      className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-700 px-2 py-1">미디어 삽입</h3>
-        
+        <h3 className="px-2 py-1 text-sm font-medium text-gray-700">미디어 삽입</h3>
+
         {/* 새 파일 업로드 섹션 */}
         <div className="border-b border-gray-100 pb-2">
-          <h4 className="text-xs font-medium text-gray-600 px-2 mb-1">새 파일 업로드</h4>
+          <h4 className="mb-1 px-2 text-xs font-medium text-gray-600">새 파일 업로드</h4>
           {mediaOptions.map((option) => (
             <button
               key={`new-${option.id}`}
               onClick={() => onSelect(option.type)}
-              className="w-full p-2 hover:bg-blue-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+              className="flex w-full items-center rounded-md border border-gray-100 p-2 text-left transition-colors hover:bg-blue-50"
             >
-              <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-blue-600`}></i>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">{option.name} 업로드</div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {option.description}
-                </div>
+              <i className={`bi ${option.icon} mr-3 flex-shrink-0 text-base text-blue-600`}></i>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">{option.name} 업로드</div>
+                <div className="mt-0.5 text-xs text-gray-500">{option.description}</div>
               </div>
             </button>
           ))}
@@ -898,19 +855,17 @@ const MediaDropdown = ({ onSelect, onExistingSelect, onClose, position }: MediaD
 
         {/* 기존 파일 선택 섹션 */}
         <div>
-          <h4 className="text-xs font-medium text-gray-600 px-2 mb-1">기존 파일 선택</h4>
+          <h4 className="mb-1 px-2 text-xs font-medium text-gray-600">기존 파일 선택</h4>
           {mediaOptions.map((option) => (
             <button
               key={`existing-${option.id}`}
               onClick={() => onExistingSelect(option.type)}
-              className="w-full p-2 hover:bg-green-50 rounded-md text-left flex items-center border border-gray-100 transition-colors"
+              className="flex w-full items-center rounded-md border border-gray-100 p-2 text-left transition-colors hover:bg-green-50"
             >
-              <i className={`bi ${option.icon} text-base mr-3 flex-shrink-0 text-green-600`}></i>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">기존 {option.name} 선택</div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  업로드된 {option.name} 목록에서 선택
-                </div>
+              <i className={`bi ${option.icon} mr-3 flex-shrink-0 text-base text-green-600`}></i>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">기존 {option.name} 선택</div>
+                <div className="mt-0.5 text-xs text-gray-500">업로드된 {option.name} 목록에서 선택</div>
               </div>
             </button>
           ))}
@@ -977,22 +932,22 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
   const handleSelectAll = () => {
     // 비디오 타입인 경우 전체 선택 비활성화
     if (fileType === 'video') return;
-    
+
     if (selectedFiles.size === mediaFiles.length) {
       setSelectedFiles(new Set());
     } else {
-      setSelectedFiles(new Set(mediaFiles.map(file => file.id)));
+      setSelectedFiles(new Set(mediaFiles.map((file) => file.id)));
     }
   };
 
   const handleSubmit = () => {
     // 중복 클릭 방지
     if (isSubmitting || selectedFiles.size === 0) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const selectedMediaFiles = mediaFiles.filter(file => selectedFiles.has(file.id));
+      const selectedMediaFiles = mediaFiles.filter((file) => selectedFiles.has(file.id));
       onSubmit(selectedMediaFiles);
       onClose();
     } finally {
@@ -1002,32 +957,30 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
 
   const getFileTypeLabel = () => {
     switch (fileType) {
-      case 'image': return '이미지';
-      case 'video': return '동영상';
-      case 'file': return '파일';
-      default: return '파일';
+    case 'image':
+      return '이미지';
+    case 'video':
+      return '동영상';
+    case 'file':
+      return '파일';
+    default:
+      return '파일';
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       {/* 배경 오버레이 */}
-      <div 
-        className="absolute inset-0"
-        onClick={onClose}
-      />
-      
+      <div className="absolute inset-0" onClick={onClose} />
+
       {/* 모달 컨텐츠 */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+      <div className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-800">기존 {getFileTypeLabel()} 선택</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-gray-600">
             <i className="bi bi-x-lg text-xl"></i>
           </button>
         </div>
@@ -1036,73 +989,54 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
         <div className="p-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
               <span className="ml-3 text-gray-600">파일 목록 로딩 중...</span>
             </div>
           ) : error ? (
-            <div className="text-center py-16">
+            <div className="py-16 text-center">
               <p className="text-red-500">{error}</p>
             </div>
           ) : mediaFiles.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="py-16 text-center">
               <p className="text-gray-500">업로드된 {getFileTypeLabel()}이 없습니다.</p>
             </div>
           ) : (
             <>
               {/* 전체 선택 버튼 */}
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center">
                   {fileType !== 'video' && (
-                    <button
-                      onClick={handleSelectAll}
-                      className="flex items-center text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.size === mediaFiles.length && mediaFiles.length > 0}
-                        onChange={handleSelectAll}
-                        className="mr-2"
-                      />
+                    <button onClick={handleSelectAll} className="flex items-center text-sm text-blue-600 hover:text-blue-800">
+                      <input type="checkbox" checked={selectedFiles.size === mediaFiles.length && mediaFiles.length > 0} onChange={handleSelectAll} className="mr-2" />
                       전체 선택
                     </button>
                   )}
-                  {fileType === 'video' && (
-                    <div className="text-sm text-gray-500">
-                      비디오는 하나씩만 선택 가능합니다
-                    </div>
-                  )}
+                  {fileType === 'video' && <div className="text-sm text-gray-500">비디오는 하나씩만 선택 가능합니다</div>}
                 </div>
                 <div className="text-sm text-gray-500">
                   {selectedFiles.size}개 선택됨 / 총 {mediaFiles.length}개
                 </div>
               </div>
 
-                             {/* 파일 그리드 */}
-               <div 
-                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto pr-2"
-                 style={{
-                   scrollbarWidth: 'thin',
-                   scrollbarColor: '#d1d5db #f3f4f6'
-                 }}
-               >
+              {/* 파일 그리드 */}
+              <div
+                className="grid max-h-96 grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3 lg:grid-cols-4"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#d1d5db #f3f4f6',
+                }}
+              >
                 {mediaFiles.map((file) => (
                   <div
                     key={file.id}
                     onClick={() => handleFileToggle(file.id)}
-                    className={`relative border-2 rounded-lg p-3 cursor-pointer transition-all ${
-                      selectedFiles.has(file.id)
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    className={`relative cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                      selectedFiles.has(file.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     {/* 체크박스 */}
                     <div className="absolute top-2 right-2 z-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.id)}
-                        onChange={() => handleFileToggle(file.id)}
-                        className="w-4 h-4"
-                      />
+                      <input type="checkbox" checked={selectedFiles.has(file.id)} onChange={() => handleFileToggle(file.id)} className="h-4 w-4" />
                     </div>
 
                     {/* 파일 미리보기 */}
@@ -1111,14 +1045,15 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
                         <img
                           src={file.fileUrl}
                           alt={file.altText || file.originalFileName}
-                          className="w-full h-24 object-cover rounded"
+                          className="h-24 w-full rounded object-cover"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42Mjc0IDM2IDM2IDMwLjYyNzQgMzYgMjRDMzYgMTcuMzcyNiAzMC42Mjc0IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42Mjc0IDE3LjM3MjYgMzYgMjQgMzYiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjwvcG='
+                            target.src =
+                              'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42Mjc0IDM2IDM2IDMwLjYyNzQgMzYgMjRDMzYgMTcuMzcyNiAzMC42Mjc0IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42Mjc0IDE3LjM3MjYgMzYgMjQgMzYiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjwvcG=';
                           }}
                         />
                       ) : (
-                        <div className="w-full h-24 bg-gray-100 rounded flex items-center justify-center">
+                        <div className="flex h-24 w-full items-center justify-center rounded bg-gray-100">
                           <i className={`bi ${fileType === 'video' ? 'bi-camera-video' : 'bi-file-earmark'} text-2xl text-gray-500`}></i>
                         </div>
                       )}
@@ -1126,15 +1061,11 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
 
                     {/* 파일 정보 */}
                     <div className="text-xs">
-                      <div className="font-medium truncate" title={file.originalFileName}>
+                      <div className="truncate font-medium" title={file.originalFileName}>
                         {file.originalFileName}
                       </div>
-                      <div className="text-gray-500 mt-1">
-                        {new Date(file.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-gray-500">
-                        {Math.round(file.fileSize / 1024)} KB
-                      </div>
+                      <div className="mt-1 text-gray-500">{new Date(file.createdAt).toLocaleDateString()}</div>
+                      <div className="text-gray-500">{Math.round(file.fileSize / 1024)} KB</div>
                     </div>
                   </div>
                 ))}
@@ -1145,17 +1076,14 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
 
         {/* 푸터 */}
         {!loading && !error && mediaFiles.length > 0 && (
-          <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors"
-            >
+          <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-4">
+            <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-gray-100">
               취소
             </button>
             <button
               onClick={handleSubmit}
               disabled={selectedFiles.size === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               선택한 파일 삽입 ({selectedFiles.size}개)
             </button>
@@ -1213,7 +1141,7 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
     if (selectedFile) {
       try {
         const result = await uploadFileToServer(selectedFile, fileName || selectedFile.name, undefined, blogId);
-        
+
         if (result.success && result.url) {
           // 파일 노드에 필요한 정보를 전달
           onSubmit(result.url, fileName || selectedFile.name, selectedFile.size, result.fileType || '');
@@ -1238,39 +1166,39 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
-      style={{ 
+      className="fixed z-50 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700">파일 업로드</h3>
-        
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">파일 선택</label>
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             accept=".pdf,.doc,.docx,.txt,.zip,.rar"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">표시 이름</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">표시 이름</label>
           <input
             type="text"
             value={fileName}
             onChange={(e) => setFileName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="파일 이름"
           />
         </div>
 
         {selectedFile && (
-          <div className="mt-3 p-2 bg-gray-50 rounded">
+          <div className="mt-3 rounded bg-gray-50 p-2">
             <p className="text-sm text-gray-600">선택된 파일:</p>
             <p className="text-sm font-medium">{selectedFile.name}</p>
             <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -1278,16 +1206,13 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
         )}
 
         <div className="flex justify-end space-x-2 pt-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={!selectedFile}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             추가
           </button>
@@ -1357,7 +1282,7 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
       try {
         const fileName = file.name.split('.')[0] || '';
         const result = await uploadVideoToServer(file, fileName, undefined, blogId);
-        
+
         if (result.success && result.url) {
           setVideoUrl(result.url || '');
           setAltText(result.altText || fileName || '비디오');
@@ -1399,33 +1324,25 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80"
-      style={{ 
+      className="fixed z-50 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      style={{
         top: `${position.top}px`,
-        left: `${position.left - 100}px`
+        left: `${position.left - 100}px`,
       }}
     >
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700">비디오 추가</h3>
-        
+
         <div className="flex space-x-2">
           <button
             onClick={() => setUploadType('url')}
-            className={`px-3 py-1.5 text-sm rounded ${
-              uploadType === 'url' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`rounded px-3 py-1.5 text-sm ${uploadType === 'url' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             URL
           </button>
           <button
             onClick={() => setUploadType('file')}
-            className={`px-3 py-1.5 text-sm rounded ${
-              uploadType === 'file' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`rounded px-3 py-1.5 text-sm ${uploadType === 'file' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             파일 업로드
           </button>
@@ -1433,41 +1350,41 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
 
         {uploadType === 'url' ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비디오 URL</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">비디오 URL</label>
             <input
               type="url"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="https://example.com/video.mp4"
             />
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">파일 선택</label>
             <input
               ref={fileInputRef}
               type="file"
               accept="video/*"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">설명</label>
           <input
             type="text"
             value={altText}
             onChange={(e) => setAltText(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="비디오 설명"
           />
         </div>
 
         {selectedVideo && uploadType === 'file' && (
-          <div className="mt-3 p-2 bg-gray-50 rounded">
+          <div className="mt-3 rounded bg-gray-50 p-2">
             <p className="text-sm text-gray-600">선택된 파일:</p>
             <p className="text-sm font-medium">{selectedVideo.name}</p>
             <p className="text-xs text-gray-500">{(selectedVideo.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -1475,16 +1392,13 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
         )}
 
         <div className="flex justify-end space-x-2 pt-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={!videoUrl}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             추가
           </button>
@@ -1535,13 +1449,11 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
         if (selection.hasFormat('strikethrough')) styles.add('strikethrough');
 
         setActiveStyles(styles);
-        
+
         // 현재 블록 타입 감지
         const anchorNode = selection.anchor.getNode();
-        const element = anchorNode.getKey() === 'root' 
-          ? anchorNode 
-          : anchorNode.getTopLevelElementOrThrow();
-        
+        const element = anchorNode.getKey() === 'root' ? anchorNode : anchorNode.getTopLevelElementOrThrow();
+
         if (element.getType() === 'heading') {
           const headingNode = element as any;
           setCurrentTextSize(headingNode.getTag());
@@ -1550,7 +1462,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
           // paragraph의 스타일을 확인하여 크기 결정
           const paragraphNode = element as any;
           const style = paragraphNode.getStyle() || '';
-          
+
           if (style.includes('font-size: 1.25rem')) {
             setCurrentTextSize('p1');
           } else if (style.includes('font-size: 1.125rem')) {
@@ -1575,7 +1487,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
       // strikethrough 선택 시 underline 제거
       editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
     }
-    
+
     // 선택한 포맷 적용
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, format as TextFormatType);
   };
@@ -1595,7 +1507,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
         let fontSize = '';
         let lineHeight = '';
         let fontWeight = '';
-        
+
         if (size === 'h1') {
           fontSize = '2.25rem';
           lineHeight = '1.2';
@@ -1616,17 +1528,18 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
           fontSize = '1.125rem';
           lineHeight = '1.75rem';
           fontWeight = 'normal';
-        } else { // p3
+        } else {
+          // p3
           fontSize = '1rem';
           lineHeight = '1.5rem';
           fontWeight = 'normal';
         }
-        
+
         // 선택된 텍스트에 인라인 스타일 적용
         $patchStyleText(selection, {
           'font-size': fontSize,
           'line-height': lineHeight,
-          'font-weight': fontWeight
+          'font-weight': fontWeight,
         });
       } else {
         // 커서만 있는 경우 (텍스트 선택되지 않음) - 블록 단위로 변경
@@ -1637,29 +1550,28 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
           // 본문으로 변환 (paragraph)
           $setBlocksType(selection, () => {
             const paragraph = $createParagraphNode();
-            
+
             // 본문 크기에 따른 인라인 스타일 적용
             if (size === 'p1') {
               paragraph.setStyle('font-size: 1.25rem; line-height: 1.75rem;'); // text-xl
             } else if (size === 'p2') {
               paragraph.setStyle('font-size: 1.125rem; line-height: 1.75rem;'); // text-lg
-            } else { // p3
+            } else {
+              // p3
               paragraph.setStyle('font-size: 1rem; line-height: 1.5rem;'); // text-base
             }
-            
+
             return paragraph;
           });
-          
+
           // DOM에 추가 속성 설정 (스타일 적용 후)
           setTimeout(() => {
             editor.update(() => {
               const selection = $getSelection();
               if ($isRangeSelection(selection)) {
                 const anchorNode = selection.anchor.getNode();
-                const element = anchorNode.getKey() === 'root' 
-                  ? anchorNode 
-                  : anchorNode.getTopLevelElementOrThrow();
-                
+                const element = anchorNode.getKey() === 'root' ? anchorNode : anchorNode.getTopLevelElementOrThrow();
+
                 const domElement = editor.getElementByKey(element.getKey());
                 if (domElement && element.getType() === 'paragraph') {
                   domElement.setAttribute('data-text-size', size);
@@ -1689,11 +1601,11 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
       if (!$isRangeSelection(selection)) return;
 
       const anchorNode = selection.anchor.getNode();
-      
+
       // 현재 노드가 리스트 아이템 안에 있는지 확인
       let currentListItemNode = null;
       let currentNode = anchorNode;
-      
+
       while (currentNode) {
         if ($isListItemNode(currentNode)) {
           currentListItemNode = currentNode;
@@ -1708,12 +1620,12 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
         // 현재 리스트 아이템 안에 있는 경우
         const currentList = currentListItemNode.getParent();
         if (!$isListNode(currentList)) return;
-        
+
         const currentListType = currentList.getListType();
-        
-                          // 리스트 타입 변경 또는 들여쓰기
+
+        // 리스트 타입 변경 또는 들여쓰기
         const prevSibling = currentListItemNode.getPreviousSibling();
-        
+
         if (prevSibling && $isListItemNode(prevSibling)) {
           // 이전 형제가 있는 경우: 들여쓰기하면서 타입 변경
           if (type === 'bullet' || type === 'number') {
@@ -1723,10 +1635,10 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             newListItem.append(...currentListItemNode.getChildren());
             nestedList.append(newListItem);
             prevSibling.append(nestedList);
-            
+
             // 현재 리스트 아이템 제거
             currentListItemNode.remove();
-            
+
             // 새로운 리스트 아이템으로 포커스 이동
             newListItem.select();
           } else {
@@ -1737,10 +1649,10 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             nestedList.append(newListItem);
             prevSibling.append(nestedList);
             currentListItemNode.remove();
-            
+
             // 새로운 리스트 아이템으로 포커스 이동
             newListItem.select();
-            
+
             // 커스텀 타입 설정
             setTimeout(() => {
               const domElement = editor.getElementByKey(nestedList.getKey());
@@ -1759,10 +1671,10 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
               const newListItem = $createListItemNode();
               newListItem.append(...currentListItemNode.getChildren());
               newList.append(newListItem);
-              
+
               // 현재 리스트를 새로운 리스트로 교체
               currentList.replace(newList);
-              
+
               // 새로운 리스트 아이템으로 포커스 이동
               newListItem.select();
             }
@@ -1772,13 +1684,13 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             const newListItem = $createListItemNode();
             newListItem.append(...currentListItemNode.getChildren());
             newList.append(newListItem);
-            
+
             // 현재 리스트를 새로운 리스트로 교체
             currentList.replace(newList);
-            
+
             // 새로운 리스트 아이템으로 포커스 이동
             newListItem.select();
-            
+
             // 커스텀 타입 설정
             setTimeout(() => {
               const domElement = editor.getElementByKey(newList.getKey());
@@ -1796,7 +1708,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
         if ($isListNode(firstNodeParent)) {
           // 이미 리스트인 경우, 리스트를 제거하고 일반 텍스트로 변환
-          const paragraphs = nodes.map(node => {
+          const paragraphs = nodes.map((node) => {
             const text = node.getTextContent();
             const paragraph = $createParagraphNode();
             const textNode = $createTextNode(text);
@@ -1818,12 +1730,12 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             // 커스텀 리스트 타입들은 bullet으로 생성
             listNode = $createListNode('bullet');
           }
-          
+
           const listItemNode = $createListItemNode();
           listItemNode.append($createTextNode(firstNode.getTextContent()));
           listNode.append(listItemNode);
           firstNode.replace(listNode);
-          
+
           // 커스텀 타입의 경우 DOM에 data attribute 추가 (update 완료 후)
           if (type !== 'bullet' && type !== 'number') {
             setTimeout(() => {
@@ -1858,7 +1770,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
       if (!selection.isCollapsed()) {
         selection.removeText();
       }
-      
+
       // 링크 노드 생성
       const linkNode = $createLinkNode(url);
       linkNode.setURL(url);
@@ -1937,10 +1849,10 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
     // 색상 명령 실행
     editor.dispatchCommand(SET_TEXT_COLOR_COMMAND, color);
-    
+
     // 포커스 복원
     editor.focus();
-    
+
     // 색상 선택 폼 닫기
     setTextColorFormPosition(null);
   };
@@ -1961,16 +1873,16 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
     // 색상 명령 실행
     editor.dispatchCommand(SET_BG_COLOR_COMMAND, color);
-    
+
     // 포커스 복원
     editor.focus();
-    
+
     // 색상 선택 폼 닫기
     setBgColorFormPosition(null);
   };
 
   const handleFontFamily = (fontValue: string) => {
-    const fontOption = fontFamilyOptions.find(option => option.value === fontValue);
+    const fontOption = fontFamilyOptions.find((option) => option.value === fontValue);
     if (!fontOption) return;
 
     // 글꼴 선택 상태 업데이트
@@ -1982,7 +1894,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
       const root = $getRoot();
       const firstChild = root.getFirstChild();
-      
+
       // 빈 에디터인 경우
       if ($isParagraphNode(firstChild) && firstChild.getTextContent() === '') {
         // 기존 paragraph를 새로운 것으로 교체
@@ -2030,24 +1942,24 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
   const handleMediaSelect = (type: 'image' | 'file' | 'video') => {
     setMediaDropdownPosition(null);
-    
+
     if (imageButtonRef.current) {
       const rect = imageButtonRef.current.getBoundingClientRect();
       const position = {
         top: rect.bottom,
         left: rect.left,
       };
-      
+
       switch (type) {
-        case 'image':
-          setImageFormPosition(position);
-          break;
-        case 'file':
-          setFileFormPosition(position);
-          break;
-        case 'video':
-          setVideoFormPosition(position);
-          break;
+      case 'image':
+        setImageFormPosition(position);
+        break;
+      case 'file':
+        setFileFormPosition(position);
+        break;
+      case 'video':
+        setVideoFormPosition(position);
+        break;
       }
     }
   };
@@ -2060,17 +1972,17 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
       // 이미지 앞에 빈 paragraph 추가
       const beforeParagraph = $createParagraphNode();
       beforeParagraph.append($createTextNode(''));
-      
+
       // 실제 이미지 노드 생성 (mediaId 포함)
       const imageNode = $createCustomImageNode(src, alt, 'auto', 'auto', mediaId);
-      
+
       // 이미지 뒤에 빈 paragraph 추가
       const afterParagraph = $createParagraphNode();
       afterParagraph.append($createTextNode(''));
 
       // 노드들 삽입
       selection.insertNodes([beforeParagraph, imageNode, afterParagraph]);
-      
+
       // 이미지 뒤의 paragraph로 커서 이동
       afterParagraph.selectEnd();
     });
@@ -2082,14 +1994,14 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
     editor.update(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
-      
+
       // 파일 노드 생성 (fileName, fileSize, fileType, fileUrl)
       const fileNode = $createCustomFileNode(fileName, fileSize, fileType, fileUrl);
-      
+
       // 파일 앞뒤에 빈 paragraph 추가
       const beforeParagraph = $createParagraphNode();
       beforeParagraph.append($createTextNode(''));
-      
+
       const afterParagraph = $createParagraphNode();
       afterParagraph.append($createTextNode(''));
 
@@ -2108,11 +2020,11 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
 
         // 비디오 노드 생성
         const videoNode = $createCustomVideoNode(src, alt);
-        
+
         // 비디오 앞뒤에 빈 paragraph 추가
         const beforeParagraph = $createParagraphNode();
         beforeParagraph.append($createTextNode(''));
-        
+
         const afterParagraph = $createParagraphNode();
         afterParagraph.append($createTextNode(''));
 
@@ -2132,7 +2044,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
   const handleExistingMediaSubmit = (files: MediaFile[]) => {
     // 빈 파일 배열이거나 이미 처리 중인 경우 방지
     if (!files || files.length === 0) return;
-    
+
     editor.update(() => {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
@@ -2141,35 +2053,33 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             // 이미지 노드 생성 및 삽입 (handleImageSubmit과 동일한 방식)
             const beforeParagraph = $createParagraphNode();
             beforeParagraph.append($createTextNode(''));
-            
+
             const imageNode = $createCustomImageNode(file.fileUrl, file.altText || file.originalFileName, 'auto', 'auto', file.id);
-            
+
             const afterParagraph = $createParagraphNode();
             afterParagraph.append($createTextNode(''));
 
             selection.insertNodes([beforeParagraph, imageNode, afterParagraph]);
             afterParagraph.selectEnd();
-            
           } else if (file.fileType === 'video') {
             // 비디오 노드 생성 및 삽입 (handleVideoSubmit과 동일한 방식)
             const beforeParagraph = $createParagraphNode();
             beforeParagraph.append($createTextNode(''));
-            
+
             const videoNode = $createCustomVideoNode(file.fileUrl, file.altText || file.originalFileName);
-            
+
             const afterParagraph = $createParagraphNode();
             afterParagraph.append($createTextNode(''));
 
             selection.insertNodes([beforeParagraph, videoNode, afterParagraph]);
             afterParagraph.selectEnd();
-            
           } else {
             // 파일 노드 생성 및 삽입 (handleFileSubmit과 동일한 방식)
             const beforeParagraph = $createParagraphNode();
             beforeParagraph.append($createTextNode(''));
-            
+
             const fileNode = $createCustomFileNode(file.originalFileName, file.fileSize, file.mimeType, file.fileUrl);
-            
+
             const afterParagraph = $createParagraphNode();
             afterParagraph.append($createTextNode(''));
 
@@ -2206,76 +2116,77 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-2">
+    <div className="sticky top-0 z-50 border-b border-gray-200 bg-white px-4 py-2">
       <div className="flex items-center">
         <div className="flex items-center space-x-3">
           <Link href="/" className="text-black hover:text-gray-600">
             <i className="bi bi-arrow-left text-xl"></i>
           </Link>
-          <span className="text-lg font-semibold px-4 py-2">글쓰기</span>
+          <span className="px-4 py-2 text-lg font-semibold">글쓰기</span>
         </div>
-        
+
         {/* 텍스트 크기 선택 드롭다운 */}
-        <div className="flex items-center space-x-1 ml-8">
-                    <ToolbarButton
-            format="image"
-            icon={<i className="bi bi-image"></i>}
-            onClick={handleImage}
-            isActive={false}
-            buttonRef={imageButtonRef}
-          />
-          
+        <div className="ml-8 flex items-center space-x-1">
+          <ToolbarButton format="image" icon={<i className="bi bi-image"></i>} onClick={handleImage} isActive={false} buttonRef={imageButtonRef} />
+
           <div className="mx-2 h-6 border-l border-gray-300" />
-          
-          <div className="relative group mx-1">
+
+          <div className="group relative mx-1">
             <select
               value={currentTextSize}
               onChange={(e) => handleTextSize(e.target.value)}
-              className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 h-8 transition-all duration-200"
+              className="h-8 rounded border border-black bg-white px-2 py-1 text-sm transition-all duration-200 hover:bg-gray-100 hover:shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
               style={{
                 fontSize: '1rem', // 선택된 값은 본문3 크기로 통일
                 fontWeight: 'normal',
                 lineHeight: '1.2',
                 width: 'auto',
-                minWidth: '100px'
+                minWidth: '100px',
               }}
             >
               {textSizeOptions.map((option) => (
-                <option 
-                  key={option.value} 
+                <option
+                  key={option.value}
                   value={option.value}
                   style={{
-                    fontSize: option.value === 'h1' ? '2.25rem' : 
-                            option.value === 'h2' ? '1.875rem' :
-                            option.value === 'h3' ? '1.5rem' :
-                            option.value === 'p1' ? '1.25rem' :
-                            option.value === 'p2' ? '1.125rem' : '1rem',
+                    fontSize:
+                      option.value === 'h1'
+                        ? '2.25rem'
+                        : option.value === 'h2'
+                          ? '1.875rem'
+                          : option.value === 'h3'
+                            ? '1.5rem'
+                            : option.value === 'p1'
+                              ? '1.25rem'
+                              : option.value === 'p2'
+                                ? '1.125rem'
+                                : '1rem',
                     fontWeight: ['h1', 'h2', 'h3'].includes(option.value) ? 'bold' : 'normal',
-                    lineHeight: '1.2'
+                    lineHeight: '1.2',
                   }}
                 >
                   {option.label}
                 </option>
               ))}
             </select>
-            
+
             {/* 텍스트 크기 툴팁 - 호버 시만 표시, sticky 헤더와 함께 움직임 */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-              <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+            <div className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <div className="rounded-lg bg-gray-800 px-3 py-2 text-xs whitespace-nowrap text-white shadow-lg">
                 <div className="font-medium">텍스트 크기</div>
-                <div className="text-gray-300 text-xs mt-1">제목과 본문 크기 선택</div>
+                <div className="mt-1 text-xs text-gray-300">제목과 본문 크기 선택</div>
                 {/* 위쪽 화살표 */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-b-gray-800"></div>
               </div>
             </div>
           </div>
-          
+
           {/* 글씨체 선택 드롭다운 */}
-          <div className="relative group mx-1">
+          <div className="group relative mx-1">
             <select
               value={currentFontFamily}
               onChange={(e) => handleFontFamily(e.target.value)}
-              className="px-2 py-1 border border-black rounded text-sm bg-white hover:bg-gray-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 h-8 transition-all duration-200"
+              className="h-8 rounded border border-black bg-white px-2 py-1 text-sm transition-all duration-200 hover:bg-gray-100 hover:shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
             >
               {fontFamilyOptions.map((option) => (
                 <option key={option.value} value={option.value} style={{ fontFamily: option.family }}>
@@ -2283,38 +2194,23 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
                 </option>
               ))}
             </select>
-            
+
             {/* 글꼴 툴팁 - 아래쪽 표시 */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-              <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+            <div className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <div className="rounded-lg bg-gray-800 px-3 py-2 text-xs whitespace-nowrap text-white shadow-lg">
                 <div className="font-medium">글꼴</div>
-                <div className="text-gray-300 text-xs mt-1">텍스트 글꼴 변경</div>
+                <div className="mt-1 text-xs text-gray-300">텍스트 글꼴 변경</div>
                 {/* 위쪽 화살표 */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-800"></div>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-b-gray-800"></div>
               </div>
-                         </div>
-           </div>
-          
+            </div>
+          </div>
+
           <div className="mx-2 h-6 border-l border-gray-300" />
-          
-          <ToolbarButton
-            format="bold"
-            icon={<i className="bi bi-type-bold"></i>}
-            onClick={() => handleFormat('bold')}
-            isActive={activeStyles.has('bold')}
-          />
-          <ToolbarButton
-            format="italic"
-            icon={<i className="bi bi-type-italic"></i>}
-            onClick={() => handleFormat('italic')}
-            isActive={activeStyles.has('italic')}
-          />
-          <ToolbarButton
-            format="underline"
-            icon={<i className="bi bi-type-underline"></i>}
-            onClick={() => handleFormat('underline')}
-            isActive={activeStyles.has('underline')}
-          />
+
+          <ToolbarButton format="bold" icon={<i className="bi bi-type-bold"></i>} onClick={() => handleFormat('bold')} isActive={activeStyles.has('bold')} />
+          <ToolbarButton format="italic" icon={<i className="bi bi-type-italic"></i>} onClick={() => handleFormat('italic')} isActive={activeStyles.has('italic')} />
+          <ToolbarButton format="underline" icon={<i className="bi bi-type-underline"></i>} onClick={() => handleFormat('underline')} isActive={activeStyles.has('underline')} />
           <ToolbarButton
             format="strikethrough"
             icon={<i className="bi bi-type-strikethrough"></i>}
@@ -2322,159 +2218,41 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
             isActive={activeStyles.has('strikethrough')}
           />
           <div className="mx-2 h-6 border-l border-gray-300" />
-          <ToolbarButton
-            format="textColor"
-            icon={<i className="bi bi-pencil"></i>}
-            onClick={handleTextColor}
-            isActive={false}
-            buttonRef={textColorButtonRef}
-          />
-          <ToolbarButton
-            format="bgColor"
-            icon={<i className="bi bi-paint-bucket"></i>}
-            onClick={handleBgColor}
-            isActive={false}
-            buttonRef={bgColorButtonRef}
-          />
+          <ToolbarButton format="textColor" icon={<i className="bi bi-pencil"></i>} onClick={handleTextColor} isActive={false} buttonRef={textColorButtonRef} />
+          <ToolbarButton format="bgColor" icon={<i className="bi bi-paint-bucket"></i>} onClick={handleBgColor} isActive={false} buttonRef={bgColorButtonRef} />
           <div className="mx-2 h-6 border-l border-gray-300" />
-          <ToolbarButton
-            format="left"
-            icon={<i className="bi bi-text-left"></i>}
-            onClick={() => handleAlignment('left')}
-            isActive={false}
-          />
-          <ToolbarButton
-            format="center"
-            icon={<i className="bi bi-text-center"></i>}
-            onClick={() => handleAlignment('center')}
-            isActive={false}
-          />
-          <ToolbarButton
-            format="right"
-            icon={<i className="bi bi-text-right"></i>}
-            onClick={() => handleAlignment('right')}
-            isActive={false}
-          />
-          <ToolbarButton
-            format="justify"
-            icon={<i className="bi bi-justify"></i>}
-            onClick={() => handleAlignment('justify')}
-            isActive={false}
-          />
+          <ToolbarButton format="left" icon={<i className="bi bi-text-left"></i>} onClick={() => handleAlignment('left')} isActive={false} />
+          <ToolbarButton format="center" icon={<i className="bi bi-text-center"></i>} onClick={() => handleAlignment('center')} isActive={false} />
+          <ToolbarButton format="right" icon={<i className="bi bi-text-right"></i>} onClick={() => handleAlignment('right')} isActive={false} />
+          <ToolbarButton format="justify" icon={<i className="bi bi-justify"></i>} onClick={() => handleAlignment('justify')} isActive={false} />
           <div className="mx-2 h-6 border-l border-gray-300" />
-          <ToolbarButton
-            format="list"
-            icon={<i className="bi bi-list-ul"></i>}
-            onClick={handleList}
-            isActive={false}
-            buttonRef={listButtonRef}
-          />
-          <ToolbarButton
-            format="link"
-            icon={<i className="bi bi-link-45deg"></i>}
-            onClick={handleLink}
-            isActive={false}
-            buttonRef={linkButtonRef}
-          />
-          <ToolbarButton
-            format="divider"
-            icon={<i className="bi bi-hr"></i>}
-            onClick={handleDivider}
-            isActive={false}
-            buttonRef={hrButtonRef}
-          />
-          <ToolbarButton
-            format="code"
-            icon={<i className="bi bi-code"></i>}
-            onClick={handleCode}
-            isActive={false}
-          />
-          <ToolbarButton
-            format="plugin"
-            icon={<i className="bi bi-plugin"></i>}
-            onClick={handlePlugin}
-            isActive={false}
-          />
+          <ToolbarButton format="list" icon={<i className="bi bi-list-ul"></i>} onClick={handleList} isActive={false} buttonRef={listButtonRef} />
+          <ToolbarButton format="link" icon={<i className="bi bi-link-45deg"></i>} onClick={handleLink} isActive={false} buttonRef={linkButtonRef} />
+          <ToolbarButton format="divider" icon={<i className="bi bi-hr"></i>} onClick={handleDivider} isActive={false} buttonRef={hrButtonRef} />
+          <ToolbarButton format="code" icon={<i className="bi bi-code"></i>} onClick={handleCode} isActive={false} />
+          <ToolbarButton format="plugin" icon={<i className="bi bi-plugin"></i>} onClick={handlePlugin} isActive={false} />
         </div>
       </div>
-      
-      {linkFormPosition && (
-        <LinkForm
-          onSubmit={handleLinkSubmit}
-          onClose={() => setLinkFormPosition(null)}
-          position={linkFormPosition}
-        />
+
+      {linkFormPosition && <LinkForm onSubmit={handleLinkSubmit} onClose={() => setLinkFormPosition(null)} position={linkFormPosition} />}
+      {hrFormPosition && <HrForm onSubmit={handleHrSubmit} onClose={() => setHrFormPosition(null)} position={hrFormPosition} />}
+      {listFormPosition && <ListForm onSubmit={handleListSubmit} onClose={() => setListFormPosition(null)} position={listFormPosition} />}
+      {textColorFormPosition && <ColorForm onSubmit={handleTextColorSubmit} onClose={() => setTextColorFormPosition(null)} position={textColorFormPosition} title="텍스트 색상" />}
+      {bgColorFormPosition && <ColorForm onSubmit={handleBgColorSubmit} onClose={() => setBgColorFormPosition(null)} position={bgColorFormPosition} title="배경 색상" />}
+      {imageFormPosition && <ImageForm onSubmit={handleImageSubmit} onClose={() => setImageFormPosition(null)} position={imageFormPosition} blogId={blogId} />}
+      {mediaDropdownPosition && (
+        <MediaDropdown onSelect={handleMediaSelect} onExistingSelect={handleExistingMediaSelect} onClose={() => setMediaDropdownPosition(null)} position={mediaDropdownPosition} />
       )}
-      {hrFormPosition && (
-        <HrForm
-          onSubmit={handleHrSubmit}
-          onClose={() => setHrFormPosition(null)}
-          position={hrFormPosition}
-        />
-      )}
-      {listFormPosition && (
-        <ListForm
-          onSubmit={handleListSubmit}
-          onClose={() => setListFormPosition(null)}
-          position={listFormPosition}
-        />
-      )}
-      {textColorFormPosition && (
-        <ColorForm
-          onSubmit={handleTextColorSubmit}
-          onClose={() => setTextColorFormPosition(null)}
-          position={textColorFormPosition}
-          title="텍스트 색상"
-        />
-      )}
-      {bgColorFormPosition && (
-        <ColorForm
-          onSubmit={handleBgColorSubmit}
-          onClose={() => setBgColorFormPosition(null)}
-          position={bgColorFormPosition}
-          title="배경 색상"
-        />
-      )}
-      {imageFormPosition && (
-        <ImageForm
-          onSubmit={handleImageSubmit}
-          onClose={() => setImageFormPosition(null)}
-          position={imageFormPosition}
-          blogId={blogId}
-        />
-      )}
-              {mediaDropdownPosition && (
-          <MediaDropdown
-            onSelect={handleMediaSelect}
-            onExistingSelect={handleExistingMediaSelect}
-            onClose={() => setMediaDropdownPosition(null)}
-            position={mediaDropdownPosition}
-          />
-        )}
-        
-        <ExistingMediaModal
-          onSubmit={handleExistingMediaSubmit}
-          onClose={() => setIsExistingMediaModalOpen(false)}
-          isOpen={isExistingMediaModalOpen}
-          fileType={existingMediaFileType}
-          blogId={blogId}
-        />
-      {fileFormPosition && (
-        <FileForm
-          onSubmit={handleFileSubmit}
-          onClose={() => setFileFormPosition(null)}
-          position={fileFormPosition}
-          blogId={blogId}
-        />
-      )}
-      {videoFormPosition && (
-        <VideoForm
-          onSubmit={handleVideoSubmit}
-          onClose={() => setVideoFormPosition(null)}
-          position={videoFormPosition}
-          blogId={blogId}
-        />
-      )}
+
+      <ExistingMediaModal
+        onSubmit={handleExistingMediaSubmit}
+        onClose={() => setIsExistingMediaModalOpen(false)}
+        isOpen={isExistingMediaModalOpen}
+        fileType={existingMediaFileType}
+        blogId={blogId}
+      />
+      {fileFormPosition && <FileForm onSubmit={handleFileSubmit} onClose={() => setFileFormPosition(null)} position={fileFormPosition} blogId={blogId} />}
+      {videoFormPosition && <VideoForm onSubmit={handleVideoSubmit} onClose={() => setVideoFormPosition(null)} position={videoFormPosition} blogId={blogId} />}
     </div>
   );
-} 
+}

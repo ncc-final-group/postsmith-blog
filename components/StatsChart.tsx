@@ -57,21 +57,21 @@ export default function StatsChart() {
   // 시간 이동 함수
   const moveTime = (direction: 'prev' | 'next') => {
     if (direction === 'prev') {
-      setTimeOffset(prev => prev + 1);
+      setTimeOffset((prev) => prev + 1);
     } else {
-      setTimeOffset(prev => Math.max(0, prev - 1));
+      setTimeOffset((prev) => Math.max(0, prev - 1));
     }
   };
 
   // 현재 기간에 따른 이동 단위 텍스트
   const getMoveUnitText = () => {
     switch (period) {
-      case 'daily':
-        return '30일';
-      case 'weekly':
-        return '15주';
-      case 'monthly':
-        return '12개월';
+    case 'daily':
+      return '30일';
+    case 'weekly':
+      return '15주';
+    case 'monthly':
+      return '12개월';
     }
   };
 
@@ -92,7 +92,7 @@ export default function StatsChart() {
 
       // 최근 30일의 날짜 배열 생성
       const today = new Date();
-      today.setDate(today.getDate() - (timeOffset * 30)); // 30일 단위로 이동
+      today.setDate(today.getDate() - timeOffset * 30); // 30일 단위로 이동
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date(today);
         date.setDate(date.getDate() - (29 - i));
@@ -137,19 +137,19 @@ export default function StatsChart() {
 
       // 기준 날짜 설정 (timeOffset 고려)
       const baseDate = new Date();
-      baseDate.setDate(baseDate.getDate() - (timeOffset * 105)); // 15주 단위로 이동 (15 * 7 = 105일)
+      baseDate.setDate(baseDate.getDate() - timeOffset * 105); // 15주 단위로 이동 (15 * 7 = 105일)
 
       // 날짜 배열 생성
       const weekDates = Array.from({ length: 15 }, (_, i) => {
         const date = new Date(baseDate);
-        date.setDate(date.getDate() + (i * 7));
+        date.setDate(date.getDate() + i * 7);
         return formatDate(date);
       });
 
       // 월이 바뀌는 지점 찾기
       const monthLabels = Array.from({ length: 15 }, (_, i) => {
         const date = new Date(baseDate);
-        date.setDate(date.getDate() + (i * 7));
+        date.setDate(date.getDate() + i * 7);
         const month = date.getMonth() + 1;
         return { month, index: i };
       }).reduce((acc: { [key: string]: number }, { month, index }) => {
@@ -162,10 +162,10 @@ export default function StatsChart() {
       // 날짜를 순차적으로 표시하기 위한 배열 생성
       const sequentialDates = Array.from({ length: 15 }, (_, i) => {
         const date = new Date(baseDate);
-        date.setDate(date.getDate() + (i * 7));
+        date.setDate(date.getDate() + i * 7);
         return {
           day: date.getDate().toString(),
-          month: date.getMonth() + 1
+          month: date.getMonth() + 1,
         };
       });
 
@@ -176,7 +176,7 @@ export default function StatsChart() {
           }
           return day;
         }),
-        data: weekDates.map(date => weeklyData[date]?.[statType] || 0),
+        data: weekDates.map((date) => weeklyData[date]?.[statType] || 0),
         monthLabels,
       };
     } else {
@@ -194,7 +194,7 @@ export default function StatsChart() {
 
       // 기준 날짜 설정 (timeOffset 고려)
       const baseDate = new Date();
-      baseDate.setMonth(baseDate.getMonth() - (timeOffset * 12)); // 12개월 단위로 이동
+      baseDate.setMonth(baseDate.getMonth() - timeOffset * 12); // 12개월 단위로 이동
 
       // 월별 데이터 배열 생성
       const monthDates = Array.from({ length: 12 }, (_, i) => {
@@ -203,7 +203,7 @@ export default function StatsChart() {
         return {
           key: `${date.getFullYear()}-${date.getMonth() + 1}`,
           label: `${date.getMonth() + 1}월`,
-          year: date.getFullYear()
+          year: date.getFullYear(),
         };
       });
 
@@ -236,25 +236,17 @@ export default function StatsChart() {
   const chartWidth = `calc(100% - ${blockWidth}px)`; // 차트 전체 너비
 
   const chartData = {
-    labels: processedData.labels.map(() => ""),
+    labels: processedData.labels.map(() => ''),
     datasets: [
       {
         data: processedData.data,
-        backgroundColor: processedData.data.map((_, index) => 
-          index === hoveredIndex ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.6)'
-        ),
+        backgroundColor: processedData.data.map((_, index) => (index === hoveredIndex ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.6)')),
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 2,
-        pointRadius: processedData.data.map((_, index) => 
-          index === hoveredIndex ? 7 : 5
-        ),
-        pointBackgroundColor: processedData.data.map((_, index) => 
-          index === hoveredIndex ? 'rgba(75, 192, 192, 1)' : 'rgba(75, 192, 192, 1)'
-        ),
+        pointRadius: processedData.data.map((_, index) => (index === hoveredIndex ? 7 : 5)),
+        pointBackgroundColor: processedData.data.map((_, index) => (index === hoveredIndex ? 'rgba(75, 192, 192, 1)' : 'rgba(75, 192, 192, 1)')),
         pointBorderColor: '#fff',
-        pointBorderWidth: processedData.data.map((_, index) => 
-          index === hoveredIndex ? 3 : 2
-        ),
+        pointBorderWidth: processedData.data.map((_, index) => (index === hoveredIndex ? 3 : 2)),
         pointHoverRadius: 7,
         pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)',
         pointHoverBorderColor: '#fff',
@@ -309,97 +301,92 @@ export default function StatsChart() {
 
   const handleTimeBlockHover = (index: number | null) => {
     setHoveredIndex(index);
-    
+
     if (chartRef.current && index !== null) {
       const chart = chartRef.current;
-      
+
       // 차트의 getDatasetMeta를 사용하여 데이터 포인트의 위치 정보를 가져옵니다
       const meta = chart.getDatasetMeta(0);
       if (meta.data[index]) {
         const element = meta.data[index];
-        chart.setActiveElements([{
-          datasetIndex: 0,
-          index: index,
-          element: element
-        }]);
-        
-        chart.tooltip.setActiveElements([{
-          datasetIndex: 0,
-          index: index,
-        }], {
-          x: element.x,
-          y: element.y
-        });
+        chart.setActiveElements([
+          {
+            datasetIndex: 0,
+            index: index,
+            element: element,
+          },
+        ]);
+
+        chart.tooltip.setActiveElements(
+          [
+            {
+              datasetIndex: 0,
+              index: index,
+            },
+          ],
+          {
+            x: element.x,
+            y: element.y,
+          },
+        );
       }
-      
+
       chart.update('none'); // 'none' 모드로 업데이트하여 성능 최적화
     }
   };
 
   return (
-    <div className="flex flex-col items-center w-full">
-      <div className="flex gap-4 mb-4">
+    <div className="flex w-full flex-col items-center">
+      <div className="mb-4 flex gap-4">
         <select
           value={period}
           onChange={(e) => {
             setPeriod(e.target.value as PeriodType);
             setTimeOffset(0);
           }}
-          className="px-4 py-2 border rounded-lg"
+          className="rounded-lg border px-4 py-2"
         >
           <option value="daily">일간</option>
           <option value="weekly">주간</option>
           <option value="monthly">월간</option>
         </select>
-        <select
-          value={statType}
-          onChange={(e) => setStatType(e.target.value as StatType)}
-          className="px-4 py-2 border rounded-lg"
-        >
+        <select value={statType} onChange={(e) => setStatType(e.target.value as StatType)} className="rounded-lg border px-4 py-2">
           <option value="views">조회수</option>
           <option value="visitors">방문자</option>
         </select>
       </div>
       <div className="relative w-full">
-        <div className="w-full h-[400px]" style={{ width: chartWidth }}>
-          <Line
-            ref={chartRef}
-            data={chartData}
-            options={options}
-          />
+        <div className="h-[400px] w-full" style={{ width: chartWidth }}>
+          <Line ref={chartRef} data={chartData} options={options} />
         </div>
-        <div className="w-full mt-4">
+        <div className="mt-4 w-full">
           <div className="flex items-center">
-            <button
-              onClick={() => moveTime('prev')}
-              className="py-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
+            <button onClick={() => moveTime('prev')} className="rounded-full py-2 transition-colors hover:bg-gray-100">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <div className="flex-1 grid" style={{ 
-              gridTemplateColumns: `repeat(${totalBlocks}, minmax(${blockWidth}px, 1fr))`,
-              width: chartWidth,
-              columnGap: '0'
-            }}>
+            <div
+              className="grid flex-1"
+              style={{
+                gridTemplateColumns: `repeat(${totalBlocks}, minmax(${blockWidth}px, 1fr))`,
+                width: chartWidth,
+                columnGap: '0',
+              }}
+            >
               {processedData.labels.map((label, index) => {
                 const displayLabel = Array.isArray(label) ? label[0] : label;
                 const monthLabel = Array.isArray(label) ? label[1] : null;
-                
+
                 return (
-                  <div 
-                    key={index} 
-                    className={`flex flex-col items-center cursor-pointer transition-colors ${
-                      hoveredIndex === index ? 'bg-gray-50' : ''
-                    }`}
+                  <div
+                    key={index}
+                    className={`flex cursor-pointer flex-col items-center transition-colors ${hoveredIndex === index ? 'bg-gray-50' : ''}`}
                     onMouseEnter={() => handleTimeBlockHover(index)}
                     onMouseLeave={() => handleTimeBlockHover(null)}
                   >
                     <span className="text-sm text-gray-600">{displayLabel}</span>
-                    {monthLabel && (
-                      <span className="text-sm font-medium text-gray-800 mt-1">{monthLabel}</span>
-                    )}
+                    {monthLabel && <span className="mt-1 text-sm font-medium text-gray-800">{monthLabel}</span>}
                   </div>
                 );
               })}
@@ -407,9 +394,7 @@ export default function StatsChart() {
             <button
               onClick={() => moveTime('next')}
               disabled={timeOffset === 0}
-              className={`py-2 rounded-full transition-colors ${
-                timeOffset === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-              }`}
+              className={`rounded-full py-2 transition-colors ${timeOffset === 0 ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -418,11 +403,7 @@ export default function StatsChart() {
           </div>
         </div>
       </div>
-      {timeOffset > 0 && (
-        <div className="mt-4 text-sm text-gray-500">
-          {getMoveUnitText()} 전 데이터
-        </div>
-      )}
+      {timeOffset > 0 && <div className="mt-4 text-sm text-gray-500">{getMoveUnitText()} 전 데이터</div>}
     </div>
   );
-} 
+}

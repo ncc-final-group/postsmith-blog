@@ -1,16 +1,19 @@
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 import React from 'react';
+
 import { getBlogByAddress } from './api/tbBlogs';
-import { getActiveThemeByBlogId } from './api/tbThemes';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getContentsByBlogId } from './api/tbContents';
 import { getRecentReplies } from './api/tbReplies';
-import { TemplateEngine } from '../lib/template/TemplateEngine';
+import { getActiveThemeByBlogId } from './api/tbThemes';
 import BlogLayout from './components/BlogLayout';
+import BlogProvider from './components/BlogProvider';
+import { renderTemplate } from '../lib/template/TemplateEngine';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수
-function formatDateToISO(date: Date): string {
+function formatDate(date: Date): string {
   return date.toISOString();
 }
 
@@ -39,67 +42,120 @@ export async function generateMetadata(): Promise<Metadata> {
   const blog = await getBlogByAddress(address);
 
   return {
-    title: blog?.name || address,
+    title: blog?.nickname || address,
     description: blog?.description,
     viewport: 'width=device-width, initial-scale=1',
   };
 }
 
+async function getBlogAddress(): Promise<string> {
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+
+    // address.localhost:3000 형태에서 address 추출
+    if (host.includes('.localhost')) {
+      const subdomain = host.split('.localhost')[0];
+      return subdomain;
+    }
+
+    // address.domain.com 형태에서 address 추출
+    if (host.includes('.')) {
+      const parts = host.split('.');
+      if (parts.length >= 2) {
+        return parts[0];
+      }
+    }
+
+    // 기본값 (개발 환경)
+    return 'testblog';
+  } catch (error) {
+    // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
+    return 'testblog';
+  }
+}
+
 export default async function HomePage() {
-  // URL에서 subdomain 추출
-  const headersList = headers();
-  const host = headersList.get('host') || 'localhost:3000';
-  const subdomain = host.split('.')[0];
+  try {
+    const subdomain = await getBlogAddress();
 
-  // 블로그 정보 조회
-  const blog = await getBlogByAddress(subdomain);
-  if (!blog) {
-    return new Response('Blog not found', { status: 404 });
-  }
+    const blog = await getBlogByAddress(subdomain);
+    if (!blog) {
+      notFound();
+    }
 
-  // 테마 정보 조회
-  const theme = await getActiveThemeByBlogId(blog.id);
-  if (!theme) {
-    return new Response('Theme not found', { status: 404 });
-  }
+    const theme = await getActiveThemeByBlogId(blog.id);
+    if (!theme) {
+      notFound();
+    }
 
-  // 컨텐츠 목록 조회
-  const contents = await getContentsByBlogId(blog.id);
+    const categories = await getCategoriesByBlogId(blog.id);
+    const contents = await getContentsByBlogId(blog.id);
+    const recentReplies = await getRecentReplies(blog.id);
 
-  // 최근 댓글 조회
-  const recentReplies = await getRecentReplies(blog.id, 5);
+    const templateData = {
+      blog: {
+        nickname: String(blog.nickname),
+        description: blog.description ? String(blog.description) : null,
+        logo_image: blog.logo_image ? String(blog.logo_image) : null,
+        address: String(blog.address),
+        author: undefined, // 메인 페이지에서는 작성자 정보 불필요
+      },
+      categories: categories.map((category) => ({
+        id: Number(category.id),
+        name: String(category.name),
+        post_count: Number(category.post_count),
+        category_id: category.category_id == null ? null : Number(category.category_id),
+      })),
+      contents: contents.map((content) => ({
+        sequence: Number(content.sequence),
+        title: String(content.title),
+        content_html: String(content.content_html),
+        content_plain: String(content.content_plain),
+        created_at: String(content.created_at),
+        thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
+        category: content.category
+          ? {
+            id: Number(content.category.id),
+            name: String(content.category.name),
+          }
+          : undefined,
+        reply_count: Number(content.reply_count ?? 0),
+      })),
+      recentReplies: recentReplies.map((reply) => ({
+        id: Number(reply.id),
+        content_id: Number(reply.content_id),
+        content: String(reply.content),
+        created_at: String(reply.created_at),
+        content_sequence: Number(reply.content_sequence),
+        user: { nickname: String(reply.user_nickname ?? '익명') },
+      })),
+      replies: [],
+    };
 
-  // 카테고리 목록 조회
-  const categories = await getCategoriesByBlogId(blog.id);
+    const html = renderTemplate(theme.html, theme.css, templateData);
 
-  // 템플릿 데이터 준비
-  const templateData = {
-    blog: {
-      title: blog.title,
+    const blogInfo = {
+      id: blog.id,
+      nickname: blog.nickname,
       description: blog.description,
-      profile_image: blog.profile_image,
-      address: blog.address
-    },
-    categories,
-    contents,
-    recentReplies
-  };
+      logo_image: blog.logo_image,
+      address: blog.address,
+    };
 
-  // 템플릿 렌더링
-  const renderedHtml = TemplateEngine.render(theme.html, theme.css, templateData);
-
-  return (
-    <html>
-      <head>
-        <style dangerouslySetInnerHTML={{ __html: theme.css }} />
-      </head>
-      <body>
-        <BlogLayout 
-          blogId={blog.id} 
-          html={renderedHtml} 
-          css={theme.css} 
-        />
-      </body>
-    </html>
-  );
+    return (
+      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+      </BlogProvider>
+    );
+  } catch (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="mb-4 text-2xl font-bold text-red-600">오류가 발생했습니다</h1>
+          <p className="text-gray-600">페이지를 불러오는 중 문제가 발생했습니다.</p>
+        </div>
+      </div>
+    );
+  }
 }

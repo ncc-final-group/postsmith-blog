@@ -11,6 +11,7 @@ FROM `postsmith`.`blog_themes`;
 SELECT `blogs`.`id`,
     `blogs`.`user_id`,
     `blogs`.`name`,
+    `blogs`.`nickname`,
     `blogs`.`address`,
     `blogs`.`description`,
     `blogs`.`logo_image`,
@@ -95,7 +96,8 @@ SELECT `themes`.`id`,
     `themes`.`description`,
     `themes`.`author`,
     `themes`.`author_link`,
-    `themes`.`theme`
+    `themes`.`html`,
+    `themes`.`css`
 FROM `postsmith`.`themes`;
 SELECT `uploads`.`id`,
     `uploads`.`blog_id`,

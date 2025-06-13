@@ -18,7 +18,7 @@ export const uploadImageToServer = async (file: File, altText?: string, userId?:
     if (file.size > maxSize) {
       return {
         success: false,
-        message: '파일 크기가 10MB를 초과했습니다. 더 작은 파일을 선택해주세요.'
+        message: '파일 크기가 10MB를 초과했습니다. 더 작은 파일을 선택해주세요.',
       };
     }
 
@@ -51,7 +51,7 @@ export const uploadImageToServer = async (file: File, altText?: string, userId?:
     console.error('이미지 업로드 오류:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
@@ -63,7 +63,7 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
     if (file.size > maxSize) {
       return {
         success: false,
-        message: '파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.'
+        message: '파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.',
       };
     }
 
@@ -75,7 +75,7 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
     console.log('파일 정보:', { name: file.name, size: file.size, type: file.type });
     // eslint-disable-next-line no-console
     console.log('요청 URL:', `${API_BASE_URL}/api1/upload/video`);
-    
+
     const formData = new FormData();
     formData.append('file', file);
     if (altText) {
@@ -117,11 +117,11 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
     console.error('에러 상세:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : '알 수 없는 오류',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
     });
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
@@ -133,7 +133,7 @@ export const uploadFileToServer = async (file: File, displayName?: string, userI
     if (file.size > maxSize) {
       return {
         success: false,
-        message: '파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.'
+        message: '파일 크기가 50MB를 초과했습니다. 더 작은 파일을 선택해주세요.',
       };
     }
 
@@ -166,14 +166,14 @@ export const uploadFileToServer = async (file: File, displayName?: string, userI
     console.error('파일 업로드 오류:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
 
 export const deleteMediaFromServer = async (mediaId: number): Promise<{ success: boolean; message?: string }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api1/media/${mediaId}`, {method: 'DELETE',});
+    const response = await fetch(`${API_BASE_URL}/api1/media/${mediaId}`, { method: 'DELETE' });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -186,4 +186,4 @@ export const deleteMediaFromServer = async (mediaId: number): Promise<{ success:
     console.error('미디어 삭제 오류:', error);
     return { success: false, message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.' };
   }
-}; 
+};

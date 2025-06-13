@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import React, { useCallback, useState } from 'react'
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useState } from 'react';
 // 업로드 서비스 함수들 (임시로 여기에 정의)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -47,7 +47,7 @@ const uploadImageToServer = async (file: File, altText?: string, userId?: number
     console.error('이미지 업로드 오류:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
@@ -83,7 +83,7 @@ const uploadVideoToServer = async (file: File, altText?: string, userId?: number
     console.error('비디오 업로드 오류:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
@@ -119,7 +119,7 @@ const uploadFileToServer = async (file: File, displayName?: string, userId?: num
     console.error('파일 업로드 오류:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };
   }
 };
@@ -136,184 +136,190 @@ interface UploadItem {
 }
 
 export default function MediaUploadPage() {
-  const router = useRouter()
-  const [uploadItems, setUploadItems] = useState<UploadItem[]>([])
-  const [dragOver, setDragOver] = useState(false)
-  
+  const router = useRouter();
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+
   // 임시 사용자 ID
-  const userId = 1
+  const userId = 1;
 
   const getFileType = (file: File): 'image' | 'video' | 'file' => {
-    if (file.type.startsWith('image/')) return 'image'
-    if (file.type.startsWith('video/')) return 'video'
-    return 'file'
-  }
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    return 'file';
+  };
 
   const addFiles = useCallback((files: FileList | File[]) => {
-    const validFiles: File[] = []
-    const invalidFiles: string[] = []
-    
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
+
     Array.from(files).forEach((file: File) => {
-      const fileType = getFileType(file)
-      let maxSize: number
-      let sizeName: string
-      
+      const fileType = getFileType(file);
+      let maxSize: number;
+      let sizeName: string;
+
       // 파일 타입별 크기 제한
       switch (fileType) {
-        case 'image':
-          maxSize = 10 * 1024 * 1024 // 10MB
-          sizeName = '10MB'
-          break
-        case 'video':
-        case 'file':
-          maxSize = 50 * 1024 * 1024 // 50MB
-          sizeName = '50MB'
-          break
-        default:
-          maxSize = 50 * 1024 * 1024 // 50MB
-          sizeName = '50MB'
+      case 'image':
+        maxSize = 10 * 1024 * 1024; // 10MB
+        sizeName = '10MB';
+        break;
+      case 'video':
+      case 'file':
+        maxSize = 50 * 1024 * 1024; // 50MB
+        sizeName = '50MB';
+        break;
+      default:
+        maxSize = 50 * 1024 * 1024; // 50MB
+        sizeName = '50MB';
       }
-      
+
       if (file.size > maxSize) {
-        invalidFiles.push(`${file.name} (${sizeName} 초과)`)
+        invalidFiles.push(`${file.name} (${sizeName} 초과)`);
       } else {
-        validFiles.push(file)
+        validFiles.push(file);
       }
-    })
-    
+    });
+
     // 크기 초과 파일이 있으면 알림
     if (invalidFiles.length > 0) {
-      alert(`다음 파일들은 크기 제한을 초과하여 제외되었습니다:\n${invalidFiles.join('\n')}`)
+      alert(`다음 파일들은 크기 제한을 초과하여 제외되었습니다:\n${invalidFiles.join('\n')}`);
     }
-    
+
     const newItems: UploadItem[] = validFiles.map((file: File) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       type: getFileType(file),
       status: 'pending',
       progress: 0,
-    }))
-    
-    setUploadItems((prev: UploadItem[]) => [...prev, ...newItems])
-  }, [])
+    }));
+
+    setUploadItems((prev: UploadItem[]) => [...prev, ...newItems]);
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      addFiles(e.target.files)
+      addFiles(e.target.files);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setDragOver(false)
-    
+    e.preventDefault();
+    setDragOver(false);
+
     if (e.dataTransfer.files) {
-      addFiles(e.dataTransfer.files)
+      addFiles(e.dataTransfer.files);
     }
-  }
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setDragOver(true)
-  }
+    e.preventDefault();
+    setDragOver(true);
+  };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setDragOver(false)
-  }
+    e.preventDefault();
+    setDragOver(false);
+  };
 
   const updateItemField = (id: string, field: keyof UploadItem, value: any) => {
-    setUploadItems((prev: UploadItem[]) => prev.map((item: UploadItem) => 
-      item.id === id ? { ...item, [field]: value } : item
-    ))
-  }
+    setUploadItems((prev: UploadItem[]) => prev.map((item: UploadItem) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
 
   const removeItem = (id: string) => {
-    setUploadItems((prev: UploadItem[]) => prev.filter((item: UploadItem) => item.id !== id))
-  }
+    setUploadItems((prev: UploadItem[]) => prev.filter((item: UploadItem) => item.id !== id));
+  };
 
   const uploadSingleItem = async (item: UploadItem) => {
-    updateItemField(item.id, 'status', 'uploading')
-    updateItemField(item.id, 'progress', 0)
+    updateItemField(item.id, 'status', 'uploading');
+    updateItemField(item.id, 'progress', 0);
 
     try {
-      let result: UploadResponse
+      let result: UploadResponse;
 
       switch (item.type) {
-        case 'image':
-          result = await uploadImageToServer(item.file, item.altText, userId)
-          break
-        case 'video':
-          result = await uploadVideoToServer(item.file, item.altText, userId)
-          break
-        case 'file':
-          result = await uploadFileToServer(item.file, item.displayName, userId)
-          break
-        default:
-          throw new Error('지원하지 않는 파일 타입입니다.')
+      case 'image':
+        result = await uploadImageToServer(item.file, item.altText, userId);
+        break;
+      case 'video':
+        result = await uploadVideoToServer(item.file, item.altText, userId);
+        break;
+      case 'file':
+        result = await uploadFileToServer(item.file, item.displayName, userId);
+        break;
+      default:
+        throw new Error('지원하지 않는 파일 타입입니다.');
       }
 
-      updateItemField(item.id, 'result', result)
-      updateItemField(item.id, 'status', result.success ? 'success' : 'error')
-      updateItemField(item.id, 'progress', 100)
+      updateItemField(item.id, 'result', result);
+      updateItemField(item.id, 'status', result.success ? 'success' : 'error');
+      updateItemField(item.id, 'progress', 100);
     } catch (error) {
-      updateItemField(item.id, 'status', 'error')
+      updateItemField(item.id, 'status', 'error');
       updateItemField(item.id, 'result', {
         success: false,
-        message: error instanceof Error ? error.message : '업로드 중 오류가 발생했습니다.'
-      })
+        message: error instanceof Error ? error.message : '업로드 중 오류가 발생했습니다.',
+      });
     }
-  }
+  };
 
   const uploadAllItems = async () => {
-    const pendingItems = uploadItems.filter((item: UploadItem) => item.status === 'pending')
-    
+    const pendingItems = uploadItems.filter((item: UploadItem) => item.status === 'pending');
+
     for (const item of pendingItems) {
-      await uploadSingleItem(item)
+      await uploadSingleItem(item);
     }
-  }
+  };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const getStatusColor = (status: UploadItem['status']) => {
     switch (status) {
-      case 'pending': return 'text-gray-600 bg-gray-100'
-      case 'uploading': return 'text-blue-600 bg-blue-100'
-      case 'success': return 'text-green-600 bg-green-100'
-      case 'error': return 'text-red-600 bg-red-100'
-      default: return 'text-gray-600 bg-gray-100'
+    case 'pending':
+      return 'text-gray-600 bg-gray-100';
+    case 'uploading':
+      return 'text-blue-600 bg-blue-100';
+    case 'success':
+      return 'text-green-600 bg-green-100';
+    case 'error':
+      return 'text-red-600 bg-red-100';
+    default:
+      return 'text-gray-600 bg-gray-100';
     }
-  }
+  };
 
   const getStatusText = (status: UploadItem['status']) => {
     switch (status) {
-      case 'pending': return '대기중'
-      case 'uploading': return '업로드중'
-      case 'success': return '완료'
-      case 'error': return '실패'
-      default: return '알 수 없음'
+    case 'pending':
+      return '대기중';
+    case 'uploading':
+      return '업로드중';
+    case 'success':
+      return '완료';
+    case 'error':
+      return '실패';
+    default:
+      return '알 수 없음';
     }
-  }
+  };
 
-  const hasSuccessfulUploads = uploadItems.some((item: UploadItem) => item.status === 'success')
+  const hasSuccessfulUploads = uploadItems.some((item: UploadItem) => item.status === 'success');
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-none mx-auto">
+        <div className="mx-auto max-w-none">
           {/* 헤더 */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  파일 업로드
-                </h1>
+                <h1 className="mb-2 text-3xl font-bold text-gray-900">파일 업로드</h1>
                 <nav className="text-sm text-gray-600">
                   <Link href="/usermanage" className="hover:text-blue-600">
                     사용자 관리
@@ -327,17 +333,11 @@ export default function MediaUploadPage() {
                 </nav>
               </div>
               <div className="flex space-x-4">
-                <Link
-                  href="/usermanage/media"
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
+                <Link href="/usermanage/media" className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50">
                   취소
                 </Link>
                 {hasSuccessfulUploads && (
-                  <button
-                    onClick={() => router.push('/usermanage/media')}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
+                  <button onClick={() => router.push('/usermanage/media')} className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700">
                     미디어 관리로 이동
                   </button>
                 )}
@@ -347,57 +347,36 @@ export default function MediaUploadPage() {
 
           {/* 파일 드롭 영역 */}
           <div
-            className={`border-2 border-dashed rounded-lg p-12 text-center mb-8 transition-colors ${
-              dragOver 
-                ? 'border-blue-400 bg-blue-50' 
-                : 'border-gray-300 bg-white hover:border-gray-400'
+            className={`mb-8 rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
+              dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-white hover:border-gray-400'
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div className="text-6xl mb-4">📁</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              파일을 여기에 드래그하거나 클릭하여 선택하세요
-            </h3>
-            <p className="text-gray-500 mb-6">
-              이미지 (최대 10MB), 동영상 (최대 50MB), 문서 파일 (최대 50MB)
-            </p>
-            <input
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              id="file-input"
-              accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-            />
-            <label
-              htmlFor="file-input"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
-            >
+            <div className="mb-4 text-6xl">📁</div>
+            <h3 className="mb-2 text-xl font-semibold text-gray-700">파일을 여기에 드래그하거나 클릭하여 선택하세요</h3>
+            <p className="mb-6 text-gray-500">이미지 (최대 10MB), 동영상 (최대 50MB), 문서 파일 (최대 50MB)</p>
+            <input type="file" multiple onChange={handleFileSelect} className="hidden" id="file-input" accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar" />
+            <label htmlFor="file-input" className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700">
               파일 선택
             </label>
           </div>
 
           {/* 업로드 목록 */}
           {uploadItems.length > 0 && (
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="p-6 border-b border-gray-200">
+            <div className="mb-8 rounded-lg bg-white shadow">
+              <div className="border-b border-gray-200 p-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">
-                    업로드 목록 ({uploadItems.length}개)
-                  </h2>
+                  <h2 className="text-lg font-semibold">업로드 목록 ({uploadItems.length}개)</h2>
                   <div className="space-x-2">
-                    <button
-                      onClick={() => setUploadItems([])}
-                      className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                    >
+                    <button onClick={() => setUploadItems([])} className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100">
                       모두 제거
                     </button>
                     <button
                       onClick={uploadAllItems}
                       disabled={uploadItems.every((item: UploadItem) => item.status !== 'pending')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       모두 업로드
                     </button>
@@ -412,40 +391,27 @@ export default function MediaUploadPage() {
                       {/* 파일 미리보기 */}
                       <div className="flex-shrink-0">
                         {item.type === 'image' ? (
-                          <img
-                            src={URL.createObjectURL(item.file)}
-                            alt={item.file.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
+                          <img src={URL.createObjectURL(item.file)} alt={item.file.name} className="h-16 w-16 rounded object-cover" />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-                            <span className="text-2xl">
-                              {item.type === 'video' ? '🎥' : '📄'}
-                            </span>
+                          <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
+                            <span className="text-2xl">{item.type === 'video' ? '🎥' : '📄'}</span>
                           </div>
                         )}
                       </div>
 
                       {/* 파일 정보 */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
-                            {item.file.name}
-                          </h3>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="truncate text-sm font-medium text-gray-900">{item.file.name}</h3>
                           <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                              {getStatusText(item.status)}
-                            </span>
-                            <button
-                              onClick={() => removeItem(item.id)}
-                              className="text-gray-400 hover:text-red-600"
-                            >
+                            <span className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(item.status)}`}>{getStatusText(item.status)}</span>
+                            <button onClick={() => removeItem(item.id)} className="text-gray-400 hover:text-red-600">
                               ✕
                             </button>
                           </div>
                         </div>
 
-                        <p className="text-sm text-gray-500 mb-3">
+                        <p className="mb-3 text-sm text-gray-500">
                           {formatFileSize(item.file.size)} • {item.file.type}
                         </p>
 
@@ -458,7 +424,7 @@ export default function MediaUploadPage() {
                                 placeholder="대체 텍스트 (선택사항)"
                                 value={item.altText || ''}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItemField(item.id, 'altText', e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                               />
                             )}
                             {item.type === 'file' && (
@@ -467,13 +433,10 @@ export default function MediaUploadPage() {
                                 placeholder="표시 이름 (선택사항)"
                                 value={item.displayName || ''}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItemField(item.id, 'displayName', e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                               />
                             )}
-                            <button
-                              onClick={() => uploadSingleItem(item)}
-                              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
+                            <button onClick={() => uploadSingleItem(item)} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
                               업로드
                             </button>
                           </div>
@@ -481,11 +444,8 @@ export default function MediaUploadPage() {
 
                         {/* 업로드 진행률 */}
                         {item.status === 'uploading' && (
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${item.progress}%` }}
-                            />
+                          <div className="h-2 w-full rounded-full bg-gray-200">
+                            <div className="h-2 rounded-full bg-blue-600 transition-all duration-300" style={{ width: `${item.progress}%` }} />
                           </div>
                         )}
 
@@ -496,18 +456,13 @@ export default function MediaUploadPage() {
                               <div className="text-sm text-green-600">
                                 ✅ 업로드 완료
                                 {item.result.url && (
-                                  <button
-                                    onClick={() => navigator.clipboard.writeText(item.result!.url!)}
-                                    className="ml-2 text-blue-600 hover:underline"
-                                  >
+                                  <button onClick={() => navigator.clipboard.writeText(item.result!.url!)} className="ml-2 text-blue-600 hover:underline">
                                     URL 복사
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <div className="text-sm text-red-600">
-                                ❌ {item.result.message}
-                              </div>
+                              <div className="text-sm text-red-600">❌ {item.result.message}</div>
                             )}
                           </div>
                         )}
@@ -520,30 +475,33 @@ export default function MediaUploadPage() {
           )}
 
           {/* 업로드 가이드 */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">업로드 가이드</h3>
+          <div className="rounded-lg bg-white p-6 shadow">
+            <h3 className="mb-4 text-lg font-semibold">업로드 가이드</h3>
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-3xl mb-2">🖼️</div>
-                <h4 className="font-medium text-gray-900 mb-1">이미지</h4>
+              <div className="rounded-lg bg-blue-50 p-4 text-center">
+                <div className="mb-2 text-3xl">🖼️</div>
+                <h4 className="mb-1 font-medium text-gray-900">이미지</h4>
                 <p className="text-sm text-gray-600">
-                  JPG, PNG, GIF, WebP<br/>
+                  JPG, PNG, GIF, WebP
+                  <br />
                   최대 10MB
                 </p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-3xl mb-2">🎥</div>
-                <h4 className="font-medium text-gray-900 mb-1">동영상</h4>
+              <div className="rounded-lg bg-green-50 p-4 text-center">
+                <div className="mb-2 text-3xl">🎥</div>
+                <h4 className="mb-1 font-medium text-gray-900">동영상</h4>
                 <p className="text-sm text-gray-600">
-                  MP4, WebM, AVI<br/>
+                  MP4, WebM, AVI
+                  <br />
                   최대 50MB
                 </p>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-3xl mb-2">📄</div>
-                <h4 className="font-medium text-gray-900 mb-1">문서</h4>
+              <div className="rounded-lg bg-purple-50 p-4 text-center">
+                <div className="mb-2 text-3xl">📄</div>
+                <h4 className="mb-1 font-medium text-gray-900">문서</h4>
                 <p className="text-sm text-gray-600">
-                  PDF, DOC, TXT, ZIP<br/>
+                  PDF, DOC, TXT, ZIP
+                  <br />
                   최대 50MB
                 </p>
               </div>
@@ -552,5 +510,5 @@ export default function MediaUploadPage() {
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

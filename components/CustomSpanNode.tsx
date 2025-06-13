@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  ElementNode,
-  LexicalNode,
-  NodeKey,
-  SerializedElementNode,
-  $createTextNode,
-  $isTextNode,
-} from 'lexical';
+import { $createTextNode, $isTextNode, ElementNode, LexicalNode, NodeKey, SerializedElementNode } from 'lexical';
 
 export type SerializedSpanNode = SerializedElementNode;
 
@@ -41,9 +34,7 @@ export class SpanNode extends ElementNode {
   }
 
   updateDOM(prevNode: SpanNode, dom: HTMLElement): boolean {
-    const shouldUpdate = 
-      prevNode.__color !== this.__color || 
-      prevNode.__backgroundColor !== this.__backgroundColor;
+    const shouldUpdate = prevNode.__color !== this.__color || prevNode.__backgroundColor !== this.__backgroundColor;
 
     if (shouldUpdate) {
       if (this.__color) {
@@ -61,7 +52,7 @@ export class SpanNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedSpanNode): SpanNode {
-    const node = $createSpanNode();
+    const node = new SpanNode();
     return node;
   }
 
@@ -94,7 +85,7 @@ export class SpanNode extends ElementNode {
   insertNewAfter(selection: any): null | LexicalNode {
     const element = this.getParentOrThrow().insertNewAfter(selection);
     if ($isTextNode(element)) {
-      const spanNode = $createSpanNode(this.__color, this.__backgroundColor);
+      const spanNode = new SpanNode(this.__color, this.__backgroundColor);
       element.replace(spanNode);
       return spanNode;
     }
@@ -108,4 +99,4 @@ export function $createSpanNode(color?: string, backgroundColor?: string): SpanN
 
 export function $isSpanNode(node: LexicalNode | null | undefined): node is SpanNode {
   return node instanceof SpanNode;
-} 
+}

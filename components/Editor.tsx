@@ -1,28 +1,41 @@
-"use client";
-import React, { useEffect, useState } from "react";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
-import { ClearEditorPlugin } from "@lexical/react/LexicalClearEditorPlugin";
-import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { TRANSFORMERS } from "@lexical/markdown";
-import { $patchStyleText } from '@lexical/selection';
+'use client';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
+import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListItemNode, ListNode } from '@lexical/list';
+import { TRANSFORMERS } from '@lexical/markdown';
+import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
+import { ClearEditorPlugin } from '@lexical/react/LexicalClearEditorPlugin';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { ContentEditable } from '@lexical/react/LexicalContentEditable';
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
+import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
+import { ListPlugin } from '@lexical/react/LexicalListPlugin';
+import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
+import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { $createHeadingNode } from '@lexical/rich-text';
-import { $createParagraphNode, $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, CLICK_COMMAND, COMMAND_PRIORITY_LOW, createCommand, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND } from 'lexical';
+import { $patchStyleText } from '@lexical/selection';
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getSelection,
+  $isParagraphNode,
+  $isRangeSelection,
+  $isTextNode,
+  CLICK_COMMAND,
+  COMMAND_PRIORITY_LOW,
+  createCommand,
+  KEY_BACKSPACE_COMMAND,
+  KEY_ENTER_COMMAND,
+  KEY_TAB_COMMAND,
+} from 'lexical';
 import { $getRoot } from 'lexical';
 import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
-import { $createListItemNode, $createListNode, $isListItemNode, $isListNode, ListItemNode, ListNode } from '@lexical/list';
+import React, { useEffect, useState } from 'react';
 
-import { CustomHRNode } from "./CustomHRNode";
+import { CustomHRNode } from './CustomHRNode';
 
-import "bootstrap-icons/font/bootstrap-icons.css";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // 색상 변경 명령어 생성
 export const SET_TEXT_COLOR_COMMAND = createCommand('SET_TEXT_COLOR_COMMAND');
@@ -32,12 +45,12 @@ export const SET_FONT_FAMILY_COMMAND = createCommand('SET_FONT_FAMILY_COMMAND');
 // HTML 추출 유틸리티 함수들
 export const getEditorHtml = (editor: any) => {
   let htmlString = '';
-  
+
   editor.update(() => {
     const root = $getRoot();
     htmlString = $generateHtmlFromNodes(editor, null);
   });
-  
+
   return htmlString;
 };
 
@@ -61,7 +74,7 @@ export const setEditorHtml = (editor: any, htmlString: string) => {
 // OnChangePlugin에서 HTML 실시간 추출 예제
 function HtmlExtractPlugin({ onChange }: { onChange?: (html: string) => void }) {
   const [editor] = useLexicalComposerContext();
-  
+
   return (
     <OnChangePlugin
       onChange={(editorState) => {
@@ -78,13 +91,13 @@ function HtmlExtractPlugin({ onChange }: { onChange?: (html: string) => void }) 
 
 function OnChange() {
   const [editor] = useLexicalComposerContext();
-  
+
   return (
     <OnChangePlugin
       onChange={(editorState) => {
         editorState.read(() => {
           const selection = editor.getEditorState()._selection;
-          
+
           if (selection) {
             // Selection changed
           }
@@ -110,7 +123,7 @@ function EnterKeyPlugin() {
         // 리스트 아이템에서 엔터키 처리
         let currentNode = anchorNode;
         let listItemNode = null;
-        
+
         // 부모 노드를 따라 올라가면서 ListItemNode를 찾음
         while (currentNode) {
           if ($isListItemNode(currentNode)) {
@@ -121,10 +134,10 @@ function EnterKeyPlugin() {
           if (!parent) break;
           currentNode = parent;
         }
-        
+
         if (listItemNode) {
           const textContent = listItemNode.getTextContent();
-          
+
           // 빈 리스트 아이템에서 엔터를 누른 경우
           if (textContent === '') {
             const listNode = listItemNode.getParent();
@@ -132,30 +145,30 @@ function EnterKeyPlugin() {
               // 1단 리스트인지 확인 (부모가 리스트 아이템이 아닌 경우)
               const listParent = listNode.getParent();
               const isTopLevel = !$isListItemNode(listParent);
-              
+
               if (isTopLevel) {
                 // 1단 리스트에서 빈 아이템의 엔터: 리스트를 빠져나가기
                 if (event) event.preventDefault();
-                
+
                 // 새로운 paragraph 생성
                 const newParagraph = $createParagraphNode();
                 const textNode = $createTextNode('');
                 newParagraph.append(textNode);
-                
+
                 // 리스트 뒤에 paragraph 추가
                 listNode.insertAfter(newParagraph);
-                
+
                 // 현재 리스트 아이템 제거
                 listItemNode.remove();
-                
+
                 // 리스트가 비어있으면 리스트도 제거
                 if (listNode.getChildren().length === 0) {
                   listNode.remove();
                 }
-                
+
                 // 새로운 paragraph로 포커스 이동
                 textNode.select();
-                
+
                 return true;
               }
             }
@@ -176,12 +189,12 @@ function EnterKeyPlugin() {
         // 이미지 노드 바로 앞이나 뒤의 빈 paragraph에서 엔터키 처리
         if ($isParagraphNode(anchorNode)) {
           const textContent = anchorNode.getTextContent();
-          
+
           // 빈 paragraph에서 엔터를 눌렀을 때
           if (textContent === '') {
             const prevSibling = anchorNode.getPreviousSibling();
             const nextSibling = anchorNode.getNextSibling();
-            
+
             // 이전 형제가 이미지 노드인 경우
             if (prevSibling && prevSibling.getType() === 'custom-image') {
               const newParagraph = $createParagraphNode();
@@ -191,7 +204,7 @@ function EnterKeyPlugin() {
               textNode.select();
               return true;
             }
-            
+
             // 다음 형제가 이미지 노드인 경우
             if (nextSibling && nextSibling.getType() === 'custom-image') {
               const newParagraph = $createParagraphNode();
@@ -202,7 +215,7 @@ function EnterKeyPlugin() {
               return true;
             }
           }
-          
+
           // paragraph 끝에서 엔터를 눌렀을 때 다음이 이미지 노드인 경우
           if (anchorOffset === textContent.length) {
             const nextSibling = anchorNode.getNextSibling();
@@ -215,7 +228,7 @@ function EnterKeyPlugin() {
               return true;
             }
           }
-          
+
           // paragraph 시작에서 엔터를 눌렀을 때 이전이 이미지 노드인 경우
           if (anchorOffset === 0) {
             const prevSibling = anchorNode.getPreviousSibling();
@@ -243,10 +256,10 @@ function EnterKeyPlugin() {
             }
           });
         }, 0);
-        
+
         return false; // 기본 엔터 동작은 유지
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
@@ -261,10 +274,10 @@ function HRKeyboardPlugin() {
       KEY_BACKSPACE_COMMAND,
       () => {
         const selection = $getSelection();
-        
+
         if ($isRangeSelection(selection)) {
           const nodes = selection.getNodes();
-          
+
           // 선택된 노드 중에 HR이 있는지 확인
           for (const node of nodes) {
             if (node instanceof CustomHRNode) {
@@ -272,16 +285,16 @@ function HRKeyboardPlugin() {
               return true;
             }
           }
-          
+
           // 빈 paragraph에서 backspace를 누른 경우
           const anchor = selection.anchor;
           if (anchor.offset === 0) {
             const currentNode = anchor.getNode();
-            
+
             // 현재 노드가 빈 paragraph인지 확인
             if ($isParagraphNode(currentNode) && currentNode.getTextContent().length === 0) {
               const prevSibling = currentNode.getPreviousSibling();
-              
+
               // 이전 노드가 HR인 경우
               if (prevSibling instanceof CustomHRNode) {
                 prevSibling.remove();
@@ -290,10 +303,10 @@ function HRKeyboardPlugin() {
             }
           }
         }
-        
+
         return false;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
@@ -308,14 +321,14 @@ function ListTabIndentationPlugin() {
       KEY_TAB_COMMAND,
       (event: KeyboardEvent) => {
         const selection = $getSelection();
-        
+
         if ($isRangeSelection(selection)) {
           const anchorNode = selection.anchor.getNode();
-          
+
           // 리스트 아이템 안에 있는지 확인
           let listItemNode = null;
           let currentNode = anchorNode;
-          
+
           // 부모 노드를 따라 올라가면서 ListItemNode를 찾음
           while (currentNode) {
             if ($isListItemNode(currentNode)) {
@@ -326,27 +339,27 @@ function ListTabIndentationPlugin() {
             if (!parent) break;
             currentNode = parent;
           }
-          
+
           if (listItemNode) {
             event.preventDefault();
-            
+
             const listNode = listItemNode.getParent();
             if (!$isListNode(listNode)) return false;
-            
+
             if (event.shiftKey) {
               // Shift + Tab: 아웃덴트 (들여쓰기 해제)
               const listType = listNode.getListType();
               const currentValue = listItemNode.getValue();
-              
+
               // 부모 리스트 노드의 부모를 찾음
               const grandParent = listNode.getParent();
-              
+
               if (grandParent) {
                 // 새로운 리스트 아이템 생성
                 const newListItem = $createListItemNode();
                 newListItem.append(...listItemNode.getChildren());
                 newListItem.setValue(currentValue);
-                
+
                 // 현재 아이템을 부모 레벨로 이동
                 if ($isListItemNode(grandParent)) {
                   grandParent.insertAfter(newListItem);
@@ -356,47 +369,47 @@ function ListTabIndentationPlugin() {
                   newList.append(newListItem);
                   listNode.insertBefore(newList);
                 }
-                
+
                 listItemNode.remove();
                 newListItem.select();
               }
             } else {
               // Tab: 인덴트 (들여쓰기)
               const prevSibling = listItemNode.getPreviousSibling();
-              
+
               if ($isListItemNode(prevSibling)) {
                 const listType = listNode.getListType();
                 const currentValue = listItemNode.getValue();
-                
+
                 // 이전 형제 요소의 자식으로 중첩 리스트 생성
                 let nestedList = null;
                 const lastChild = prevSibling.getLastChild();
-                
+
                 if ($isListNode(lastChild)) {
                   nestedList = lastChild;
                 } else {
                   nestedList = $createListNode(listType);
                   prevSibling.append(nestedList);
                 }
-                
+
                 // 새로운 리스트 아이템 생성하여 중첩 리스트에 추가
                 const newListItem = $createListItemNode();
                 newListItem.append(...listItemNode.getChildren());
                 newListItem.setValue(currentValue);
-                
+
                 nestedList.append(newListItem);
                 listItemNode.remove();
                 newListItem.select();
               }
             }
-            
+
             return true;
           }
         }
-        
+
         return false;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
@@ -412,11 +425,11 @@ function CheckboxTogglePlugin() {
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      
+
       // 체크박스 리스트 아이템인지 확인
       const listItem = target.closest('li');
       if (!listItem) return;
-      
+
       const list = listItem.closest('ul[data-list-type="checkbox"]');
       if (!list) return;
 
@@ -424,10 +437,10 @@ function CheckboxTogglePlugin() {
       if (!editorElement.contains(listItem)) return;
 
       e.preventDefault();
-      
+
       // 체크 상태 토글
       const isChecked = listItem.hasAttribute('data-checked');
-      
+
       if (isChecked) {
         listItem.removeAttribute('data-checked');
       } else {
@@ -467,7 +480,7 @@ function ColorPlugin() {
         });
         return true;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
 
     // 배경색 변경 명령어 등록
@@ -488,7 +501,7 @@ function ColorPlugin() {
         });
         return true;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
@@ -496,13 +509,7 @@ function ColorPlugin() {
 }
 
 // 이미지 컴포넌트 - 크기 조절 기능 포함 (사용하지 않음)
-function ImageComponent({ src, alt, width, height, node }: { 
-  src: string; 
-  alt: string; 
-  width: string; 
-  height: string; 
-  node: any;
-}) {
+function ImageComponent({ src, alt, width, height, node }: { src: string; alt: string; width: string; height: string; node: any }) {
   const [editor] = useLexicalComposerContext();
   const [showSizeMenu, setShowSizeMenu] = React.useState(false);
   const [customWidth, setCustomWidth] = React.useState('');
@@ -515,7 +522,7 @@ function ImageComponent({ src, alt, width, height, node }: {
     { label: '크게 (75%)', value: '75%' },
     { label: '최대 (100%)', value: '100%' },
     { label: '자동', value: 'auto' },
-    { label: '사용자 정의', value: 'custom' }
+    { label: '사용자 정의', value: 'custom' },
   ];
 
   React.useEffect(() => {
@@ -551,7 +558,7 @@ function ImageComponent({ src, alt, width, height, node }: {
   const handleCustomSizeSubmit = () => {
     if (customWidth) {
       const width = /^\d+$/.test(customWidth) ? `${customWidth}px` : customWidth;
-      
+
       editor.update(() => {
         node.setSize(width);
       });
@@ -562,7 +569,7 @@ function ImageComponent({ src, alt, width, height, node }: {
   };
 
   return (
-    <div className="relative inline-block group" style={{ margin: '10px 0' }}>
+    <div className="group relative inline-block" style={{ margin: '10px 0' }}>
       <img
         src={src}
         alt={alt}
@@ -576,10 +583,10 @@ function ImageComponent({ src, alt, width, height, node }: {
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
           cursor: 'pointer',
           border: showSizeMenu ? '3px solid #3B82F6' : '2px solid transparent',
-          transition: 'border-color 0.2s ease'
+          transition: 'border-color 0.2s ease',
         }}
       />
-      
+
       {/* 크기 조절 메뉴 */}
       {showSizeMenu && (
         <div
@@ -594,7 +601,7 @@ function ImageComponent({ src, alt, width, height, node }: {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
             padding: '12px',
             zIndex: 9999,
-            minWidth: '200px'
+            minWidth: '200px',
           }}
         >
           <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>이미지 크기</h4>
@@ -612,7 +619,7 @@ function ImageComponent({ src, alt, width, height, node }: {
                   borderRadius: '4px',
                   background: width === option.value ? '#e3f2fd' : 'transparent',
                   color: width === option.value ? '#1976d2' : '#333',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
                 }}
                 onMouseEnter={(e) => {
                   if (width !== option.value) {
@@ -629,13 +636,11 @@ function ImageComponent({ src, alt, width, height, node }: {
               </button>
             ))}
           </div>
-          
+
           {/* 사용자 정의 크기 입력 */}
           {showCustomInput && (
             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-                사용자 정의 크기 (예: 300px, 50%, 20rem)
-              </label>
+              <label style={{ display: 'block', fontSize: '11px', color: '#666', marginBottom: '4px' }}>사용자 정의 크기 (예: 300px, 50%, 20rem)</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
@@ -647,7 +652,7 @@ function ImageComponent({ src, alt, width, height, node }: {
                     padding: '4px 8px',
                     fontSize: '12px',
                     border: '1px solid #ccc',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && handleCustomSizeSubmit()}
                 />
@@ -660,7 +665,7 @@ function ImageComponent({ src, alt, width, height, node }: {
                     fontSize: '11px',
                     border: 'none',
                     borderRadius: '4px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   적용
@@ -668,7 +673,7 @@ function ImageComponent({ src, alt, width, height, node }: {
               </div>
             </div>
           )}
-          
+
           {/* 현재 크기 표시 */}
           <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '11px', color: '#666' }}>
             현재 크기: {width} × {height}
@@ -710,7 +715,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     container.style.display = 'block';
     container.style.margin = '20px 0';
     container.style.textAlign = 'center';
-    
+
     const img = document.createElement('img');
     img.src = this.__src;
     img.alt = this.__alt;
@@ -723,7 +728,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     img.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
     img.style.transition = 'border-color 0.2s ease';
     img.style.border = '2px solid transparent';
-    
+
     // 크기 조절 메뉴 생성
     const sizeMenu = document.createElement('div');
     sizeMenu.style.position = 'absolute';
@@ -737,7 +742,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     sizeMenu.style.zIndex = '9999';
     sizeMenu.style.minWidth = '200px';
     sizeMenu.style.display = 'none';
-    
+
     // 메뉴 제목
     const title = document.createElement('h4');
     title.textContent = '이미지 크기';
@@ -745,16 +750,16 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     sizeMenu.appendChild(title);
-    
+
     // 크기 옵션들
     const sizeOptions = [
       { label: '작게 (25%)', value: '25%' },
       { label: '보통 (50%)', value: '50%' },
       { label: '크게 (75%)', value: '75%' },
       { label: '최대 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' }
+      { label: '자동', value: 'auto' },
     ];
-    
+
     // 현재 크기 표시
     const currentSize = document.createElement('div');
     currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
@@ -763,8 +768,8 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     currentSize.style.borderTop = '1px solid #eee';
     currentSize.style.fontSize = '11px';
     currentSize.style.color = '#666';
-    
-    sizeOptions.forEach(option => {
+
+    sizeOptions.forEach((option) => {
       const button = document.createElement('button');
       button.textContent = option.label;
       button.style.width = '100%';
@@ -776,39 +781,39 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
       button.style.background = 'transparent';
       button.style.cursor = 'pointer';
       button.style.marginBottom = '4px';
-      
+
       button.addEventListener('mouseenter', () => {
         button.style.background = '#f5f5f5';
       });
-      
+
       button.addEventListener('mouseleave', () => {
         button.style.background = 'transparent';
       });
-      
+
       button.addEventListener('click', (e) => {
         e.stopPropagation();
-        
+
         // 이미지 크기 업데이트
         img.style.width = option.value;
-        
+
         // 현재 크기 표시 업데이트
         currentSize.textContent = `현재 크기: ${option.value} × auto`;
-        
+
         // 메뉴 닫기
         sizeMenu.style.display = 'none';
         img.style.border = '2px solid transparent';
       });
-      
+
       sizeMenu.appendChild(button);
     });
-    
+
     sizeMenu.appendChild(currentSize);
-    
+
     // 이미지 클릭 이벤트 - 메뉴 토글
     let menuOpen = false;
     img.addEventListener('click', (e) => {
       e.stopPropagation();
-      
+
       menuOpen = !menuOpen;
       if (menuOpen) {
         sizeMenu.style.display = 'block';
@@ -818,7 +823,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
         img.style.border = '2px solid transparent';
       }
     });
-    
+
     // 외부 클릭시 메뉴 닫기
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target as Node)) {
@@ -827,10 +832,10 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
         menuOpen = false;
       }
     });
-    
+
     container.appendChild(img);
     container.appendChild(sizeMenu);
-    
+
     return container;
   }
 
@@ -884,22 +889,10 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
   }
 
   static clone(node: CustomFileNode): CustomFileNode {
-    return new CustomFileNode(
-      node.__fileName,
-      node.__fileSize,
-      node.__fileType,
-      node.__fileData,
-      node.__key
-    );
+    return new CustomFileNode(node.__fileName, node.__fileSize, node.__fileType, node.__fileData, node.__key);
   }
 
-  constructor(
-    fileName: string,
-    fileSize: number,
-    fileType: string,
-    fileData: string,
-    key?: NodeKey
-  ) {
+  constructor(fileName: string, fileSize: number, fileType: string, fileData: string, key?: NodeKey) {
     super(key);
     this.__fileName = fileName;
     this.__fileSize = fileSize;
@@ -913,7 +906,7 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     container.style.display = 'block';
     container.style.margin = '20px 0';
     container.style.textAlign = 'center';
-    
+
     const fileCard = document.createElement('div');
     fileCard.style.display = 'inline-block';
     fileCard.style.padding = '16px 20px';
@@ -924,26 +917,26 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     fileCard.style.transition = 'all 0.2s ease';
     fileCard.style.maxWidth = '300px';
     fileCard.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-    
+
     // 파일 아이콘
     const icon = document.createElement('div');
     icon.style.fontSize = '32px';
     icon.style.marginBottom = '8px';
     icon.innerHTML = this.getFileIcon();
-    
+
     // 파일 이름
     const fileName = document.createElement('div');
     fileName.style.fontWeight = 'bold';
     fileName.style.marginBottom = '4px';
     fileName.style.color = '#333';
     fileName.textContent = this.__fileName;
-    
+
     // 파일 정보
     const fileInfo = document.createElement('div');
     fileInfo.style.fontSize = '12px';
     fileInfo.style.color = '#666';
     fileInfo.textContent = `${this.__fileType.toUpperCase()} • ${this.formatFileSize(this.__fileSize)}`;
-    
+
     // 다운로드 버튼
     const downloadBtn = document.createElement('button');
     downloadBtn.style.marginTop = '8px';
@@ -955,79 +948,79 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     downloadBtn.style.fontSize = '12px';
     downloadBtn.style.cursor = 'pointer';
     downloadBtn.textContent = '다운로드';
-    
+
     // 호버 효과
     fileCard.addEventListener('mouseenter', () => {
       fileCard.style.borderColor = '#3b82f6';
       fileCard.style.backgroundColor = '#f0f9ff';
     });
-    
+
     fileCard.addEventListener('mouseleave', () => {
       fileCard.style.borderColor = '#e5e5e5';
       fileCard.style.backgroundColor = '#f9f9f9';
     });
-    
+
     // 다운로드 기능
     downloadBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.downloadFile();
     });
-    
+
     fileCard.appendChild(icon);
     fileCard.appendChild(fileName);
     fileCard.appendChild(fileInfo);
     fileCard.appendChild(downloadBtn);
     container.appendChild(fileCard);
-    
+
     return container;
   }
 
   private getFileIcon(): string {
     const extension = this.__fileName.split('.').pop()?.toLowerCase() || '';
-    
+
     switch (extension) {
-      case 'pdf':
-        return '📄';
-      case 'doc':
-      case 'docx':
-        return '📝';
-      case 'xls':
-      case 'xlsx':
-        return '📊';
-      case 'ppt':
-      case 'pptx':
-        return '📋';
-      case 'zip':
-      case 'rar':
-      case '7z':
-        return '🗜️';
-      case 'txt':
-        return '📃';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return '🖼️';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return '🎥';
-      case 'mp3':
-      case 'wav':
-        return '🎵';
-      default:
-        return '📁';
+    case 'pdf':
+      return '📄';
+    case 'doc':
+    case 'docx':
+      return '📝';
+    case 'xls':
+    case 'xlsx':
+      return '📊';
+    case 'ppt':
+    case 'pptx':
+      return '📋';
+    case 'zip':
+    case 'rar':
+    case '7z':
+      return '🗜️';
+    case 'txt':
+      return '📃';
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+      return '🖼️';
+    case 'mp4':
+    case 'avi':
+    case 'mov':
+      return '🎥';
+    case 'mp3':
+    case 'wav':
+      return '🎵';
+    default:
+      return '📁';
     }
   }
 
   private formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
@@ -1082,12 +1075,7 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
   }
 }
 
-export function $createCustomFileNode(
-  fileName: string,
-  fileSize: number,
-  fileType: string,
-  fileData: string
-): CustomFileNode {
+export function $createCustomFileNode(fileName: string, fileSize: number, fileType: string, fileData: string): CustomFileNode {
   return new CustomFileNode(fileName, fileSize, fileType, fileData);
 }
 
@@ -1118,22 +1106,10 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
   }
 
   static clone(node: CustomVideoNode): CustomVideoNode {
-    return new CustomVideoNode(
-      node.__src,
-      node.__alt,
-      node.__width,
-      node.__height,
-      node.__key
-    );
+    return new CustomVideoNode(node.__src, node.__alt, node.__width, node.__height, node.__key);
   }
 
-  constructor(
-    src: string,
-    alt: string,
-    width: string = '100%',
-    height: string = 'auto',
-    key?: NodeKey
-  ) {
+  constructor(src: string, alt: string, width: string = '100%', height: string = 'auto', key?: NodeKey) {
     super(key);
     this.__src = src;
     this.__alt = alt;
@@ -1147,7 +1123,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     container.style.display = 'block';
     container.style.margin = '20px 0';
     container.style.textAlign = 'center';
-    
+
     const videoCard = document.createElement('div');
     videoCard.style.display = 'inline-block';
     videoCard.style.maxWidth = '100%';
@@ -1156,7 +1132,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     videoCard.style.overflow = 'hidden';
     videoCard.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
     videoCard.style.backgroundColor = '#000';
-    
+
     const video = document.createElement('video');
     video.src = this.__src;
     video.style.width = this.__width;
@@ -1165,7 +1141,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     video.style.display = 'block';
     video.controls = true;
     video.preload = 'metadata';
-    
+
     // 비디오 제목/설명
     if (this.__alt && this.__alt !== '비디오') {
       const title = document.createElement('div');
@@ -1177,13 +1153,13 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       title.style.fontWeight = 'bold';
       title.style.color = '#333';
       title.style.textAlign = 'left';
-      
+
       videoCard.appendChild(video);
       videoCard.appendChild(title);
     } else {
       videoCard.appendChild(video);
     }
-    
+
     // 크기 조절 메뉴 (이미지와 유사)
     const sizeMenu = document.createElement('div');
     sizeMenu.style.position = 'absolute';
@@ -1197,7 +1173,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     sizeMenu.style.zIndex = '9999';
     sizeMenu.style.minWidth = '200px';
     sizeMenu.style.display = 'none';
-    
+
     // 메뉴 제목
     const title = document.createElement('h4');
     title.textContent = '비디오 크기';
@@ -1205,15 +1181,15 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     sizeMenu.appendChild(title);
-    
+
     // 크기 옵션들
     const sizeOptions = [
       { label: '작게 (50%)', value: '50%' },
       { label: '보통 (75%)', value: '75%' },
       { label: '크게 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' }
+      { label: '자동', value: 'auto' },
     ];
-    
+
     // 현재 크기 표시
     const currentSize = document.createElement('div');
     currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
@@ -1222,8 +1198,8 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     currentSize.style.borderTop = '1px solid #eee';
     currentSize.style.fontSize = '11px';
     currentSize.style.color = '#666';
-    
-    sizeOptions.forEach(option => {
+
+    sizeOptions.forEach((option) => {
       const button = document.createElement('button');
       button.textContent = option.label;
       button.style.width = '100%';
@@ -1235,39 +1211,39 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       button.style.background = 'transparent';
       button.style.cursor = 'pointer';
       button.style.marginBottom = '4px';
-      
+
       button.addEventListener('mouseenter', () => {
         button.style.background = '#f5f5f5';
       });
-      
+
       button.addEventListener('mouseleave', () => {
         button.style.background = 'transparent';
       });
-      
+
       button.addEventListener('click', (e) => {
         e.stopPropagation();
-        
+
         // 비디오 크기 업데이트
         video.style.width = option.value;
-        
+
         // 현재 크기 표시 업데이트
         currentSize.textContent = `현재 크기: ${option.value} × auto`;
-        
+
         // 메뉴 닫기
         sizeMenu.style.display = 'none';
         videoCard.style.border = '2px solid #e5e5e5';
       });
-      
+
       sizeMenu.appendChild(button);
     });
-    
+
     sizeMenu.appendChild(currentSize);
-    
+
     // 비디오 클릭 이벤트 - 메뉴 토글
     let menuOpen = false;
     videoCard.addEventListener('click', (e) => {
       e.stopPropagation();
-      
+
       menuOpen = !menuOpen;
       if (menuOpen) {
         sizeMenu.style.display = 'block';
@@ -1277,7 +1253,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
         videoCard.style.border = '2px solid #e5e5e5';
       }
     });
-    
+
     // 외부 클릭시 메뉴 닫기
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target as Node)) {
@@ -1286,10 +1262,10 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
         menuOpen = false;
       }
     });
-    
+
     container.appendChild(videoCard);
     container.appendChild(sizeMenu);
-    
+
     return container;
   }
 
@@ -1330,12 +1306,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
   }
 }
 
-export function $createCustomVideoNode(
-  src: string,
-  alt: string,
-  width: string = '100%',
-  height: string = 'auto'
-): CustomVideoNode {
+export function $createCustomVideoNode(src: string, alt: string, width: string = '100%', height: string = 'auto'): CustomVideoNode {
   return new CustomVideoNode(src, alt, width, height);
 }
 
@@ -1355,7 +1326,7 @@ function LinkClickPlugin() {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const closestLink = target.closest('a');
-      
+
       if (closestLink) {
         e.preventDefault();
         window.open(closestLink.href, '_blank');
@@ -1380,13 +1351,13 @@ function MediaDeletionPlugin() {
       KEY_BACKSPACE_COMMAND,
       (event: KeyboardEvent) => {
         const selection = $getSelection();
-        
+
         if ($isRangeSelection(selection)) {
           const anchorNode = selection.anchor.getNode();
-          
+
           // 미디어 노드들을 체크
           let mediaNode = null;
-          
+
           if ($isCustomImageNode(anchorNode)) {
             mediaNode = anchorNode;
           } else if ($isCustomVideoNode(anchorNode)) {
@@ -1404,22 +1375,22 @@ function MediaDeletionPlugin() {
               currentNode = currentNode.getParent();
             }
           }
-          
+
           // 미디어 노드가 선택되었을 때 삭제
           if (mediaNode) {
             event.preventDefault();
-            
+
             // 에디터에서만 노드 삭제 (서버에서는 삭제하지 않음)
             // 실제 미디어 파일 삭제는 usermanage의 media 관리 창에서만 가능
             mediaNode.remove();
-            
+
             return true;
           }
         }
-        
+
         return false;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
@@ -1429,7 +1400,7 @@ function MediaDeletionPlugin() {
 export default function Editor() {
   const [defaultFontFamily, setDefaultFontFamily] = useState('inherit');
   const [editor] = useLexicalComposerContext();
-  
+
   useEffect(() => {
     return editor.registerCommand(
       SET_FONT_FAMILY_COMMAND,
@@ -1437,252 +1408,21 @@ export default function Editor() {
         setDefaultFontFamily(fontFamily || 'inherit');
         return true;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_LOW,
     );
   }, [editor]);
 
   return (
-    <div className="border border-gray-300 rounded bg-white">
+    <div className="rounded border border-gray-300 bg-white">
       <style jsx global>{`
-        /* 웹 폰트 추가 */
-        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&family=Nanum+Myeongjo:wght@400;700&display=swap');
-        
-        /* 기존 스타일 유지 */
-        
-        /* 글꼴 관련 스타일 */
+        /* 에디터 전용 동적 글꼴 스타일 */
         .editor-content {
           font-family: ${defaultFontFamily};
-        }
-        
-        .editor-content [style*="font-family"] {
-          font-family: inherit;
-        }
-
-        /* 링크 스타일 */
-        .editor-content a {
-          color: #2563eb;
-          text-decoration: underline;
-          cursor: pointer;
-          pointer-events: all !important;
-        }
-
-        .editor-content a:hover {
-          color: #1d4ed8;
-        }
-
-        /* 코드 블럭 스타일 - 모든 코드를 블럭 형태로 */
-        .editor-content code {
-          display: block;
-          background-color: #f1f5f9;
-          color: #475569;
-          padding: 16px;
-          border-radius: 8px;
-          font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
-          font-size: 14px !important;
-          border: 1px solid #e2e8f0;
-          margin: 16px 0;
-          overflow-x: auto;
-          line-height: 1.4;
-          white-space: pre-wrap;
-          font-weight: normal !important;
-        }
-
-        .editor-content pre {
-          background-color: #f1f5f9;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 16px;
-          overflow-x: auto;
-          margin: 16px 0;
-          font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
-          font-size: 14px !important;
-          line-height: 1.4;
-          font-weight: normal !important;
-        }
-
-        .editor-content pre code {
-          display: block;
-          background-color: transparent;
-          border: none;
-          padding: 0;
-          margin: 0;
-          color: #475569;
-          font-family: inherit !important;
-          font-size: inherit !important;
-          font-weight: inherit !important;
-        }
-
-        /* 리스트 스타일 */
-        .editor-content ul,
-        .editor-content ol {
-          margin: 16px 0;
-          padding-left: 24px;
-        }
-
-        .editor-content li {
-          margin: 4px 0;
-          line-height: 1.6;
-        }
-
-        /* 기본 리스트 타입 */
-        .editor-content ul {
-          list-style-type: disc;
-        }
-
-        .editor-content ol {
-          list-style-type: decimal;
-        }
-
-        /* 커스텀 리스트 타입 */
-        .editor-content ul[data-list-type="checkbox"] {
-          list-style-type: none;
-        }
-
-        .editor-content ul[data-list-type="checkbox"] li {
-          cursor: pointer;
-          user-select: none;
-        }
-
-        .editor-content ul[data-list-type="checkbox"] li::before {
-          content: "";
-          display: inline-block;
-          width: 16px;
-          height: 16px;
-          border: 2px solid #94a3b8;
-          border-radius: 3px;
-          margin-right: 8px;
-          vertical-align: middle;
-          transition: all 0.2s ease;
-          background-color: transparent;
-        }
-
-        .editor-content ul[data-list-type="checkbox"] li[data-checked="true"]::before {
-          background-color: #2563eb;
-          border-color: #2563eb;
-          background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 8l2.5 2.5L12 5'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: center;
-          background-size: 12px 12px;
-        }
-
-        .editor-content ul[data-list-type="checkbox"] li:hover::before {
-          border-color: #64748b;
-        }
-
-        .editor-content ul[data-list-type="checkbox"] li[data-checked="true"]:hover::before {
-          background-color: #1d4ed8;
-          border-color: #1d4ed8;
-        }
-
-        .editor-content ul[data-list-type="dash"] {
-          list-style-type: none;
-        }
-
-        .editor-content ul[data-list-type="dash"] li::before {
-          content: "– ";
-          margin-right: 8px;
-          color: #333;
-        }
-
-        .editor-content ul[data-list-type="arrow"] {
-          list-style-type: none;
-        }
-
-        .editor-content ul[data-list-type="arrow"] li::before {
-          content: "→ ";
-          margin-right: 8px;
-          color: #333;
-        }
-
-        .editor-content ul[data-list-type="roman"] {
-          list-style-type: none;
-          counter-reset: roman-counter;
-        }
-
-        .editor-content ul[data-list-type="roman"] li {
-          counter-increment: roman-counter;
-        }
-
-        .editor-content ul[data-list-type="roman"] li::before {
-          content: counter(roman-counter, lower-roman) ". ";
-          margin-right: 8px;
-          color: #333;
-        }
-
-        /* 중첩 리스트 들여쓰기 */
-        .editor-content ul ul,
-        .editor-content ol ol,
-        .editor-content ul ol,
-        .editor-content ol ul {
-          margin: 4px 0;
-          padding-left: 20px;
-        }
-
-        /* 텍스트 크기 스타일 - EditHeader와 일치 */
-        .editor-content h1 {
-          font-size: 2.25rem !important; /* 36px */
-          line-height: 1.2 !important;
-          font-weight: bold !important;
-          margin: 16px 0 !important;
-        }
-
-        .editor-content h2 {
-          font-size: 1.875rem !important; /* 30px */
-          line-height: 1.2 !important;
-          font-weight: bold !important;
-          margin: 14px 0 !important;
-        }
-
-        .editor-content h3 {
-          font-size: 1.5rem !important; /* 24px */
-          line-height: 1.2 !important;
-          font-weight: bold !important;
-          margin: 12px 0 !important;
-        }
-
-        /* 본문 크기 스타일 */
-        .editor-content p[data-text-size="p1"] {
-          font-size: 1.25rem !important; /* 20px */
-          line-height: 1.75rem !important;
-          margin: 8px 0 !important;
-        }
-
-        .editor-content p[data-text-size="p2"] {
-          font-size: 1.125rem !important; /* 18px */
-          line-height: 1.75rem !important;
-          margin: 6px 0 !important;
-        }
-
-        .editor-content p[data-text-size="p3"], 
-        .editor-content p {
-          font-size: 1rem !important; /* 16px */
-          line-height: 1.5rem !important;
-          margin: 4px 0 !important;
-        }
-
-        /* 기본 패러그래프 스타일 */
-        .editor-content p {
-          margin: 4px 0;
-        }
-
-        /* 글꼴 스타일 보완 */
-        @font-face {
-          font-family: 'NanumGothic';
-          src: local('Nanum Gothic');
-        }
-
-        @font-face {
-          font-family: 'NanumMyeongjo';
-          src: local('Nanum Myeongjo');
         }
       `}</style>
       <div className="p-4">
         <RichTextPlugin
-          contentEditable={
-            <ContentEditable 
-              className="min-h-[400px] outline-none text-black prose max-w-none editor-content"
-            />
-          }
+          contentEditable={<ContentEditable className="prose editor-content min-h-[400px] max-w-none text-black outline-none" />}
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
@@ -1703,4 +1443,4 @@ export default function Editor() {
       </div>
     </div>
   );
-} 
+}

@@ -1,0 +1,295 @@
+/* 웹 폰트 추가 */
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&family=Nanum+Myeongjo:wght@400;700&display=swap');
+
+/* 글꼴 관련 스타일 */
+.editor-content {
+  font-family: inherit;
+}
+
+.editor-content [style*='font-family'] {
+  font-family: inherit;
+}
+
+/* 링크 스타일 */
+.editor-content a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  pointer-events: all !important;
+}
+
+.editor-content a:hover {
+  color: #1d4ed8;
+}
+
+/* 코드 블럭 스타일 - 모든 코드를 블럭 형태로 */
+.editor-content code {
+  display: block;
+  background-color: #f1f5f9;
+  color: #475569;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  border: 1px solid #e2e8f0;
+  margin: 16px 0;
+  overflow-x: auto;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  font-weight: normal !important;
+}
+
+.editor-content pre {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.4;
+  font-weight: normal !important;
+}
+
+.editor-content pre code {
+  display: block;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #475569;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* 리스트 스타일 */
+.editor-content ul,
+.editor-content ol {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+
+.editor-content li {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+/* 기본 리스트 타입 */
+.editor-content ul {
+  list-style-type: disc;
+}
+
+.editor-content ol {
+  list-style-type: decimal;
+}
+
+/* 커스텀 리스트 타입 */
+.editor-content ul[data-list-type='checkbox'] {
+  list-style-type: none;
+}
+
+.editor-content ul[data-list-type='checkbox'] li {
+  cursor: pointer;
+  user-select: none;
+}
+
+.editor-content ul[data-list-type='checkbox'] li::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #94a3b8;
+  border-radius: 3px;
+  margin-right: 8px;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+.editor-content ul[data-list-type='checkbox'] li[data-checked='true']::before {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 8l2.5 2.5L12 5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+
+.editor-content ul[data-list-type='checkbox'] li:hover::before {
+  border-color: #64748b;
+}
+
+.editor-content ul[data-list-type='checkbox'] li[data-checked='true']:hover::before {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.editor-content ul[data-list-type='dash'] {
+  list-style-type: none;
+}
+
+.editor-content ul[data-list-type='dash'] li::before {
+  content: '– ';
+  margin-right: 8px;
+  color: #333;
+}
+
+.editor-content ul[data-list-type='arrow'] {
+  list-style-type: none;
+}
+
+.editor-content ul[data-list-type='arrow'] li::before {
+  content: '→ ';
+  margin-right: 8px;
+  color: #333;
+}
+
+.editor-content ul[data-list-type='roman'] {
+  list-style-type: none;
+  counter-reset: roman-counter;
+}
+
+.editor-content ul[data-list-type='roman'] li {
+  counter-increment: roman-counter;
+}
+
+.editor-content ul[data-list-type='roman'] li::before {
+  content: counter(roman-counter, lower-roman) '. ';
+  margin-right: 8px;
+  color: #333;
+}
+
+/* 중첩 리스트 들여쓰기 */
+.editor-content ul ul,
+.editor-content ol ol,
+.editor-content ul ol,
+.editor-content ol ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+/* 텍스트 크기 스타일 - EditHeader와 일치 */
+.editor-content h1 {
+  font-size: 2.25rem !important; /* 36px */
+  line-height: 1.2 !important;
+  font-weight: bold !important;
+  margin: 16px 0 !important;
+}
+
+.editor-content h2 {
+  font-size: 1.875rem !important; /* 30px */
+  line-height: 1.2 !important;
+  font-weight: bold !important;
+  margin: 14px 0 !important;
+}
+
+.editor-content h3 {
+  font-size: 1.5rem !important; /* 24px */
+  line-height: 1.2 !important;
+  font-weight: bold !important;
+  margin: 12px 0 !important;
+}
+
+/* 중첩된 editor-content div 처리 */
+.editor-content .editor-content {
+  margin: 0;
+  padding: 0;
+}
+
+.editor-content .editor-content h1,
+.editor-content .editor-content h2,
+.editor-content .editor-content h3 {
+  margin: 0;
+}
+
+/* 본문 크기 스타일 */
+.editor-content p[data-text-size='p1'] {
+  font-size: 1.25rem !important; /* 20px */
+  line-height: 1.75rem !important;
+  margin: 8px 0 !important;
+}
+
+.editor-content p[data-text-size='p2'] {
+  font-size: 1.125rem !important; /* 18px */
+  line-height: 1.75rem !important;
+  margin: 6px 0 !important;
+}
+
+.editor-content p[data-text-size='p3'],
+.editor-content p {
+  font-size: 1rem !important; /* 16px */
+  line-height: 1.5rem !important;
+  margin: 4px 0 !important;
+}
+
+/* 기본 패러그래프 스타일 */
+.editor-content p {
+  margin: 4px 0;
+}
+
+/* 글꼴 스타일 보완 */
+@font-face {
+  font-family: 'NanumGothic';
+  src: local('Nanum Gothic');
+}
+
+@font-face {
+  font-family: 'NanumMyeongjo';
+  src: local('Nanum Myeongjo');
+}
+
+/* 이미지 스타일 */
+.editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+}
+
+/* 비디오 스타일 */
+.editor-content video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+}
+
+/* 테이블 스타일 */
+.editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.editor-content th,
+.editor-content td {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.editor-content th {
+  background-color: #f8fafc;
+  font-weight: bold;
+}
+
+/* 인용문 스타일 */
+.editor-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* HR 스타일 */
+.editor-content hr {
+  border: none;
+  border-top: 2px solid #e2e8f0;
+  margin: 24px 0;
+}

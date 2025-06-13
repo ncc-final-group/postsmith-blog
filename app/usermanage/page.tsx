@@ -8,7 +8,7 @@ export default function UserManagePage() {
   const segments = pathname.split('/');
   // usermanage 경로에서 username 추출: /username/usermanage 형태에서 username은 segments[1]
   const username = segments[1] || '';
-  
+
   // 현재 경로가 /usermanage인 경우 (root usermanage)와 /username/usermanage 구분
   const isRootUsermanage = segments.length === 2 && segments[1] === 'usermanage';
   const actualUsername = isRootUsermanage ? '' : username;
@@ -60,85 +60,63 @@ export default function UserManagePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-none mx-auto">
+      <div className="mx-auto max-w-none">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            관리자 대시보드
-          </h1>
-          <p className="text-gray-600">
-            {isRootUsermanage ? '블로그를 관리하세요' : `${actualUsername}님의 블로그를 관리하세요`}
-          </p>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">관리자 대시보드</h1>
+          <p className="text-gray-600">{isRootUsermanage ? '블로그를 관리하세요' : `${actualUsername}님의 블로그를 관리하세요`}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {dashboardItems.map((item, index) => (
-            <Link
-              key={index}
-              href={item.href}
-              className="block bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 group"
-            >
-              <div className="flex items-center mb-4">
-                <div className={`${item.color} p-3 rounded-lg text-white mr-4`}>
-                  <item.icon className="w-6 h-6" />
+            <Link key={index} href={item.href} className="group block rounded-lg bg-white p-6 shadow-md transition-shadow duration-200 hover:shadow-lg">
+              <div className="mb-4 flex items-center">
+                <div className={`${item.color} mr-4 rounded-lg p-3 text-white`}>
+                  <item.icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {item.title}
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-blue-600">{item.title}</h3>
               </div>
-              <p className="text-gray-600">
-                {item.description}
-              </p>
+              <p className="text-gray-600">{item.description}</p>
             </Link>
           ))}
         </div>
 
-        <div className="mt-12 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            빠른 작업
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-12 rounded-lg bg-white p-6 shadow-md">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">빠른 작업</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link
               href={isRootUsermanage ? '/usermanage/posts' : `/${actualUsername}/usermanage/posts`}
-              className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-blue-500 hover:bg-blue-50"
             >
               <div className="text-center">
-                <Edit className="w-8 h-8 text-gray-400 group-hover:text-blue-500 mx-auto mb-2" />
-                <span className="text-sm text-gray-600 group-hover:text-blue-600">
-                  새 글 작성
-                </span>
+                <Edit className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-blue-500" />
+                <span className="text-sm text-gray-600 group-hover:text-blue-600">새 글 작성</span>
               </div>
             </Link>
             <Link
               href={isRootUsermanage ? '/usermanage/media/upload' : `/${actualUsername}/usermanage/media/upload`}
-              className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors group"
+              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-green-500 hover:bg-green-50"
             >
               <div className="text-center">
-                <FileImage className="w-8 h-8 text-gray-400 group-hover:text-green-500 mx-auto mb-2" />
-                <span className="text-sm text-gray-600 group-hover:text-green-600">
-                  파일 업로드
-                </span>
+                <FileImage className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-green-500" />
+                <span className="text-sm text-gray-600 group-hover:text-green-600">파일 업로드</span>
               </div>
             </Link>
             <Link
               href={isRootUsermanage ? '/usermanage/categories' : `/${actualUsername}/usermanage/categories`}
-              className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-colors group"
+              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-yellow-500 hover:bg-yellow-50"
             >
               <div className="text-center">
-                <Settings className="w-8 h-8 text-gray-400 group-hover:text-yellow-500 mx-auto mb-2" />
-                <span className="text-sm text-gray-600 group-hover:text-yellow-600">
-                  카테고리 관리
-                </span>
+                <Settings className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-yellow-500" />
+                <span className="text-sm text-gray-600 group-hover:text-yellow-600">카테고리 관리</span>
               </div>
             </Link>
             <Link
               href={isRootUsermanage ? '/usermanage/stats/visits' : `/${actualUsername}/usermanage/stats/visits`}
-              className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group"
+              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-purple-500 hover:bg-purple-50"
             >
               <div className="text-center">
-                <BarChart3 className="w-8 h-8 text-gray-400 group-hover:text-purple-500 mx-auto mb-2" />
-                <span className="text-sm text-gray-600 group-hover:text-purple-600">
-                  통계 보기
-                </span>
+                <BarChart3 className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-purple-500" />
+                <span className="text-sm text-gray-600 group-hover:text-purple-600">통계 보기</span>
               </div>
             </Link>
           </div>

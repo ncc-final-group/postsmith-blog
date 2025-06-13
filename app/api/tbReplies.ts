@@ -2,75 +2,42 @@ import { selectSQL } from '../_lib/mysql/db';
 
 export interface Reply {
   id: number;
-  content_id: number;
   user_id: number;
-  content_html: string;
-  content_plain: string;
+  content_id: number;
+  reply_id: number | null;
+  content: string;
   created_at: string;
-  updated_at: string;
-  user?: {
-    nickname: string;
-    profile_image?: string;
-  };
-  content: {
-    sequence: number;
-  };
+  deleted_at: string | null;
+  user_nickname?: string;
+  user_profile_image?: string | null;
+  content_sequence?: number;
 }
 
-export const getAllReplies = async () => {
-  const query = 'SELECT * FROM replies';
-  return await selectSQL(query);
+export const getRepliesByContentId = async (contentId: number): Promise<Reply[]> => {
+  const query = `
+    SELECT r.id, r.user_id, r.content_id, r.reply_id, r.content as content, r.created_at, r.deleted_at,
+           u.nickname as user_nickname, u.profile_image as user_profile_image, c.sequence as content_sequence
+    FROM replies r
+    LEFT JOIN users u ON r.user_id = u.id
+    LEFT JOIN contents c ON r.content_id = c.id
+    WHERE r.content_id = ? AND r.deleted_at IS NULL
+    ORDER BY r.created_at DESC
+  `;
+
+  return await selectSQL<Reply>(query, [contentId]);
 };
 
 export const getRecentReplies = async (blogId: number, limit: number = 5): Promise<Reply[]> => {
   const query = `
-    SELECT r.*, 
-           u.nickname, u.profile_image,
-           c.sequence as content_sequence
+    SELECT r.id, r.user_id, r.content_id, r.reply_id, r.content as content, r.created_at, r.deleted_at,
+           u.nickname as user_nickname, u.profile_image as user_profile_image, c.sequence as content_sequence
     FROM replies r
-    JOIN contents c ON r.content_id = c.id
     LEFT JOIN users u ON r.user_id = u.id
-    WHERE c.blog_id = ?
+    LEFT JOIN contents c ON r.content_id = c.id
+    WHERE r.deleted_at IS NULL AND c.blog_id = ?
     ORDER BY r.created_at DESC
     LIMIT ?
   `;
-  
-  const replies = await selectSQL<any>(query, [blogId, limit]);
-  
-  return replies.map((reply: any) => ({
-    ...reply,
-    user: {
-      nickname: reply.nickname,
-      profile_image: reply.profile_image
-    },
-    content: {
-      sequence: reply.content_sequence
-    }
-  }));
-};
 
-export const getRepliesByContentId = async (contentId: number): Promise<Reply[]> => {
-  const query = `
-    SELECT r.*, 
-           u.nickname, u.profile_image,
-           c.sequence as content_sequence
-    FROM replies r
-    JOIN contents c ON r.content_id = c.id
-    LEFT JOIN users u ON r.user_id = u.id
-    WHERE r.content_id = ?
-    ORDER BY r.created_at ASC
-  `;
-  
-  const replies = await selectSQL<any>(query, [contentId]);
-  
-  return replies.map((reply: any) => ({
-    ...reply,
-    user: {
-      nickname: reply.nickname,
-      profile_image: reply.profile_image
-    },
-    content: {
-      sequence: reply.content_sequence
-    }
-  }));
-}; 
+  return await selectSQL<Reply>(query, [blogId, limit]);
+};

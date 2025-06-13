@@ -3,7 +3,7 @@ import { selectSQL } from '../_lib/mysql/db';
 export interface Category {
   id: number;
   blog_id: number;
-  parent_id: number | null;
+  category_id: number | null;
   name: string;
   description: string | null;
   sort_order: number;
@@ -27,6 +27,6 @@ export const getCategoriesByBlogId = async (blogId: number): Promise<Category[]>
     GROUP BY c.id
     ORDER BY c.id ASC
   `;
-  
+
   return await selectSQL<Category>(query, [blogId]);
 };

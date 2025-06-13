@@ -22,7 +22,7 @@ export const getThemeById = async (id: number): Promise<Theme | null> => {
     WHERE id = ?
     LIMIT 1
   `;
-  
+
   const themes = await selectSQL<Theme>(query, [id]);
   return themes.length > 0 ? themes[0] : null;
 };
@@ -38,7 +38,7 @@ export const getThemeByBlogAddress = async (address: string): Promise<Theme | nu
     AND bt.is_active = true
     LIMIT 1
   `;
-  
+
   const themes = await selectSQL<Theme>(query, [address]);
   return themes.length > 0 ? themes[0] : null;
 };
@@ -52,7 +52,7 @@ export const getActiveThemeByBlogId = async (blogId: number): Promise<Theme | nu
     AND bt.is_active = true
     LIMIT 1
   `;
-  
+
   const themes = await selectSQL<Theme>(query, [blogId]);
   return themes.length > 0 ? themes[0] : null;
-}; 
+};

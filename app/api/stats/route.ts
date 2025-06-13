@@ -39,7 +39,7 @@ export async function GET() {
 
     // 오늘의 통계 (배열의 마지막 요소)
     const todayStats = data[data.length - 1];
-    
+
     // 어제의 통계 (배열의 마지막에서 두 번째 요소)
     const yesterdayStats = data[data.length - 2] || { views: 0, visitors: 0 };
 
@@ -71,9 +71,6 @@ export async function GET() {
 
     return NextResponse.json(summary);
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch stats data' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch stats data' }, { status: 500 });
   }
-} 
+}

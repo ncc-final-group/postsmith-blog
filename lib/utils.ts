@@ -1,8 +1,8 @@
 export function getSubdomain(): string {
   if (typeof window === 'undefined') return '';
-  
+
   const hostname = window.location.hostname;
-  
+
   if (hostname.includes('localhost')) {
     // localhost 환경에서 subdomain 확인 (예: blog.localhost:3000)
     const parts = hostname.split('.');
@@ -16,10 +16,10 @@ export function getSubdomain(): string {
       return parts[0];
     }
   }
-  
+
   return '';
-} 
+}
 
 export function formatDateToISO(date: Date): string {
   return date.toISOString().split('T')[0];
-} 
+}

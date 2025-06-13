@@ -28,9 +28,9 @@ export interface Category {
   id: number;
   name: string;
   description: string;
-  parent_id?: number;
+  category_id?: number;
   type: string;
   sort_order: number;
   post_count: number;
   user_id: number;
-} 
+}

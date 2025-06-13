@@ -68,4 +68,4 @@ export function $createCustomHRNode(style: string): CustomHRNode {
 
 export function $isCustomHRNode(node: any): node is CustomHRNode {
   return node instanceof CustomHRNode;
-} 
+}

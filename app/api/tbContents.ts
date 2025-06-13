@@ -29,9 +29,35 @@ export const getAllContents = async () => {
   return await selectSQL(query);
 };
 
-export const getContentByBlogIdAndSequence = async (blogId: number, contentSequence: number) => {
-  const query = 'SELECT * FROM contents WHERE blog_id = ? AND sequence = ?';
-  return await selectSQL(query, [blogId, contentSequence]);
+export const getContentByBlogIdAndSequence = async (blogId: number, contentSequence: number): Promise<Content | null> => {
+  const query = `
+    SELECT c.*, 
+           cat.id as category_id, 
+           cat.name as category_name,
+           COUNT(DISTINCT r.id) as reply_count
+    FROM contents c
+    LEFT JOIN categories cat ON c.category_id = cat.id
+    LEFT JOIN replies r ON c.id = r.content_id
+    WHERE c.blog_id = ? AND c.sequence = ?
+    GROUP BY c.id
+  `;
+
+  const contents = await selectSQL<any>(query, [blogId, contentSequence]);
+
+  if (contents.length === 0) {
+    return null;
+  }
+
+  const content = contents[0];
+  return {
+    ...content,
+    category: content.category_id
+      ? {
+        id: content.category_id,
+        name: content.category_name,
+      }
+      : undefined,
+  };
 };
 
 export const getContentsByBlogId = async (blogId: number): Promise<Content[]> => {
@@ -47,15 +73,17 @@ export const getContentsByBlogId = async (blogId: number): Promise<Content[]> =>
     GROUP BY c.id
     ORDER BY c.sequence DESC
   `;
-  
+
   const contents = await selectSQL<any>(query, [blogId]);
-  
+
   return contents.map((content: any) => ({
     ...content,
-    category: content.category_id ? {
-      id: content.category_id,
-      name: content.category_name
-    } : undefined
+    category: content.category_id
+      ? {
+        id: content.category_id,
+        name: content.category_name,
+      }
+      : undefined,
   }));
 };
 
@@ -75,15 +103,17 @@ export const getRecentContents = async (blogId: number, limit: number = 5): Prom
     LIMIT ?
   `;
   const rows = await selectSQL<any>(query, [blogId, limit]);
-  
-  return rows.map(row => ({
+
+  return rows.map((row) => ({
     ...row,
-    category: row.category_id ? {
-      id: row.category_id,
-      name: row.category_name,
-      sequence: row.category_sequence,
-      description: row.category_description
-    } : undefined
+    category: row.category_id
+      ? {
+        id: row.category_id,
+        name: row.category_name,
+        sequence: row.category_sequence,
+        description: row.category_description,
+      }
+      : undefined,
   }));
 };
 
@@ -99,9 +129,9 @@ export const getContentById = async (id: number): Promise<Content | null> => {
     WHERE c.id = ?
     GROUP BY c.id
   `;
-  
+
   const contents = await selectSQL<any>(query, [id]);
-  
+
   if (contents.length === 0) {
     return null;
   }
@@ -109,10 +139,12 @@ export const getContentById = async (id: number): Promise<Content | null> => {
   const content = contents[0];
   return {
     ...content,
-    category: content.category_id ? {
-      id: content.category_id,
-      name: content.category_name
-    } : undefined
+    category: content.category_id
+      ? {
+        id: content.category_id,
+        name: content.category_name,
+      }
+      : undefined,
   };
 };
 
@@ -128,9 +160,9 @@ export const getContentBySequence = async (blogId: number, sequence: number): Pr
     WHERE c.blog_id = ? AND c.sequence = ?
     GROUP BY c.id
   `;
-  
+
   const contents = await selectSQL<any>(query, [blogId, sequence]);
-  
+
   if (contents.length === 0) {
     return null;
   }
@@ -138,9 +170,49 @@ export const getContentBySequence = async (blogId: number, sequence: number): Pr
   const content = contents[0];
   return {
     ...content,
-    category: content.category_id ? {
-      id: content.category_id,
-      name: content.category_name
-    } : undefined
+    category: content.category_id
+      ? {
+        id: content.category_id,
+        name: content.category_name,
+      }
+      : undefined,
   };
-}; 
+};
+
+// 이전 글 가져오기 (현재 sequence보다 작은 것 중 가장 큰 sequence)
+export const getPrevContent = async (blogId: number, currentSequence: number): Promise<{ sequence: number; title: string } | null> => {
+  const query = `
+    SELECT sequence, title
+    FROM contents
+    WHERE blog_id = ? AND sequence < ? AND is_public = 1 AND is_temp = 0
+    ORDER BY sequence DESC
+    LIMIT 1
+  `;
+
+  const contents = await selectSQL<any>(query, [blogId, currentSequence]);
+
+  if (contents.length === 0) {
+    return null;
+  }
+
+  return contents[0];
+};
+
+// 다음 글 가져오기 (현재 sequence보다 큰 것 중 가장 작은 sequence)
+export const getNextContent = async (blogId: number, currentSequence: number): Promise<{ sequence: number; title: string } | null> => {
+  const query = `
+    SELECT sequence, title
+    FROM contents
+    WHERE blog_id = ? AND sequence > ? AND is_public = 1 AND is_temp = 0
+    ORDER BY sequence ASC
+    LIMIT 1
+  `;
+
+  const contents = await selectSQL<any>(query, [blogId, currentSequence]);
+
+  if (contents.length === 0) {
+    return null;
+  }
+
+  return contents[0];
+};

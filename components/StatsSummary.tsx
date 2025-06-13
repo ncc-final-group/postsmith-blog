@@ -21,7 +21,7 @@ export default function StatsSummary() {
   const [statsData, setStatsData] = useState<StatsData>({
     today: { views: 0, visitors: 0 },
     yesterday: { views: 0, visitors: 0 },
-    total: { views: 0, visitors: 0 }
+    total: { views: 0, visitors: 0 },
   });
 
   const [loading, setLoading] = useState(true);
@@ -32,33 +32,33 @@ export default function StatsSummary() {
       try {
         setLoading(true);
         const response = await fetch('/api/stats');
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.error) {
           throw new Error(data.error);
         }
-        
+
         // API 응답에서 직접 필요한 데이터 추출
         setStatsData({
           today: {
             views: data.today?.views || 0,
-            visitors: data.today?.visitors || 0
+            visitors: data.today?.visitors || 0,
           },
           yesterday: {
             views: data.yesterday?.views || 0,
-            visitors: data.yesterday?.visitors || 0
+            visitors: data.yesterday?.visitors || 0,
           },
           total: {
             views: data.total?.views || 0,
-            visitors: data.total?.visitors || 0
-          }
+            visitors: data.total?.visitors || 0,
+          },
         });
-        
+
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : '통계 데이터를 불러오는데 실패했습니다');
@@ -66,7 +66,7 @@ export default function StatsSummary() {
         setStatsData({
           today: { views: 0, visitors: 0 },
           yesterday: { views: 0, visitors: 0 },
-          total: { views: 0, visitors: 0 }
+          total: { views: 0, visitors: 0 },
         });
       } finally {
         setLoading(false);
@@ -74,7 +74,7 @@ export default function StatsSummary() {
     };
 
     fetchStats();
-    
+
     // 5분마다 데이터 갱신
     const interval = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
@@ -87,11 +87,11 @@ export default function StatsSummary() {
   if (loading) {
     return (
       <div className="pf-6 flex w-full items-center justify-start gap-8 font-sans">
-        <div className="animate-pulse flex w-full justify-between">
+        <div className="flex w-full animate-pulse justify-between">
           {Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="flex-1 text-center">
-              <div className="mb-2 h-4 bg-gray-200 rounded w-20 mx-auto"></div>
-              <div className="h-8 bg-gray-200 rounded w-16 mx-auto"></div>
+              <div className="mx-auto mb-2 h-4 w-20 rounded bg-gray-200"></div>
+              <div className="mx-auto h-8 w-16 rounded bg-gray-200"></div>
             </div>
           ))}
         </div>
@@ -102,9 +102,7 @@ export default function StatsSummary() {
   if (error) {
     return (
       <div className="pf-6 flex w-full items-center justify-center font-sans">
-        <div className="text-red-500 text-center py-4">
-          {error}
-        </div>
+        <div className="py-4 text-center text-red-500">{error}</div>
       </div>
     );
   }

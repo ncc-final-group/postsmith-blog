@@ -50,4 +50,4 @@ export function $createColorTextNode(text: string, textColor?: string, bgColor?:
 
 export function $isColorTextNode(node: any): node is ColorTextNode {
   return node instanceof ColorTextNode;
-} 
+}

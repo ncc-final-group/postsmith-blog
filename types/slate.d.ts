@@ -8,4 +8,4 @@ declare module 'slate' {
     Element: CustomElement;
     Text: CustomText;
   }
-} 
+}

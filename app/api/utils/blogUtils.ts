@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+
 import { getBlogByAddress } from '../tbBlogs';
 
 /**
@@ -12,19 +13,19 @@ export async function extractBlogId(request: NextRequest): Promise<number | null
   try {
     const { searchParams } = new URL(request.url);
     let blogId = parseInt(searchParams.get('blogId') || '0');
-    
+
     // URL 파라미터에 blogId가 있으면 그것을 사용
     if (blogId) {
       return blogId;
     }
-    
+
     // 먼저 미들웨어에서 설정한 x-subdomain 헤더 확인
     let subdomain = request.headers.get('x-subdomain') || '';
-    
+
     // x-subdomain 헤더가 없으면 hostname에서 추출
     if (!subdomain) {
       const hostname = request.headers.get('host') || '';
-      
+
       if (hostname.includes('localhost')) {
         // localhost 환경에서 subdomain 확인
         // 예: 주소.localhost:3000 -> subdomain = '주소'
@@ -36,15 +37,16 @@ export async function extractBlogId(request: NextRequest): Promise<number | null
         // 일반 도메인에서 subdomain 확인
         // 예: 주소.yourdomain.com -> subdomain = '주소'
         const parts = hostname.split('.');
-        if (parts.length > 2) { // www.yourdomain.com이 아닌 경우
+        if (parts.length > 2) {
+          // www.yourdomain.com이 아닌 경우
           subdomain = parts[0];
         }
       }
     }
-    
+
     if (subdomain) {
       const blog = await getBlogByAddress(subdomain);
-      
+
       if (blog) {
         return blog.id;
       } else {
@@ -52,10 +54,10 @@ export async function extractBlogId(request: NextRequest): Promise<number | null
         return null;
       }
     }
-    
+
     // subdomain이 없는 경우 (메인 도메인) - 404 처리
     return null;
   } catch (error) {
     return null;
   }
-} 
+}
