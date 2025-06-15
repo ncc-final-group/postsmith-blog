@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { CategoryItem } from "./CategoryItem";
 import { DropZone } from "./DropZone";
@@ -21,6 +21,9 @@ export interface Category extends CategoryDto {
   depth?: number;
 }
 
+// 최대 깊이 상수 추가
+const MAX_DEPTH = 2;
+
 interface CategoryTreeProps {
   categories: Category[];
   onMoveItem: (newTree: Category[]) => void;
@@ -32,123 +35,242 @@ async function fetchNewTree(): Promise<Category[]> {
   return res.json();
 }
 
-
 export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
+  const [expandedState, setExpandedState] = useState<{ [key: number]: boolean }>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories);
+  const [newChildName, setNewChildName] = useState('');
+  const [newChildDescription, setNewChildDescription] = useState('');
+  const [parentCategory, setParentCategory] = useState<Category | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
 
   //생성
-  const handleAddChild = async (parentCategory: Category) => {
-    // 예시: 모달/폼 띄우고, 입력값 받아서
-    const name = prompt('하위 카테고리 이름을 입력하세요');
-    if (!name) return;
-    const res = await fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        parentId: parentCategory.id,
-        blogId: parentCategory.blogId,
-        sequence: (parentCategory.children?.length ?? 0) + 1,
-      }),
-    });
-    if (res.ok) {
-      onMoveItem(await fetchNewTree());
+  const handleAddChild = (parentCategory: Category) => {
+    alert('handleAddChild 호출됨');
+    
+    // 깊이 체크
+    if ((parentCategory.depth ?? 0) >= MAX_DEPTH - 1) {
+      alert('서브 카테고리까지만 생성 가능합니다.');
+      return;
     }
-  };
-  // 카테고리 수정
-  const handleEdit = async (category: Category) => {
-    const name = prompt('카테고리 이름을 수정하세요', category.name);
-    if (!name) return;
-    const description = prompt('설명(선택)을 수정하세요', category.description ?? '');
-    const res = await fetch(`/api/categories/${category.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        description,
-        blogId: category.blogId,
-        parentId: category.parentId,
-        sequence: category.sequence,
-      }),
-    });
-    if (res.ok) {
-      onMoveItem(await fetchNewTree());
-    }
+
+    // 부모 카테고리 설정 및 폼 초기화
+    const updatedParent = {
+      ...parentCategory,
+      depth: parentCategory.depth ?? 0
+    };
+    setParentCategory(updatedParent);
+    setNewChildName('');
+    setNewChildDescription('');
   };
 
-  // 카테고리 삭제
-  const handleDelete = async (category: Category) => {
-    if (!confirm(`정말 삭제하시겠습니까? (${category.name})\n하위 카테고리도 함께 삭제됩니다.`)) return;
-    const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE',});
-    if (res.ok) {
-      onMoveItem(await fetchNewTree());
+  const handleSaveChild = () => {
+    if (!newChildName.trim() || !parentCategory) {
+      alert('카테고리 이름을 입력해주세요.');
+      return;
     }
+    
+    // 로컬 상태에 새 카테고리 추가
+    const newChild: Category = {
+      id: Date.now(), // 임시 ID
+      name: newChildName,
+      description: newChildDescription,
+      parentId: parentCategory.id,
+      blogId: parentCategory.blogId,
+      sequence: (parentCategory.children?.length ?? 0) + 1,
+      depth: (parentCategory.depth ?? 0) + 1,
+      children: []
+    };
+
+    // 부모 카테고리의 children 배열에 추가
+    const updatedCategories = localCategories.map(cat => {
+      if (cat.id === parentCategory.id) {
+        return {
+          ...cat,
+          children: [...(cat.children || []), newChild]
+        };
+      }
+      return cat;
+    });
+
+    // 폼 초기화
+    setNewChildName('');
+    setNewChildDescription('');
+    setParentCategory(null);
+    
+    // 변경사항 저장 버튼 활성화
+    setIsDirty(true);
+    
+    // 트리 업데이트
+    setLocalCategories(updatedCategories);
+    onMoveItem(updatedCategories);
   };
 
-  // 카테고리 이동 (예시: 부모를 변경)
-  const handleMove = async (category: Category) => {
-    const targetIdStr = prompt('이동할 대상 카테고리 ID를 입력하세요 (루트로 이동하려면 비워두세요):');
-    let targetId: number | null = null;
-    if (targetIdStr && targetIdStr.trim() !== '') {
-      targetId = Number(targetIdStr);
-      if (isNaN(targetId)) {
-        alert('숫자를 입력하세요.');
-        return;
+  const handleCancelAdd = () => {
+    setNewChildName('');
+    setNewChildDescription('');
+    setParentCategory(null);
+  };
+
+  const findCategoryById = (id: number, categories: Category[]): Category | null => {
+    for (const cat of categories) {
+      if (cat.id === id) return cat;
+      if (cat.children) {
+        const found = findCategoryById(id, cat.children);
+        if (found) return found;
       }
     }
-    const url = `/api/categories/${category.id}/move${targetId !== null ? `?targetId=${targetId}` : ''}`;
-    const res = await fetch(url, { method: 'PUT',});
-    if (res.ok) {
-      onMoveItem(await fetchNewTree());
-    }
+    return null;
   };
 
+  const updateCategoryInTree = (categories: Category[], targetId: number, updater: (cat: Category) => Category): Category[] => {
+    return categories.map(cat => {
+      if (cat.id === targetId) {
+        return updater(cat);
+      }
+      if (cat.children && cat.children.length > 0) {
+        return {
+          ...cat,
+          children: updateCategoryInTree(cat.children, targetId, updater)
+        };
+      }
+      return cat;
+    });
+  };
 
+  // 수정
+  const handleEdit = (category: Category) => {
+    const targetCategory = findCategoryById(category.id, localCategories);
+    if (!targetCategory) {
+      return;
+    }
+
+    setEditingCategory(targetCategory);
+    setEditName(targetCategory.name);
+    setEditDescription(targetCategory.description || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingCategory || !editName.trim()) {
+      alert('카테고리 이름을 입력해주세요.');
+      return;
+    }
+
+    const updatedCategories = updateCategoryInTree(localCategories, editingCategory.id, cat => ({
+      ...cat,
+      name: editName,
+      description: editDescription
+    }));
+
+    setLocalCategories(updatedCategories);
+    setEditingCategory(null);
+    setEditName('');
+    setEditDescription('');
+    setIsDirty(true);
+    onMoveItem(updatedCategories);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setEditName('');
+    setEditDescription('');
+  };
 
   //드래그 이동 관련
   const moveItem = (dragId: number, targetId: number | null) => {
-    if (dragId === targetId) return; // 같은 항목 드래그 무시
+    if (dragId === targetId) return;
 
     const categoryMap = new Map<number, Category>();
-
-    //category[] -> CategoryDto[]
-    function flattenCategories(categories: Category[], blogId: number): CategoryDto[] {
-      const result: CategoryDto[] = [];
-
-      const traverse = (nodes: Category[], parentId: number | null) => {
-        nodes.forEach((node, index) => {
-          const { id, name, description } = node;
-
-          result.push({
-            id,
-            name,
-            description,
-            parentId,
-            sequence: index,
-            blogId,
-          });
-
-          if (node.children?.length) {
-            traverse(node.children, id);
-          }
-        });
-      };
-
-      traverse(categories, null);
-      return result;
-    }
-
     const buildMap = (list: Category[]) => {
       list.forEach((cat) => {
         categoryMap.set(cat.id, cat);
         if (cat.children) buildMap(cat.children);
       });
     };
-    buildMap(categories);
+    buildMap(localCategories);
 
     const dragged = categoryMap.get(dragId);
-    const target = targetId !== null ? categoryMap.get(targetId) : null;
+    let target = targetId !== null ? categoryMap.get(targetId) : null;
 
     if (!dragged) return;
+
+    if (target) {
+      const targetDepth = target.depth ?? 0;
+      if (targetDepth > 0) {
+        const findParent = (list: Category[], targetId: number): Category | null => {
+          for (const cat of list) {
+            if (cat.children?.some(child => child.id === targetId)) {
+              return cat;
+            }
+            if (cat.children) {
+              const found = findParent(cat.children, targetId);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const parentCategory = target ? findParent(localCategories, target.id) : null;
+        if (parentCategory) {
+          const parentDepth = parentCategory.depth ?? 0;
+          if (parentDepth >= MAX_DEPTH - 1) {
+            alert('서브 카테고리까지만 생성 가능합니다.');
+            return;
+          }
+          target = parentCategory;
+        }
+      } else if (targetDepth >= MAX_DEPTH - 1) {
+        alert('서브 카테고리까지만 생성 가능합니다.');
+        return;
+      }
+    }
+
+    const isNoOp = dragged.parentId === (target ? target.id : null);
+
+    if (isNoOp) {
+      const parentList = (target ? target.children : localCategories) || [];
+      const oldIndex = parentList.findIndex((c) => c.id === dragId);
+      const newIndex = parentList.findIndex((c) => c.id === (target?.id ?? null));
+
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+        return;
+      }
+
+      const reordered = [...parentList];
+      const movedItem = reordered.splice(oldIndex, 1)[0];
+      reordered.splice(newIndex, 0, movedItem);
+
+      const updatedList = reordered.map((item, idx) => ({
+        ...item,
+        sequence: idx + 1,
+      }));
+
+      const applyToTree = (list: Category[]): Category[] => {
+        return list.map((node) => {
+          if ((target && node.id === target.id) || (!target && node.parentId === null)) {
+            return {
+              ...node,
+              children: target ? updatedList : undefined,
+            };
+          }
+          if (node.children) {
+            return { ...node, children: applyToTree(node.children) };
+          }
+          return node;
+        });
+      };
+
+      const finalTree = applyToTree([...localCategories]);
+      setIsDirty(true);
+      setLocalCategories(finalTree);
+      onMoveItem(finalTree);
+      return;
+    }
 
     const removeFromTree = (list: Category[]): [Category | null, Category[]] => {
       for (let i = 0; i < list.length; i++) {
@@ -172,131 +294,322 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       return [null, list];
     };
 
-    const [removedItem, newTree] = removeFromTree(categories);
+    const [removedItem, newTree] = removeFromTree([...localCategories]);
     if (!removedItem) return;
 
-    // ✅ 실제 위치가 변하지 않았으면 무시
-    const isNoOp =
-      dragged.parentId === (target ? target.id : null);
-
-    if (isNoOp) {
-      // 같은 부모 안에서의 순서 변경인지 확인
-      const parentList = (target ? target.children : categories) || [];
-
-      const oldIndex = parentList.findIndex((c) => c.id === dragId);
-      const newIndex = parentList.findIndex((c) => c.id === (target?.id ?? null));
-
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-        return; // 위치가 완전히 같으면 무시
-      }
-
-      // ✅ 순서 변경 처리 (동일 부모 안에서만)
-      const reordered = [...parentList];
-      const movedItem = reordered.splice(oldIndex, 1)[0];
-      reordered.splice(newIndex, 0, movedItem);
-
-      // ✅ sequence 재정렬
-      const updatedList = reordered.map((item, idx) => ({
-        ...item,
-        sequence: idx + 1,
-      }));
-
-      // 부모에 반영
-      const applyToTree = (list: Category[]): Category[] => {
-        return list.map((node) => {
-          if ((target && node.id === target.id) || (!target && node.parentId === null)) {
-            return {
-              ...node,
-              children: target ? updatedList : undefined,
-            };
-          }
-          if (node.children) {
-            return { ...node, children: applyToTree(node.children) };
-          }
-          return node;
-        });
-      };
-
-      const finalTree = applyToTree(newTree);
-      onMoveItem(finalTree);
-      return;
-    }
-
-    // ✅ 위치가 변경된 경우: 자식으로 이동 or 루트로 이동
     let updatedTree: Category[];
-
     if (target) {
       const insert = (list: Category[]): Category[] =>
         list.map((node) => {
           if (node.id === target.id) {
             const children = [...(node.children || [])];
-            children.push({ ...removedItem, parentId: target.id });
-            const sortedChildren = children
-              .map((c, idx) => ({ ...c, sequence: idx + 1 }))
-              .sort((a, b) => a.sequence - b.sequence);
-            return {
-              ...node,
-              children: sortedChildren,
-            };
+            const resetDepth = (item: Category, newDepth: number): Category => ({
+              ...item,
+              depth: newDepth,
+              children: item.children?.map(child => ({
+                ...child,
+                depth: newDepth + 1,
+                children: child.children?.map(grandChild => ({
+                  ...grandChild,
+                  depth: newDepth + 1
+                }))
+              }))
+            });
+            
+            const targetDepth = target.depth ?? 0;
+            const convertedItem = resetDepth(removedItem, targetDepth + 1);
+            children.push(convertedItem);
+            return { ...node, children };
           }
           if (node.children) {
             return { ...node, children: insert(node.children) };
           }
           return node;
         });
-
       updatedTree = insert(newTree);
     } else {
-      // 루트로 이동
-      const newRoot = [
-        ...newTree,
-        { ...removedItem, parentId: null }
-      ].map((c, idx) => ({ ...c, sequence: idx + 1 }));
-
-      updatedTree = newRoot;
+      const resetDepth = (item: Category): Category => ({
+        ...item,
+        depth: 0,
+        children: item.children?.map(child => ({
+          ...child,
+          depth: 1,
+          children: child.children?.map(grandChild => ({
+            ...grandChild,
+            depth: 1
+          }))
+        }))
+      });
+      
+      const convertedItem = resetDepth(removedItem);
+      updatedTree = [...newTree, convertedItem];
     }
 
+    setIsDirty(true);
+    setLocalCategories(updatedTree);
     onMoveItem(updatedTree);
   };
 
-  //오른쪽 상단 펼치기 버튼
-  const [expandedMap, setExpandedMap] = useState<{ [id: number]: boolean }>({});
-
   // 전체 펼치기
   const expandAll = () => {
-    const allIds: number[] = [];
-    const collectIds = (list: Category[]) => {
-      list.forEach((cat) => {
-        allIds.push(cat.id);
-        if (cat.children) collectIds(cat.children);
+    const newState: { [key: number]: boolean } = {};
+    const setExpanded = (cats: Category[]) => {
+      cats.forEach(cat => {
+        if (cat.children && cat.children.length > 0) {
+          newState[cat.id] = true;
+          setExpanded(cat.children);
+        }
       });
     };
-    collectIds(categories);
-    const newMap = Object.fromEntries(allIds.map((id) => [id, true]));
-    setExpandedMap(newMap);
+    setExpanded(localCategories);
+    setExpandedState(newState);
   };
 
   // 전체 닫기
   const collapseAll = () => {
-    setExpandedMap({});
+    setExpandedState({});
   };
 
-
-
   const handleDropToRoot = (dragId: number) => moveItem(dragId, null);
+
+  // 변경사항 저장
+  const saveChanges = async () => {
+    if (!isDirty) return;
+    
+    try {
+      // 모든 카테고리를 평탄화하여 시퀀스 재정렬
+      const flattenCategories = (categories: Category[], parentId: number | null = null): Category[] => {
+        return categories.reduce((acc: Category[], category, index) => {
+          const flatCategory = {
+            ...category,
+            sequence: index + 1,
+            parentId: parentId
+          };
+          acc.push(flatCategory);
+          if (category.children) {
+            acc.push(...flattenCategories(category.children, category.id));
+          }
+          return acc;
+        }, []);
+      };
+
+      const flatCategories = flattenCategories(localCategories);
+      
+      const res = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(flatCategories),
+      });
+      
+      if (res.ok) {
+        setIsDirty(false);
+        // 트리 새로고침
+        onMoveItem(await fetchNewTree());
+      }
+    } catch (error) {
+      // 에러 처리
+      alert('카테고리 저장에 실패했습니다.');
+    }
+  };
+
+  // 삭제
+  const handleDelete = (category: Category) => {
+    if (!confirm('정말로 이 카테고리를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    const findParentCategory = (id: number, categories: Category[]): Category | null => {
+      for (const cat of categories) {
+        if (cat.children?.some(child => child.id === id)) {
+          return cat;
+        }
+        if (cat.children) {
+          const found = findParentCategory(id, cat.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const findLaterSiblings = (category: Category, categories: Category[]): Category[] => {
+      const parent = findParentCategory(category.id, categories);
+      if (!parent) {
+        return categories.filter(cat => cat.sequence > category.sequence);
+      }
+      return parent.children?.filter(child => child.sequence > category.sequence) || [];
+    };
+
+    const targetCategory = findCategoryById(category.id, localCategories);
+    if (!targetCategory) return;
+
+    const parentCategory = findParentCategory(category.id, localCategories);
+    const children = targetCategory.children || [];
+    const laterSiblings = findLaterSiblings(targetCategory, localCategories);
+
+    // 자식 카테고리 승격 및 시퀀스 조정
+    const updatedCategories = localCategories.map(cat => {
+      if (cat.id === category.id) {
+        // 삭제할 카테고리 제거
+        return null;
+      }
+
+      if (parentCategory && cat.id === parentCategory.id) {
+        // 부모 카테고리의 children 배열에서 삭제할 카테고리 제거
+        return {
+          ...cat,
+          children: cat.children?.filter(child => child.id !== category.id)
+        };
+      }
+
+      // 나중 형제들의 시퀀스 조정
+      if (laterSiblings.some(sibling => sibling.id === cat.id)) {
+        return {
+          ...cat,
+          sequence: cat.sequence + (children.length - 1)
+        };
+      }
+
+      return cat;
+    }).filter(Boolean) as Category[];
+
+    // 자식 카테고리들을 부모 카테고리의 위치로 승격
+    if (children.length > 0) {
+      const parentSequence = targetCategory.sequence;
+      const promotedChildren = children.map((child, index) => ({
+        ...child,
+        parentId: parentCategory?.id || null,
+        sequence: parentSequence + index,
+        depth: (parentCategory?.depth || 0) + 1
+      }));
+
+      // 승격된 자식 카테고리들을 부모 카테고리의 위치에 삽입
+      const insertIndex = updatedCategories.findIndex(cat => cat.id === targetCategory.id);
+      if (insertIndex !== -1) {
+        updatedCategories.splice(insertIndex, 0, ...promotedChildren);
+      } else {
+        updatedCategories.push(...promotedChildren);
+      }
+    }
+
+    setLocalCategories(updatedCategories);
+    setIsDirty(true);
+    onMoveItem(updatedCategories);
+  };
+
+  const renderCategory = (category: Category, depth: number) => {
+    const isEditing = editingCategory?.id === category.id;
+  
+
+    return (
+      <div key={category.id} className="space-y-2">
+        <div style={{ marginLeft: `${depth * 50}px` }}>
+          {isEditing ? (
+            <div className="mt-2 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="카테고리 이름"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="설명 (선택사항)"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-200 rounded"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    disabled={!editName.trim()}
+                  >
+                    저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <CategoryItem
+              category={category}
+              depth={depth}
+              moveItem={moveItem}
+              onAdd={() => handleAddChild(category)}
+              onEdit={() => handleEdit(category)}
+              onDelete={() => handleDelete(category)}
+              onMove={() => {}}
+              isExpanded={expandedState[category.id]}
+            />
+          )}
+
+          {/* 하위 카테고리 추가 폼 */}
+          {parentCategory && parentCategory.id === category.id && (
+            <div className="mt-2 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={newChildName}
+                  onChange={(e) => setNewChildName(e.target.value)}
+                  placeholder="카테고리 이름"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  value={newChildDescription}
+                  onChange={(e) => setNewChildDescription(e.target.value)}
+                  placeholder="설명 (선택사항)"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={handleCancelAdd}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-200 rounded"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleSaveChild}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    disabled={!newChildName.trim()}
+                  >
+                    저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 자식 카테고리들 */}
+        {category.children && category.children.length > 0 && expandedState[category.id] && (
+          <div className="mt-2 space-y-1">
+            {category.children
+              .sort((a, b) => a.sequence - b.sequence)
+              .map((child) => renderCategory(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
       <div className="mb-4 border border-gray-300 bg-white p-4 text-sm text-gray-700">
         <div className="flex justify-between items-center gap-4">
-          {/* 왼쪽 문장 */}
           <p className="whitespace-pre-line">
             카테고리 순서를 변경하고 주제 연결을 설정할 수 있습니다.
             <br />
             드래그 앤 드롭으로 카테고리 순서를 변경할 수 있습니다.
           </p>
 
-          {/* 오른쪽 버튼들 */}
           <div className="flex-shrink-0 space-x-2">
             <button
               onClick={expandAll}
@@ -315,26 +628,35 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       </div>
 
       <div className="overflow-auto max-h-[490px] p-3 bg-white" style={{
-        minWidth: '780px', width: '100%', minHeight: '500px',
-        border: '1px solid #ccc', borderRadius: '0.5rem' 
+        minWidth: '780px', 
+        width: '100%', 
+        minHeight: '500px',
+        maxWidth: '100%',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        border: '1px solid #ccc', 
+        borderRadius: '0.5rem' 
       }}>
         <DropZone onDropToRoot={handleDropToRoot} />
-        <div className="space-y-2 space-x-2">
-          {categories
+        <div className="space-y-2">
+          {localCategories
             .sort((a, b) => a.sequence - b.sequence)
-            .map((category) => (
-              <CategoryItem
-                key={category.id}
-                category={category}
-                depth={0}
-                moveItem={moveItem}
-                onAdd={() => handleAddChild(category)}
-                onEdit={() => handleEdit(category)}
-                onDelete={() => handleDelete(category)}
-                onMove={() => handleMove(category)}
-              />
-            ))}
+            .map((category) => renderCategory(category, 0))}
         </div>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={saveChanges}
+          className={`px-4 py-2 rounded transition-colors duration-200 shadow-md ${
+            isDirty 
+              ? 'bg-blue-500 text-white hover:bg-blue-600' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          disabled={!isDirty}
+        >
+          변경사항 저장
+        </button>
       </div>
     </>
   );

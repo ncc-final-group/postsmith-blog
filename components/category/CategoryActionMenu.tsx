@@ -7,6 +7,7 @@ interface CategoryActionMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onMove: () => void;
+  isRoot?: boolean;
 }
 
 export default function CategoryActionMenu({
@@ -14,6 +15,7 @@ export default function CategoryActionMenu({
   onEdit,
   onDelete,
   onMove,
+  isRoot = false,
 }: CategoryActionMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -53,15 +55,18 @@ export default function CategoryActionMenu({
 
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-10">
-          <button
-            onClick={() => {
-              onAdd();
-              setOpen(false);
-            }}
-            className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-          >
-            하위 카테고리 추가
-          </button>
+          {isRoot && (
+            <button
+              onClick={() => {
+                alert('CategoryActionMenu onAdd 호출됨');
+                onAdd();
+                setOpen(false);
+              }}
+              className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+            >
+              하위 카테고리 추가
+            </button>
+          )}
           <button
             onClick={() => {
               onEdit();

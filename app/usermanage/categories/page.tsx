@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -25,11 +24,16 @@ function flattenTree(categories: Category[], parentId: number | null = null): Ca
   });
 }
 
-
-
+// depth 값을 설정하는 함수
+function setDepth(categories: Category[], depth: number = 0): Category[] {
+  return categories.map(category => ({
+    ...category,
+    depth,
+    children: category.children ? setDepth(category.children, depth + 1) : undefined
+  }));
+}
 
 export default function CategoriesPage() {
-
   const [treeData, setTreeData] = useState<Category[]>([]);
   const [savedData, setSavedData] = useState<Category[]>([]);
   const [nextTempId, setNextTempId] = useState(-1); // 신규 생성 시 음수 ID 관리용
@@ -47,7 +51,9 @@ export default function CategoriesPage() {
         const res = await fetch('http://localhost:8080/api/categories/tree'); // 백엔드 카테고리 API 경로
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
         const data = await res.json();
-        setTreeData(data);
+        // depth 값을 설정하여 저장
+        setTreeData(setDepth(data));
+        setSavedData(setDepth(data));
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -59,7 +65,6 @@ export default function CategoriesPage() {
 
   if (loading) return <div>로딩중...</div>;
   if (error) return <div>에러: {error}</div>;
-
 
   function handleCreate(newCategoryData: Omit<Category, 'id' | 'children' | 'depth'>) {
     const newCategory: Category = {
@@ -93,7 +98,6 @@ export default function CategoriesPage() {
     }
   }
 
-
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-6">
@@ -103,14 +107,6 @@ export default function CategoriesPage() {
           onMoveItem={setTreeData} // ✅ 핵심
         />
       </div>
-      <button
-        disabled={!isDirty}
-        onClick={saveAll}
-        className={`fixed bottom-6 right-6 py-3 px-6 rounded-xl shadow-lg text-lg font-semibold
-        ${isDirty ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'}`}
-      >
-        저장
-      </button>
     </DndProvider>
   );
 }
