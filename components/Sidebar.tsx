@@ -39,7 +39,9 @@ const menuItems: MenuItem[] = [
   {
     key: 'customize',
     label: '꾸미기',
-    subItems: [{ label: '스킨', route: '/customize/skin' }],
+    subItems: [{ label: '스킨', route: '/customize/skin' },
+      {label: '메뉴', route: '/customize/menu' },
+    ],
   },
   {
     key: 'plugins',
