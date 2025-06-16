@@ -44,6 +44,10 @@ const MenuManagerPage = () => {
   const [tempId, setTempId] = useState<number>(-1);
 
 
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [pages, setPages] = useState<{ id: number; title: string }[]>([]);
+
+
   // 메뉴 상태 갱신 함수 (변경사항 체크 포함)
   const updateMenus = (newMenus: MenuType[]) => {
     setMenus(newMenus);
@@ -73,6 +77,13 @@ const MenuManagerPage = () => {
     setHasChanges(true);
   };
 
+  //변동사항 되돌리기
+  const handleReset = () => {
+    setMenus(initialMenus);
+    setDeletedMenus([]); // 삭제한 메뉴 초기화
+    setHasChanges(false);
+  };
+
   // 삭제
   const handleDeleteMenu = (id: number) => {
     const deleted = menus.find((menu) => menu.id === id);
@@ -91,18 +102,48 @@ const MenuManagerPage = () => {
 
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/menus?blogId=1')
-      .then(res => {
+    Promise.all([
+      fetch('http://localhost:8080/api/menus?blogId=1').then(res => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
-      })
-      .then((data: MenuType[]) => {
-        setMenus(data);
-        setInitialMenus(data);
+      }),
+      fetch('http://localhost:8080/api/menus/categories?blogId=1').then(res => {
+        if (!res.ok) throw new Error('네트워크 응답 에러');
+        return res.json();
+      }),
+      fetch('http://localhost:8080/api/menus/pages?blogId=1').then(res => {
+        if (!res.ok) throw new Error('네트워크 응답 에러');
+        return res.json();
+      }),
+    ])
+      .then(([menusData, categoriesData, pagesData]) => {
+        setMenus(menusData);
+        setInitialMenus(menusData);
+
+        console.log("✅ Fetched categoriesData:", categoriesData); // <-- 여기 추가
+        console.log('✅ Fetched pagesData:', pagesData);
+
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
+        } else {
+          console.error('Expected array but got categories:', categoriesData);
+          setCategories([]);
+        }
+        if (Array.isArray(pagesData)) {
+          setPages(pagesData);  // pages는 [{id, title}, ...] 형태가 됨
+        } else {
+          setPages([]);
+        }
       })
       .catch(err => {
+        console.error('데이터 불러오기 실패:', err);
+        setMenus([]);
+        setInitialMenus([]);
+        setCategories([]);
+        setPages([]);
       });
   }, []);
+
 
   const handleSave = () => {
     console.log('저장할 메뉴들 id:', menus.map(menu => menu.id));
@@ -124,6 +165,7 @@ const MenuManagerPage = () => {
       .then((savedMenus: MenuType[]) => {
         setMenus(savedMenus);
         setInitialMenus(savedMenus);
+        setDeletedMenus([]); // <-- 삭제된 메뉴 초기화
         setHasChanges(false);
       })
       .catch(err => {
@@ -131,7 +173,6 @@ const MenuManagerPage = () => {
         console.error(err);
       });
   };
-
 
 
   return (
@@ -158,7 +199,15 @@ const MenuManagerPage = () => {
               + 메뉴 추가
             </button>
           )}
-          {isAdding && <AddMenuForm existingMenus={menus} onAdd={handleAddMenu} onCancel={() => setIsAdding(false)} />}
+          {isAdding && (
+            <AddMenuForm
+              existingMenus={menus}
+              onAdd={handleAddMenu}
+              onCancel={() => setIsAdding(false)}
+              categories={categories} // 이제 {id, name}[] 타입
+              pages={pages}
+            />
+          )}
           <hr className="my-6" />
           {deletedMenus.length > 0 && (
             <div className="mt-8 p-4 bg-gray-50 border rounded-lg">
@@ -173,6 +222,14 @@ const MenuManagerPage = () => {
           <br />
           <div className="flex justify-end gap-4">
             <button className="border px-4 py-2 rounded cursor-pointer">미리보기</button>
+            {hasChanges && (
+              <button
+                className="border px-4 py-2 rounded text-gray-700 bg-white hover:bg-gray-100"
+                onClick={handleReset}
+              >
+                변경사항 되돌리기
+              </button>
+            )}
             <button
               className={`px-4 py-2 rounded ${
                 hasChanges

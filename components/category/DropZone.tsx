@@ -12,10 +12,12 @@ export function DropZone({ onDropToRoot }: DropZoneProps) {
 
   const [{ isOver }, drop] = useDrop({
     accept: 'CATEGORY',
-    drop: (dragged: { id: number }) => {
+    drop: (dragged: { id: number }, monitor) => {
+      if (monitor.didDrop()) return;
+      console.log('DropZone drop', dragged.id);
       onDropToRoot(dragged.id);
     },
-    collect: (monitor) => ({ isOver: monitor.isOver(), }),
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
   });
 
   useEffect(() => {

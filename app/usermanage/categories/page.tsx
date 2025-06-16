@@ -25,11 +25,11 @@ function flattenTree(categories: Category[], parentId: number | null = null): Ca
 }
 
 // depth 값을 설정하는 함수
-function setDepth(categories: Category[], depth: number = 0): Category[] {
+function setDepth(categories: Category[], depth = 0): Category[] {
   return categories.map(category => ({
     ...category,
     depth,
-    children: category.children ? setDepth(category.children, depth + 1) : undefined
+    children: category.children ? setDepth(category.children, depth + 1) : []
   }));
 }
 
@@ -104,7 +104,7 @@ export default function CategoriesPage() {
         <h1 className="text-xl font-bold text-gray-800 mb-4">카테고리 관리</h1>
         <CategoryTree
           categories={treeData}
-          onMoveItem={setTreeData} // ✅ 핵심
+          onMoveItem={setTreeData}
         />
       </div>
     </DndProvider>

@@ -17,6 +17,7 @@ interface CategoryItemProps {
   onDelete: () => void | Promise<void>;
   onMove: () => void | Promise<void>;
   isExpanded?: boolean; // 펼침 상태 추가
+  showExpandButton?: boolean; // 화살표 버튼 표시 여부
 }
 
 export function CategoryItem({
@@ -28,6 +29,7 @@ export function CategoryItem({
   onDelete,
   onMove,
   isExpanded = false, // 기본값은 접힘 상태
+  showExpandButton = true, // 기본값은 true
 }: CategoryItemProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [isLocalExpanded, setIsLocalExpanded] = useState(isExpanded);
@@ -52,6 +54,7 @@ export function CategoryItem({
   const [{ isOver }, dropRef] = useDrop({
     accept: 'CATEGORY',
     drop: (dragged: { id: number }) => {
+      console.log('CategoryItem drop', dragged.id, category.id);
       if (dragged.id !== category.id) {
         moveItem(dragged.id, category.id);
       }
@@ -93,12 +96,12 @@ export function CategoryItem({
         style={{
           padding: '0.5rem 1rem',
           width: '100%',
-          marginLeft: isRoot ? '0' : '50px' // 들여쓰기는 여기서만 적용
+          marginLeft: isRoot ? '0' : '50px' // 루트가 아니면 50px 들여쓰기
         }}
       >
         <div className="flex items-center space-x-10">
           <span className="cursor-move text-gray-400 space-x-5 flex items-center">≡</span>
-          {hasChildren && (
+          {hasChildren && showExpandButton && (
             <button
               onClick={() => setIsLocalExpanded(!isLocalExpanded)}
               className="text-gray-400 hover:text-gray-600 transition-transform duration-200"
@@ -130,13 +133,14 @@ export function CategoryItem({
               <CategoryItem
                 key={child.id}
                 category={child}
-                depth={1}
+                depth={depth + 1} // 부모의 depth + 1로 변경
                 moveItem={moveItem}
                 onAdd={onAdd}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onMove={onMove}
                 isExpanded={isExpanded}
+                showExpandButton={false} // 서브 카테고리에서는 화살표 버튼 숨김
               />
             ))}
         </div>

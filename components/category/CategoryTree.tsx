@@ -47,8 +47,18 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
   const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
-    setLocalCategories(categories);
+    // 중복 체크 및 정리
+    const cleanTree = (categories: Category[]): Category[] => {
+      return categories.map(cat => ({
+        ...cat,
+        children: cat.children ? cleanTree(cat.children) : []
+      }));
+    };
+    setLocalCategories(cleanTree(categories));
   }, [categories]);
+
+
+
 
   //생성
   const handleAddChild = (parentCategory: Category) => {
@@ -75,7 +85,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       alert('카테고리 이름을 입력해주세요.');
       return;
     }
-    
+
     // 로컬 상태에 새 카테고리 추가
     const newChild: Category = {
       id: Date.now(), // 임시 ID
@@ -103,10 +113,10 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     setNewChildName('');
     setNewChildDescription('');
     setParentCategory(null);
-    
+
     // 변경사항 저장 버튼 활성화
     setIsDirty(true);
-    
+
     // 트리 업데이트
     setLocalCategories(updatedCategories);
     onMoveItem(updatedCategories);
@@ -120,10 +130,14 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
 
   const findCategoryById = (id: number, categories: Category[]): Category | null => {
     for (const cat of categories) {
-      if (cat.id === id) return cat;
-      if (cat.children) {
+      if (cat.id === id) {
+        return cat;
+      }
+      if (cat.children && cat.children.length > 0) {
         const found = findCategoryById(id, cat.children);
-        if (found) return found;
+        if (found) {
+          return found;
+        }
       }
     }
     return null;
@@ -135,9 +149,10 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         return updater(cat);
       }
       if (cat.children && cat.children.length > 0) {
+        const updatedChildren = updateCategoryInTree(cat.children, targetId, updater);
         return {
           ...cat,
-          children: updateCategoryInTree(cat.children, targetId, updater)
+          children: updatedChildren
         };
       }
       return cat;
@@ -182,193 +197,85 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     setEditDescription('');
   };
 
-  //드래그 이동 관련
-  const moveItem = (dragId: number, targetId: number | null) => {
-    if (dragId === targetId) return;
+// 깊은 복사 함수
+  function moveItem(draggedId: number, newParentId: number | null) {
+    // 트리에서 draggedId 제거
+    const removeCategory = (categories: Category[]): [Category[], Category | null] => {
+      let removed: Category | null = null;
 
-    const categoryMap = new Map<number, Category>();
-    const buildMap = (list: Category[]) => {
-      list.forEach((cat) => {
-        categoryMap.set(cat.id, cat);
-        if (cat.children) buildMap(cat.children);
-      });
-    };
-    buildMap(localCategories);
-
-    const dragged = categoryMap.get(dragId);
-    let target = targetId !== null ? categoryMap.get(targetId) : null;
-
-    if (!dragged) return;
-
-    if (target) {
-      const targetDepth = target.depth ?? 0;
-      if (targetDepth > 0) {
-        const findParent = (list: Category[], targetId: number): Category | null => {
-          for (const cat of list) {
-            if (cat.children?.some(child => child.id === targetId)) {
-              return cat;
-            }
-            if (cat.children) {
-              const found = findParent(cat.children, targetId);
-              if (found) return found;
-            }
+      const result = categories
+        .map(cat => {
+          if (cat.id === draggedId) {
+            removed = cat;
+            return null;
+          } else if (cat.children) {
+            const [newChildren, removedChild] = removeCategory(cat.children);
+            if (removedChild) removed = removedChild;
+            return { ...cat, children: newChildren };
           }
-          return null;
-        };
-        const parentCategory = target ? findParent(localCategories, target.id) : null;
-        if (parentCategory) {
-          const parentDepth = parentCategory.depth ?? 0;
-          if (parentDepth >= MAX_DEPTH - 1) {
-            alert('서브 카테고리까지만 생성 가능합니다.');
-            return;
-          }
-          target = parentCategory;
-        }
-      } else if (targetDepth >= MAX_DEPTH - 1) {
-        alert('서브 카테고리까지만 생성 가능합니다.');
-        return;
-      }
-    }
+          return cat;
+        })
+        .filter(Boolean) as Category[];
 
-    const isNoOp = dragged.parentId === (target ? target.id : null);
-
-    if (isNoOp) {
-      const parentList = (target ? target.children : localCategories) || [];
-      const oldIndex = parentList.findIndex((c) => c.id === dragId);
-      const newIndex = parentList.findIndex((c) => c.id === (target?.id ?? null));
-
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-        return;
-      }
-
-      const reordered = [...parentList];
-      const movedItem = reordered.splice(oldIndex, 1)[0];
-      reordered.splice(newIndex, 0, movedItem);
-
-      const updatedList = reordered.map((item, idx) => ({
-        ...item,
-        sequence: idx + 1,
-      }));
-
-      const applyToTree = (list: Category[]): Category[] => {
-        return list.map((node) => {
-          if ((target && node.id === target.id) || (!target && node.parentId === null)) {
-            return {
-              ...node,
-              children: target ? updatedList : undefined,
-            };
-          }
-          if (node.children) {
-            return { ...node, children: applyToTree(node.children) };
-          }
-          return node;
-        });
-      };
-
-      const finalTree = applyToTree([...localCategories]);
-      setIsDirty(true);
-      setLocalCategories(finalTree);
-      onMoveItem(finalTree);
-      return;
-    }
-
-    const removeFromTree = (list: Category[]): [Category | null, Category[]] => {
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].id === dragId) {
-          return [list[i], [...list.slice(0, i), ...list.slice(i + 1)]];
-        }
-
-        const children = list[i].children;
-        if (children && children.length > 0) {
-          const [removed, newChildren] = removeFromTree(children);
-          if (removed) {
-            return [
-              removed,
-              list.map((item, idx) =>
-                idx === i ? { ...item, children: newChildren } : item
-              ),
-            ];
-          }
-        }
-      }
-      return [null, list];
+      return [result, removed];
     };
 
-    const [removedItem, newTree] = removeFromTree([...localCategories]);
-    if (!removedItem) return;
+    const [categoriesWithoutDragged, draggedCategory] = removeCategory(localCategories);
 
-    let updatedTree: Category[];
-    if (target) {
-      const insert = (list: Category[]): Category[] =>
-        list.map((node) => {
-          if (node.id === target.id) {
-            const children = [...(node.children || [])];
-            const resetDepth = (item: Category, newDepth: number): Category => ({
-              ...item,
-              depth: newDepth,
-              children: item.children?.map(child => ({
-                ...child,
-                depth: newDepth + 1,
-                children: child.children?.map(grandChild => ({
-                  ...grandChild,
-                  depth: newDepth + 1
-                }))
-              }))
-            });
-            
-            const targetDepth = target.depth ?? 0;
-            const convertedItem = resetDepth(removedItem, targetDepth + 1);
-            children.push(convertedItem);
-            return { ...node, children };
-          }
-          if (node.children) {
-            return { ...node, children: insert(node.children) };
-          }
-          return node;
-        });
-      updatedTree = insert(newTree);
-    } else {
-      const resetDepth = (item: Category): Category => ({
-        ...item,
-        depth: 0,
-        children: item.children?.map(child => ({
-          ...child,
-          depth: 1,
-          children: child.children?.map(grandChild => ({
-            ...grandChild,
-            depth: 1
-          }))
-        }))
+    if (!draggedCategory) return;
+
+    // parentId 및 depth 재설정
+    draggedCategory.parentId = newParentId;
+    draggedCategory.depth = newParentId ? 1 : 0;
+
+    // 대상 위치에 삽입
+    const insertToParent = (categories: Category[]): Category[] => {
+      if (!newParentId) {
+        return [...categories, { ...draggedCategory }];
+      }
+
+      return categories.map(cat => {
+        if (cat.id === newParentId) {
+          return {
+            ...cat,
+            children: [...(cat.children || []), { ...draggedCategory }]
+          };
+        } else if (cat.children) {
+          return { ...cat, children: insertToParent(cat.children) };
+        }
+        return cat;
       });
-      
-      const convertedItem = resetDepth(removedItem);
-      updatedTree = [...newTree, convertedItem];
-    }
+    };
 
+    const updated = insertToParent(categoriesWithoutDragged);
+    setLocalCategories(updated);
     setIsDirty(true);
-    setLocalCategories(updatedTree);
-    onMoveItem(updatedTree);
-  };
+    onMoveItem(updated);
+  }
+
 
   // 전체 펼치기
   const expandAll = () => {
     const newState: { [key: number]: boolean } = {};
+
     const setExpanded = (cats: Category[]) => {
       cats.forEach(cat => {
+        newState[cat.id] = true;  // 모든 카테고리 ID 펼침 true 세팅
         if (cat.children && cat.children.length > 0) {
-          newState[cat.id] = true;
           setExpanded(cat.children);
         }
       });
     };
+
     setExpanded(localCategories);
     setExpandedState(newState);
   };
 
-  // 전체 닫기
+  //전체 닫기
   const collapseAll = () => {
     setExpandedState({});
   };
+
 
   const handleDropToRoot = (dragId: number) => moveItem(dragId, null);
 
@@ -483,9 +390,10 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       }));
 
       // 승격된 자식 카테고리들을 부모 카테고리의 위치에 삽입
-      const insertIndex = updatedCategories.findIndex(cat => cat.id === targetCategory.id);
-      if (insertIndex !== -1) {
-        updatedCategories.splice(insertIndex, 0, ...promotedChildren);
+      const parentIndex = updatedCategories.findIndex(cat => cat.id === parentCategory?.id);
+      if (parentIndex !== -1) {
+        // 부모 바로 다음 위치에 자식들을 삽입 (또는 적절한 위치에)
+        updatedCategories.splice(parentIndex + 1, 0, ...promotedChildren);
       } else {
         updatedCategories.push(...promotedChildren);
       }
@@ -498,11 +406,11 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
 
   const renderCategory = (category: Category, depth: number) => {
     const isEditing = editingCategory?.id === category.id;
-  
+    const hasChildren = category.children && category.children.length > 0;
 
     return (
       <div key={category.id} className="space-y-2">
-        <div style={{ marginLeft: `${depth * 50}px` }}>
+        <div>
           {isEditing ? (
             <div className="mt-2 p-4 bg-gray-50 rounded-md border border-gray-200">
               <div className="space-y-3">
@@ -546,7 +454,8 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
               onEdit={() => handleEdit(category)}
               onDelete={() => handleDelete(category)}
               onMove={() => {}}
-              isExpanded={expandedState[category.id]}
+              isExpanded={expandedState[category.id] || false}
+              showExpandButton={depth === 0}
             />
           )}
 
@@ -589,13 +498,13 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         </div>
 
         {/* 자식 카테고리들 */}
-        {category.children && category.children.length > 0 && expandedState[category.id] && (
+        {/*{hasChildren && expandedState[category.id] && (
           <div className="mt-2 space-y-1">
-            {category.children
+            {category.children!
               .sort((a, b) => a.sequence - b.sequence)
               .map((child) => renderCategory(child, depth + 1))}
           </div>
-        )}
+        )}*/}
       </div>
     );
   };

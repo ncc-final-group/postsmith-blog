@@ -1,14 +1,36 @@
 import React, { useState } from 'react';
 import { MenuType } from './Types';
 
+interface CategoryOption{
+  id: number;
+  name: string;
+}
+
+interface PageOption{
+  id: number;
+  title: string;
+}
+
 interface AddMenuFormProps {
   onAdd: (menu: MenuType) => void;
   onCancel: () => void;
   existingMenus: MenuType[];
+  categories:CategoryOption[];
+  pages: PageOption[];
 }
 
-const dummyPages = ['회사소개', '연락처', '이용약관'];
-const dummyCategories = ['프론트엔드', '백엔드', '일상'];
+
+function isPageOption(item:any): item is PageOption {
+  return item && typeof item.id === 'number' && typeof item.title === 'string';
+}
+
+function isCategoryOption(item:any): item is CategoryOption {
+  return item && typeof item.id === 'number' && typeof item.name === 'string';
+}
+
+type pageOption = { id: number; title: string;};
+type categoryOption = { id: number; name: string;};
+
 
 const defaultMenus = [
   { name: '홈', uri: '/', key: 'home' },
@@ -16,13 +38,15 @@ const defaultMenus = [
   { name: '방명록', uri: '/guestbook', key: 'guestbook' },
 ];
 
-const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenus }) => {
+const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenus ,categories, pages }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState<'DEFAULT' | 'PAGE' | 'CATEGORY' | 'MANUAL'>('MANUAL');
   const [selectedItem, setSelectedItem] = useState('');
   const [uri, setUri] = useState('http://');
   const [isBlank, setIsBlank] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+
 
   const availableDefaultMenus = defaultMenus.filter(
     (m) => !existingMenus.some((em) => em.type === 'DEFAULT' && em.name === m.name)
@@ -125,7 +149,7 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
       );
     }
 
-    const list = type === 'PAGE' ? dummyPages : dummyCategories;
+    const list: (PageOption | CategoryOption)[] = type === 'PAGE' ? pages : categories;
     return (
       <select
         value={selectedItem}
@@ -133,13 +157,33 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
         className="border rounded p-2 w-1/2"
       >
         {list.length > 0 ? (
-          list.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))
+          list.map((item, index) => {
+            if (type === 'PAGE' && isPageOption(item)) {
+              return (
+                <option key={`page-${item.id}`} value={item.id.toString()}>
+                  {item.title}
+                </option>
+              );
+            } else if (isCategoryOption(item)) {
+              return (
+                <option key={`category-${item.id}`} value={item.name}>
+                  {item.name}
+                </option>
+              );
+            } else if (typeof item === 'string') {
+              return (
+                <option key={`string-${index}`} value={item}>
+                  {item}
+                </option>
+              );
+            } else {
+              return null; // 예상하지 못한 타입일 경우 안전하게 렌더링하지 않음
+            }
+          })
         ) : (
-          <option disabled>{type === 'PAGE' ? '페이지 없음' : '카테고리 없음'}</option>
+          <option disabled>
+            {type === 'PAGE' ? '페이지 없음' : '카테고리 없음'}
+          </option>
         )}
       </select>
     );
@@ -168,9 +212,9 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
             if (newType === 'DEFAULT') {
               setSelectedItem(availableDefaultMenus[0]?.key || '');
             } else if (newType === 'PAGE') {
-              setSelectedItem(dummyPages[0] || '');
+              setSelectedItem(pages[0]?.id?.toString() || '');
             } else if (newType === 'CATEGORY') {
-              setSelectedItem(dummyCategories[0] || '');
+              setSelectedItem(categories[0]?.name || '');
             }
           }}
           className="border rounded p-2 w-1/2"
