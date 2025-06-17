@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { useUserStore } from '../store/userStore';
+import { useUserStore } from '../app/store/userStore';
 
 interface UserProviderProps {
   children: React.ReactNode;

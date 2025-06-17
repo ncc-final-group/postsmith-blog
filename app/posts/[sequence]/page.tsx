@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
@@ -8,8 +10,6 @@ import { getContentByBlogIdAndSequence, getContentsByBlogId, getNextContent, get
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
-import BlogLayout from '../../components/BlogLayout';
-import BlogProvider from '../../components/BlogProvider';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {

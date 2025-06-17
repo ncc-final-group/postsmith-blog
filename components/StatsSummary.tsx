@@ -17,7 +17,7 @@ interface StatsData {
   };
 }
 
-export default function StatsSummary() {
+export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
   const [statsData, setStatsData] = useState<StatsData>({
     today: { views: 0, visitors: 0 },
     yesterday: { views: 0, visitors: 0 },
@@ -31,43 +31,39 @@ export default function StatsSummary() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/stats');
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const [viewRes, visitRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/view/${blogId}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/${blogId}`),
+        ]);
+
+        if (!viewRes.ok || !visitRes.ok) {
+          throw new Error(`통계 API 응답 오류: view=${viewRes.status}, visit=${visitRes.status}`);
         }
 
-        const data = await response.json();
+        const viewData = await viewRes.json();
+        const visitData = await visitRes.json();
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        // API 응답에서 직접 필요한 데이터 추출
         setStatsData({
           today: {
-            views: data.today?.views || 0,
-            visitors: data.today?.visitors || 0,
+            views: viewData.todayViewCount || 0,
+            visitors: visitData.todayVisitCount || 0,
           },
           yesterday: {
-            views: data.yesterday?.views || 0,
-            visitors: data.yesterday?.visitors || 0,
+            views: viewData.yesterdayViewCount || 0,
+            visitors: visitData.yesterdayVisitCount || 0,
           },
           total: {
-            views: data.total?.views || 0,
-            visitors: data.total?.visitors || 0,
+            views: viewData.totalViewCount || 0,
+            visitors: visitData.totalVisitCount || 0,
           },
         });
 
         setError(null);
       } catch (err) {
+        //eslint-disable-next-line no-console
+        console.error(err);
         setError(err instanceof Error ? err.message : '통계 데이터를 불러오는데 실패했습니다');
-        // 에러 시 기본값 유지
-        setStatsData({
-          today: { views: 0, visitors: 0 },
-          yesterday: { views: 0, visitors: 0 },
-          total: { views: 0, visitors: 0 },
-        });
       } finally {
         setLoading(false);
       }
@@ -75,10 +71,9 @@ export default function StatsSummary() {
 
     fetchStats();
 
-    // 5분마다 데이터 갱신
-    const interval = setInterval(fetchStats, 5 * 60 * 1000);
+    const interval = setInterval(fetchStats, 5 * 60 * 1000); // 5분마다 갱신
     return () => clearInterval(interval);
-  }, []);
+  }, [blogId]);
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString();

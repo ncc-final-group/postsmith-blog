@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 import './globals.css';
 import '../styles/editor-content.css';
-import UserProvider from './components/UserProvider';
+import UserProvider from '../components/UserProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

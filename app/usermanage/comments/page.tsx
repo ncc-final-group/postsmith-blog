@@ -39,12 +39,12 @@ export default function CommentsData() {
   const [hoveredCommentId, setHoveredCommentId] = useState<number | null>(null);
   const [filterReply, setFilterReply] = useState<'all' | 'true' | 'false'>('all');
 
-  // ✅ 서버에서 댓글 데이터 불러오기
   useEffect(() => {
     const fetchComments = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('http://localhost:8088/api/Replies'); // 주소 맞게 조정
+        const blogId = 1;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies?blogId=${blogId}`);
         const data = await res.json();
         setCommentData({
           comments: data,
@@ -74,6 +74,12 @@ export default function CommentsData() {
   const filteredAndSortedComments = useMemo(() => {
     let comments = [...commentData.comments];
 
+    if (searchTerm.trim() !== '') {
+      comments = comments.filter(
+        (comment) => comment.replyContent.toLowerCase().includes(searchTerm.toLowerCase()) || comment.userName.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    }
+
     // ✅ 댓글/답글 필터링
     if (filterReply === 'true') {
       comments = comments.filter((c) => c.parentReplyId === null); // 댓글만
@@ -91,7 +97,7 @@ export default function CommentsData() {
     });
 
     return comments;
-  }, [commentData.comments, sortOrder, filterReply]);
+  }, [commentData.comments, sortOrder, filterReply, searchTerm]);
 
   const getPageNumbers = (): number[] => {
     const { currentPage, totalPages } = commentData;
@@ -131,7 +137,7 @@ export default function CommentsData() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://localhost:8088/api/Replies/delete/${comment.repliesId}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies/delete/${comment.repliesId}`, { method: 'DELETE' });
 
       if (!res.ok) {
         throw new Error(`서버 응답 오류: ${res.status}`);
@@ -177,7 +183,7 @@ export default function CommentsData() {
       try {
         const idsToDelete = Array.from(selectedComments);
 
-        const res = await fetch('http://localhost:8088/api/Replies/delete', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(idsToDelete),
