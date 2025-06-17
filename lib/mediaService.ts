@@ -31,7 +31,7 @@ interface MediaListResponse {
   last: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
 
 // 파일명과 타입으로 MIME 타입 추정
 function determineMimeType(filename: string, fileType: string): string {
@@ -105,7 +105,7 @@ export async function getMediaFiles(params: { userId: number; page?: number; siz
     searchParams.append('search', params.search);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api1/media?${searchParams}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media?${searchParams}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -158,7 +158,7 @@ export async function getMediaFiles(params: { userId: number; page?: number; siz
 
 // 미디어 파일 상세 조회
 export async function getMediaFile(id: number, userId: number = 1): Promise<MediaFile> {
-  const response = await fetch(`${API_BASE_URL}/api1/media/${id}?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -196,7 +196,7 @@ export async function updateMediaFile(
   },
   userId: number = 1,
 ): Promise<MediaFile> {
-  const response = await fetch(`${API_BASE_URL}/api1/media/${id}?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updateData),
@@ -211,7 +211,7 @@ export async function updateMediaFile(
 
 // 미디어 파일 삭제
 export async function deleteMediaFile(id: number, userId: number = 1): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api1/media/${id}?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -223,7 +223,7 @@ export async function deleteMediaFile(id: number, userId: number = 1): Promise<v
 
 // 여러 미디어 파일 삭제
 export async function deleteMediaFiles(ids: number[], userId: number = 1): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api1/media/batch?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/batch?userId=${userId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(ids),
@@ -236,7 +236,7 @@ export async function deleteMediaFiles(ids: number[], userId: number = 1): Promi
 
 // 미디어 통계 조회
 export async function getMediaStats(userId: number): Promise<MediaStats> {
-  const response = await fetch(`${API_BASE_URL}/api1/media/stats?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/stats?userId=${userId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });

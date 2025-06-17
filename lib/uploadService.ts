@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
 
 export interface UploadResponse {
   success: boolean;
@@ -34,7 +34,7 @@ export const uploadImageToServer = async (file: File, altText?: string, userId?:
       formData.append('blogId', blogId.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/image`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
       method: 'POST',
       body: formData,
     });
@@ -74,7 +74,7 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
     // eslint-disable-next-line no-console
     console.log('파일 정보:', { name: file.name, size: file.size, type: file.type });
     // eslint-disable-next-line no-console
-    console.log('요청 URL:', `${API_BASE_URL}/api1/upload/video`);
+    console.log('요청 URL:', `${API_BASE_URL}/api/upload/video`);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -91,7 +91,7 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
     // eslint-disable-next-line no-console
     console.log('FormData 내용:', { altText, userId, blogId });
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/video`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
       method: 'POST',
       body: formData,
     });
@@ -149,7 +149,7 @@ export const uploadFileToServer = async (file: File, displayName?: string, userI
       formData.append('blogId', blogId.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/file`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/file`, {
       method: 'POST',
       body: formData,
     });
@@ -173,7 +173,7 @@ export const uploadFileToServer = async (file: File, displayName?: string, userI
 
 export const deleteMediaFromServer = async (mediaId: number): Promise<{ success: boolean; message?: string }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api1/media/${mediaId}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/api/media/${mediaId}`, { method: 'DELETE' });
 
     if (!response.ok) {
       const errorText = await response.text();

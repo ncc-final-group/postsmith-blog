@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState } from 'react';
 // 업로드 서비스 함수들 (임시로 여기에 정의)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
 
 interface UploadResponse {
   success: boolean;
@@ -30,7 +30,7 @@ const uploadImageToServer = async (file: File, altText?: string, userId?: number
       formData.append('blogId', blogId.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/image`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
       method: 'POST',
       body: formData,
     });
@@ -66,7 +66,7 @@ const uploadVideoToServer = async (file: File, altText?: string, userId?: number
       formData.append('blogId', blogId.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/video`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
       method: 'POST',
       body: formData,
     });
@@ -102,7 +102,7 @@ const uploadFileToServer = async (file: File, displayName?: string, userId?: num
       formData.append('blogId', blogId.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/api1/upload/file`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/file`, {
       method: 'POST',
       body: formData,
     });

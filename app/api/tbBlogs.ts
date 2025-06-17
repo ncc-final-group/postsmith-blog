@@ -40,6 +40,18 @@ export const getBlogById = async (id: number): Promise<Blog | null> => {
   return blogs.length > 0 ? blogs[0] : null;
 };
 
+// 사용자별 블로그 리스트 가져오기
+export const getBlogsByUserId = async (userId: number): Promise<Blog[]> => {
+  const query = `
+    SELECT *
+    FROM blogs
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `;
+
+  return await selectSQL<Blog>(query, [userId]);
+};
+
 // 블로그 작성자 정보 포함해서 가져오기
 export const getBlogWithAuthor = async (address: string): Promise<(Blog & { author?: string }) | null> => {
   const query = `
