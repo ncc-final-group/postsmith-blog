@@ -9,8 +9,8 @@ import { getContentsByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
 import { getRecentReplies } from './api/tbReplies';
 import { getActiveThemeByBlogId } from './api/tbThemes';
-import BlogLayout from './components/BlogLayout';
-import BlogProvider from './components/BlogProvider';
+import BlogLayout from '../components/BlogLayout';
+import BlogProvider from '../components/BlogProvider';
 import { renderTemplate } from '../lib/template/TemplateEngine';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수

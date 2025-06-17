@@ -32,19 +32,27 @@ export default function StatsChart() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const chartRef = useRef<any>(null);
 
+  const blogId = 2;
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
-        setStatsData(data.data);
-      } catch (error) {
-        throw new Error('Failed to fetch stats: ' + error);
+        const url =
+          statType === 'views'
+            ? `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/views/daily?blogId=${blogId}`
+            : `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/daily?blogId=${blogId}`;
+
+        const res = await fetch(url);
+        const data: StatsData[] = await res.json();
+        setStatsData(data);
+      } catch (e) {
+        //eslint-disable-next-line no-console
+        console.error('Failed to fetch stats', e);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [blogId, period, statType, timeOffset]);
 
   // 날짜를 YYYY-MM-DD 형식으로 포맷팅하는 함수
   const formatDate = (date: Date): string => {

@@ -34,7 +34,7 @@ const menuItems: MenuItem[] = [
   {
     key: 'comments',
     label: '댓글',
-    subItems: [{ label: '댓글 관리', route: '/comments' }],
+    subItems: [{ label: '댓글 관리', route: '/usermanage/comments' }],
   },
   {
     key: 'customize',
@@ -47,12 +47,12 @@ const menuItems: MenuItem[] = [
   {
     key: 'plugins',
     label: '플러그인',
-    subItems: [{ label: '플러그인 관리', route: '/plugins' }],
+    subItems: [{ label: '플러그인 관리', route: '/usermanage/plugins' }],
   },
   {
     key: 'admin',
     label: '관리',
-    subItems: [{ label: '블로그', route: '/admin/blog' }],
+    subItems: [{ label: '블로그', route: '/usermanage/blogs' }],
   },
 ];
 
