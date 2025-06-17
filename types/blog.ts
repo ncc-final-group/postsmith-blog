@@ -27,10 +27,10 @@ export interface Content {
 export interface Category {
   id: number;
   name: string;
-  description: string;
-  category_id?: number;
-  type: string;
-  sort_order: number;
-  post_count: number;
-  user_id: number;
+  description?: string;
+  categoryId?: number;       // snake_case -> camelCase 변경 및 옵셔널
+  sequence: number;
+  postCount?: number;        // snake_case -> camelCase, 옵셔널
+  blogId: number;            // snake_case -> camelCase
+  children?: Category[];
 }

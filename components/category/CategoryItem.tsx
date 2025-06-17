@@ -15,15 +15,17 @@ interface CategoryItemProps {
   onAdd: () => void | Promise<void>;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
-  onMove: () => void | Promise<void>;
+  onMove: (id: number) => void | Promise<void>;
   isExpanded?: boolean; // 펼침 상태 추가
   showExpandButton?: boolean; // 화살표 버튼 표시 여부
   onChangeOrder?: (category: Category, direction: "up" | "down") => void;
-  localCategories: Category[];   // 추가
+  localCategories: Category[]; // 추가
   editingCategoryId: number | null;
   setEditingCategoryId: (id: number | null) => void;
+  onLocalEdit: (id: number) => void;
   editingCategory: Category | null;
-  onLocalEdit: (updated: Category) => void;
+  onSaveEdit: (name: string, description: string) => void;
+  onCancelEdit: () => void;
   setLocalCategories: (categories: Category[]) => void;
   setIsDirty: (dirty: boolean) => void;
 }
@@ -45,6 +47,9 @@ export function CategoryItem({
   editingCategoryId,
   setEditingCategoryId,
   setLocalCategories,
+  onSaveEdit,
+  onCancelEdit,
+  onLocalEdit,
   setIsDirty,
   editingCategory, // ✅ props로 받음
 }: CategoryItemProps) {
@@ -54,12 +59,6 @@ export function CategoryItem({
   const [editDescription, setEditDescription] = useState(editingCategory?.description ?? '');
 
 
-  useEffect(() => {
-    if (editingCategory?.id === category.id) {
-      setEditName(editingCategory.name || '');
-      setEditDescription(editingCategory.description || '');
-    }
-  }, [editingCategory, category.id]);
 
   // isExpanded prop이 변경되면 로컬 상태도 업데이트
   useEffect(() => {
@@ -132,8 +131,8 @@ export function CategoryItem({
   return (
     <div
       ref={ref}
-      onMouseEnter={() => setIsHovered(true)}     // hover 시작
-      onMouseLeave={() => setIsHovered(false)}    // hover 종료
+      onMouseEnter={() => setIsHovered(true)} // hover 시작
+      onMouseLeave={() => setIsHovered(false)} // hover 종료
       className="transition-all duration-200"
       style={{
         opacity: isDragging ? 0.5 : 1,
@@ -187,13 +186,13 @@ export function CategoryItem({
               />
               <div className="flex space-x-2 pt-1">
                 <button
-                  onClick={handleCancelEdit}
+                  onClick={onCancelEdit}
                   className="text-xs text-gray-500 hover:text-gray-700"
                 >
                   취소
                 </button>
                 <button
-                  onClick={handleSaveEdit}
+                  onClick={() => onSaveEdit(editName, editDescription)}
                   disabled={!editName.trim()}
                   className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
                 >
@@ -234,9 +233,9 @@ export function CategoryItem({
         </div>
 
         <CategoryActionMenu
-          category={category}
+          category={{...category,}}
           onAdd={handleAddChild}
-          onEdit={(id) => setEditingCategoryId(id)}  // 이걸 직접 넘겨도 되고
+          onEdit={(id) => setEditingCategoryId(id)} // 이걸 직접 넘겨도 되고
           onDelete={() => {
             const hasChildren = category.children && category.children.length > 0;
             const isRoot = depth === 0;
@@ -264,16 +263,24 @@ export function CategoryItem({
               <CategoryItem
                 key={child.id}
                 category={child}
-                depth={depth + 1} // 부모의 depth + 1로 변경
+                depth={depth + 1}
                 moveItem={moveItem}
                 onAdd={onAdd}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onMove={onMove}
                 isExpanded={isExpanded}
-                showExpandButton={false} // 서브 카테고리에서는 화살표 버튼 숨김
+                showExpandButton={false}
+                onLocalEdit={onLocalEdit}
                 onChangeOrder={onChangeOrder}
                 localCategories={localCategories}
+                editingCategoryId={editingCategoryId}
+                setEditingCategoryId={setEditingCategoryId}
+                editingCategory={editingCategory}
+                setLocalCategories={setLocalCategories}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
+                setIsDirty={setIsDirty}
               />
             ))}
           {/* 마우스 오버 시에만 화살표 버튼 노출 */}

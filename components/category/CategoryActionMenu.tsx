@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
+import { Category } from '../../types/blog';
 
 interface CategoryActionMenuProps {
   category: Category; // 👈 이거 props로 추가해야 함

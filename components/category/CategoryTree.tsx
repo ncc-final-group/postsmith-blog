@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { CategoryItem } from "./CategoryItem";
-import { DropZone } from "./DropZone";
+import { CategoryItem } from './CategoryItem';
+import { DropZone } from './DropZone';
+
 
 //api 호출용
 export interface CategoryDto {
@@ -19,25 +20,19 @@ export interface CategoryDto {
 export interface Category extends CategoryDto {
   children?: Category[];
   depth?: number;
+  posts?: number;
 }
 
 // 최대 깊이 상수 추가
 const MAX_DEPTH = 2;
 
 interface CategoryTreeProps {
-  categories: Category[];
-  onMoveItem: (newTree: Category[]) => void;
+  categories: Category[],
+  onMoveItem: (newTree: Category[]) => void,
+  blogId: number
 }
 
-async function fetchNewTree(): Promise<Category[]> {
-  const res = await fetch('http://localhost:8080/api/categories/tree');
-  if (!res.ok) throw new Error('카테고리 트리 불러오기 실패');
-  return res.json();
-}
-
-
-
-export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
+export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreeProps) {
   const [expandedState, setExpandedState] = useState<{ [key: number]: boolean }>({});
   const [isDirty, setIsDirty] = useState(false);
   const [localCategories, setLocalCategories] = useState<Category[]>(categories);
@@ -49,8 +44,6 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
   const [editDescription, setEditDescription] = useState('');
   const [originalCategories, setOriginalCategories] = useState<Category[]>([]);
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
-  const [newCategoryDraft, setNewCategoryDraft] = useState<Partial<Category> | null>(null);
-
 
 
   let [tempId, setTempId] = useState(-1);
@@ -60,14 +53,11 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     setEditingCategoryId(categoryId);
   }
 
-  const currentEditingCategory = editingCategoryId
-    ? categories.find(cat => cat.id === editingCategoryId) ?? null
-    : null;
 
   const cleanTree = (categories: Category[]): Category[] => {
     return categories.map(cat => ({
       ...cat,
-      children: cat.children ? cleanTree(cat.children) : []
+      children: cat.children ? cleanTree(cat.children) : [],
     }));
   };
 
@@ -100,7 +90,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     return categories.map(cat => ({
       ...cat,
       depth,
-      children: cat.children ? setDepth(cat.children, depth + 1) : []
+      children: cat.children ? setDepth(cat.children, depth + 1) : [],
     }));
   }
 
@@ -117,7 +107,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     // 부모 카테고리 설정 및 폼 초기화
     const updatedParent = {
       ...parentCategory,
-      depth: parentCategory.depth ?? 0
+      depth: parentCategory.depth ?? 0,
     };
     setParentCategory(updatedParent);
     setNewChildName('');
@@ -130,18 +120,19 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       return;
     }
 
-    setTempId(prevTempId => prevTempId - 1); // 상태를 안전하게 감소 처리
+    const newId = tempId;
+    setTempId(prev => prev - 1);  // 비동기적으로 감소
 
     // 로컬 상태에 새 카테고리 추가
     const newChild: Category = {
-      id: tempId,
+      id: newId,
       name: newChildName,
       description: newChildDescription,
+      blogId: blogId,
       parentId: parentCategory.id,
-      blogId: parentCategory.blogId,
       sequence: (parentCategory.children?.length ?? 0) + 1,
       depth: (parentCategory.depth ?? 0) + 1,
-      children: []
+      children: [],
     };
 
     // 부모 카테고리의 children 배열에 추가
@@ -149,7 +140,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       if (cat.id === parentCategory.id) {
         return {
           ...cat,
-          children: [...(cat.children || []), newChild]
+          children: [...(cat.children || []), newChild],
         };
       }
       return cat;
@@ -204,12 +195,12 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
   };*/
 
   const handleEdit = (id: number) => {
-    console.log("handleEdit called with id:", id);
+    console.log('handleEdit called with id:', id);
     const categoryToEdit = findCategoryByIdDeep(categories, id);
-    console.log("find result:", categoryToEdit);
+    console.log('find result:', categoryToEdit);
 
     if (!categoryToEdit) {
-      console.error("Category with id", id, "not found");
+      console.error('Category with id', id, 'not found');
       return;
     }
 
@@ -219,9 +210,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
   };
 
 
-
-
-  const updateCategoryInTree = (
+  /*const updateCategoryInTree = (
     categories: Category[],
     targetId: number,
     updater: (cat: Category) => Partial<Category>
@@ -241,7 +230,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       }
       return cat;
     });
-  };
+  };*/
 
 
   const updateParentChildren = (categories: Category[], parentId: number, newChildren: Category[]): Category[] => {
@@ -303,7 +292,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     };
 
     if (targetCategory.depth === 0) {
-      const rootCats = clone.filter(c => c.depth === 0).sort((a,b) => a.sequence - b.sequence);
+      const rootCats = clone.filter(c => c.depth === 0).sort((a, b) => a.sequence - b.sequence);
       const index = rootCats.findIndex(c => c.id === targetCategory.id);
       if (index === -1) return;
 
@@ -324,7 +313,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       const parent = clone.find(c => c.id === targetCategory.parentId);
       if (!parent || !parent.children) return;
 
-      const children = [...parent.children].sort((a,b) => a.sequence - b.sequence);
+      const children = [...parent.children].sort((a, b) => a.sequence - b.sequence);
       const index = children.findIndex(c => c.id === targetCategory.id);
       if (index === -1) return;
 
@@ -365,7 +354,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       initialDraggedCategory.children.length > 0 &&
       newParentId !== null
     ) {
-      alert("자식 카테고리가 있는 루트 카테고리는 다른 카테고리로 이동할 수 없습니다. 먼저 자식 카테고리를 제거해주세요.");
+      alert('자식 카테고리가 있는 루트 카테고리는 다른 카테고리로 이동할 수 없습니다. 먼저 자식 카테고리를 제거해주세요.');
       return;
     }
 
@@ -409,7 +398,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         if (cat.id === newParentId) {
           return {
             ...cat,
-            children: [...(cat.children || []), { ...draggedCategory }]
+            children: [...(cat.children || []), { ...draggedCategory }],
           };
         } else if (cat.children) {
           return { ...cat, children: insertToParent(cat.children) };
@@ -417,7 +406,6 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         return cat;
       });
     };
-
 
 
     const updated = insertToParent(categoriesWithoutDragged);
@@ -461,14 +449,17 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       // 모든 카테고리를 평탄화하여 시퀀스 재정렬
       const flattenCategories = (categories: Category[], parentId: number | null = null): Category[] => {
         return categories.reduce((acc: Category[], category, index) => {
+
           const flatCategory = {
             ...category,
             parentId, // category 안의 parentId를 덮어씀
             sequence: index + 1,
             blogId: 1,
-            children: undefined
+            children: undefined,
           };
+
           acc.push(flatCategory);
+
           if (category.children) {
             acc.push(...flattenCategories(category.children, category.id));
           }
@@ -476,15 +467,18 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         }, []);
       };
 
+
+
       const sortedCategories = sortCategoriesRecursively(localCategories);
 
-      const flatCategories = flattenCategories(sortedCategories);
-
+      const flatCategories = flattenCategories(sortedCategories).map(c => ({
+        ...c,
+        blogId: 1 // 또는 dynamicBlogId
+      }));
 
       flatCategories.forEach(c => {
-        console.log(`- ${c.name} (id: ${c.id}, parent: ${c.parentId}, seq: ${c.sequence})`);
+        console.log(`- ${c.name} (id: ${c.id}, parent: ${c.parentId}, seq: ${c.sequence}, blogId: ${c.blogId},name: ${c.name}, description: ${c.description})`);
       });
-
 
 
       const res = await fetch('http://localhost:8080/api/categories', {
@@ -503,6 +497,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         setIsDirty(false);
         const newTree = await fetchNewTree();
         const cleanedTree = setDepth(newTree); // depth 재설정
+        setLocalCategories(cleanedTree)
         setOriginalCategories(JSON.parse(JSON.stringify(cleanedTree))); // <-- 이거 기준으로 원본 저장
         onMoveItem(cleanedTree); // 트리 렌더링에 반영
 
@@ -514,21 +509,15 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
   };
 
 
-  const deleteCategoryInTree = (categories: Category[], idsToDelete: number[]): Category[] => {
-    return categories
-      .filter(cat => !idsToDelete.includes(cat.id))
-      .map(cat => ({
-        ...cat,
-        children: cat.children ? deleteCategoryInTree(cat.children, idsToDelete) : [],
-      }));
-  };
+  
 
   const handleAddRootCategory = () => {
     const newId = tempId;
     setTempId(tempId - 1);
 
     const newCategory: Category = {
-      id: tempId,
+      id: newId,
+      blogId: blogId,
       name: '',
       description: '',
       parentId: null,
@@ -538,9 +527,15 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       posts: 0,
     };
 
+    const handleUndoChanges = () => {
+      setLocalCategories(JSON.parse(JSON.stringify(originalCategories)));
+      setIsDirty(false);
+    };
+
     setLocalCategories(prev => [...prev, newCategory]);
     setEditingCategoryId(newId);
     setEditingCategory(newCategory);
+
     setIsDirty(true);
   };
 
@@ -556,7 +551,6 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
       }
       return ids;
     };
-
     const findCategoryById = (cats: Category[], id: number): Category | null => {
       for (const cat of cats) {
         if (cat.id === id) return cat;
@@ -587,8 +581,6 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
     setLocalCategories(updated);
     setIsDirty(true);
   };
-
-
 
 
   const renderCategory = (category: Category, depth: number) => {
@@ -627,7 +619,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
                     취소
                   </button>
                   <button
-                    onClick={handleSaveEdit}
+                    onClick={() => handleSaveEdit(editName, editDescription)}
                     className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                     disabled={!editName.trim()}
                   >
@@ -642,9 +634,10 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
               depth={depth}
               moveItem={moveItem}
               onAdd={() => handleAddChild(category)}
-              onEdit={handleEdit}    // 상위 컴포넌트에 구현된 함수 넘기기
+              onEdit={handleEdit} // 상위 컴포넌트에 구현된 함수 넘기기
               onDelete={handleDelete}
-              onMove={() => {}}
+              onMove={() => {
+              }}
               isExpanded={expandedState[category.id] || false}
               showExpandButton={depth === 0}
               onChangeOrder={moveCategoryOrder}
@@ -652,6 +645,9 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
               editingCategoryId={editingCategoryId}
               setEditingCategoryId={setEditingCategoryId}
               editingCategory={editingCategory}
+              onLocalEdit={onEditClick}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
               setLocalCategories={setLocalCategories}
               setIsDirty={setIsDirty}
             />
@@ -747,7 +743,7 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         overflowX: 'auto',
         overflowY: 'auto',
         border: '1px solid #ccc',
-        borderRadius: '0.5rem'
+        borderRadius: '0.5rem',
       }}>
         <DropZone onDropToRoot={handleDropToRoot} />
         <div className="space-y-2">
@@ -773,8 +769,8 @@ export function CategoryTree({ categories, onMoveItem }: CategoryTreeProps) {
         <button
           onClick={saveChanges}
           className={`px-4 py-2 rounded transition-colors duration-200 shadow-md ${
-            isDirty 
-              ? 'bg-blue-500 text-white hover:bg-blue-600' 
+            isDirty
+              ? 'bg-blue-500 text-white hover:bg-blue-600'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
           disabled={!isDirty}
