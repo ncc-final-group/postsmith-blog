@@ -33,13 +33,35 @@ function setDepth(categories: Category[], depth = 0): Category[] {
   }));
 }
 
+const handleEditCategory = (categoryId: number, newName: string, newDescription: string) => {
+  setLocalCategories(prev =>
+    updateCategoryInTree(prev, categoryId, cat => ({
+      ...cat,
+      name: newName,
+      description: newDescription,
+    }))
+  );
+};
+
 export default function CategoriesPage() {
   const [treeData, setTreeData] = useState<Category[]>([]);
   const [savedData, setSavedData] = useState<Category[]>([]);
   const [nextTempId, setNextTempId] = useState(-1); // 신규 생성 시 음수 ID 관리용
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  function updateSequence(categories: Category[]): Category[] {
+    return categories.map((cat, index) => ({
+      ...cat,
+      sequence: index,
+      children: cat.children ? updateSequence(cat.children) : [],
+    }));
+  }
+
+  const handleMoveItem = (newTree: Category[]) => {
+    const updatedTree = updateSequence(newTree);
+    setTreeData(updatedTree);
+  };
 
   //저장할게 생기면 save 버튼 활성화 체크용 .
   const isDirty = JSON.stringify(treeData) !== JSON.stringify(savedData);
@@ -100,11 +122,11 @@ export default function CategoriesPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="p-6">
+      <div className="p-6 max-w-6xl">
         <h1 className="text-xl font-bold text-gray-800 mb-4">카테고리 관리</h1>
         <CategoryTree
           categories={treeData}
-          onMoveItem={setTreeData}
+          onMoveItem={handleMoveItem}
         />
       </div>
     </DndProvider>

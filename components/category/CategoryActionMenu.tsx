@@ -3,14 +3,16 @@
 import React, { useEffect, useRef, useState } from "react";
 
 interface CategoryActionMenuProps {
+  category: Category; // 👈 이거 props로 추가해야 함
   onAdd: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
   onMove: () => void;
   isRoot?: boolean;
 }
 
 export default function CategoryActionMenu({
+  category,
   onAdd,
   onEdit,
   onDelete,
@@ -19,6 +21,7 @@ export default function CategoryActionMenu({
 }: CategoryActionMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
 
   // 바깥 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -67,12 +70,11 @@ export default function CategoryActionMenu({
               하위 카테고리 추가
             </button>
           )}
-          <button
-            onClick={() => {
-              onEdit();
-              setOpen(false);
-            }}
-            className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+          <button onClick={() => {
+            onEdit(category.id);
+            setOpen(false);
+          }}
+          className="block w-full px-4 py-2 text-left hover:bg-gray-100"
           >
             수정
           </button>
@@ -87,7 +89,7 @@ export default function CategoryActionMenu({
           </button>
           <button
             onClick={() => {
-              onDelete();
+              onDelete(category.id);
               setOpen(false);
             }}
             className="block w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600"
