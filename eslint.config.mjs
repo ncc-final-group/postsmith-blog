@@ -11,7 +11,7 @@ const compat = new FlatCompat({ baseDirectory: __dirname });
 const eslintConfig = [
   ...compat.config({
     ignorePatterns: ['.next/**/*.ts', '.next/**/*.tsx', '**/*.config.mjs', '**/*.config.ts'],
-    extends: ['next/core-web-vitals'],
+    extends: ['next/core-web-vitals', 'prettier'],
     plugins: ['import'],
     rules: {
       camelcase: 'off',
@@ -21,7 +21,7 @@ const eslintConfig = [
       'no-underscore-dangle': 'off',
       'dot-notation': 'off',
       'max-len': ['warn', { code: 180, ignoreComments: true }],
-      indent: ['warn', 2],
+      indent: ['warn', 2, { flatTernaryExpressions: true, offsetTernaryExpressions: true, SwitchCase: 1 }],
       'no-plusplus': 'off',
       'object-curly-newline': ['error', { multiline: true }],
       'no-extra-semi': 'warn',
