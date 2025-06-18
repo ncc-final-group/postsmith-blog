@@ -13,7 +13,7 @@ const PostSmiths: React.FC = () => {
   });
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/blogs/userId/1')
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogs/userId/1`)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -51,7 +51,7 @@ const PostSmiths: React.FC = () => {
       description: formData.description,
     };
 
-    fetch(`http://localhost:8080/api/blogs/update/${selectedBlog.id}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogs/update/${selectedBlog.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedBlog),

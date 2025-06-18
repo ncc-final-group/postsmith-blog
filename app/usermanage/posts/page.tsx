@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -34,7 +35,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
+  const router = useRouter(); 
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
@@ -44,7 +45,7 @@ export default function BoardSitePage() {
     currentPage: 1,
     totalPages: 1,
   });
-
+  
   const uniqueCategories = useMemo(() => {
     return Array.from(new Set(boardData.posts.map((post) => post.categoryName).filter(Boolean)));
   }, [boardData.posts]);
@@ -157,9 +158,8 @@ export default function BoardSitePage() {
   }
 
   function handleViewStats(post: Post) {
-    alert(`통계 보기: ${post.title}`);
+    router.push(`/visits/${post.contentId}`);
   }
-
   const handlePageChange = (pageNum: number) => {
     if (pageNum < 1 || pageNum > boardData.totalPages) return;
 
