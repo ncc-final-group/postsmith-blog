@@ -19,6 +19,7 @@ interface Post {
   categoryPath?: string;
   totalViewCount: number;
   totalRepliesCount: number;
+  sequence: number;
 }
 
 interface BoardData {
@@ -35,7 +36,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const router = useRouter(); 
+  const router = useRouter();
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
@@ -45,7 +46,7 @@ export default function BoardSitePage() {
     currentPage: 1,
     totalPages: 1,
   });
-  
+
   const uniqueCategories = useMemo(() => {
     return Array.from(new Set(boardData.posts.map((post) => post.categoryName).filter(Boolean)));
   }, [boardData.posts]);
@@ -126,7 +127,7 @@ export default function BoardSitePage() {
   }
 
   function handleCreatePost() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/post');
   }
 
   function handlePostClick(post: Post) {}
@@ -154,7 +155,7 @@ export default function BoardSitePage() {
   }
 
   function handleEditPost(post: Post) {
-    alert(`수정: ${post.title}`);
+    router.push(`/edit/post/${post.sequence}`);
   }
 
   function handleViewStats(post: Post) {

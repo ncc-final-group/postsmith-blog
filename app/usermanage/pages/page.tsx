@@ -13,6 +13,7 @@ interface Page {
   title: string;
   isPublic: boolean;
   likes: number;
+  sequence: number;
   createdAt: string;
   categoryid?: string;
   categoryName?: string;
@@ -35,6 +36,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const router = useRouter();
 
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -127,7 +129,7 @@ export default function BoardSitePage() {
   }
 
   function handleCreatePage() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/page');
   }
 
   function handlePageClick(page: Page) {}
@@ -154,10 +156,9 @@ export default function BoardSitePage() {
     }
   }
 
-  function handleEditPage(page: Page) {
-    alert(`수정: ${page.title}`);
+   function handleEditPage(page: Page) {
+    router.push(`/edit/post/${page.sequence}`);
   }
-  const router = useRouter();
 
   function handleViewStats(page: Page) {
     router.push(`/visits/${page.contentId}`);
