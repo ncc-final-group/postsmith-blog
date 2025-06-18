@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import EditorContentHandler from '../../components/EditorContentHandler';
-import { useBlogStore } from '../store/blogStore';
+import EditorContentHandler from './EditorContentHandler';
+import { useBlogStore } from '../app/store/blogStore';
 
 interface BlogLayoutProps {
   blogId: number;

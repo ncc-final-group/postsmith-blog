@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -78,9 +79,11 @@ export default function BoardSitePage() {
   }, [boardData.pages, sortOrder, filterPrivacy, selectedCategory, searchTerm]);
 
   const PAGES_PER_PAGE = 5;
+
   useEffect(() => {
+    const blogId = 2;
     setIsLoading(true);
-    fetch('http://localhost:8088/api/contents/PAGE')
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/PAGE?blogId=${blogId}`)
       .then((res) => {
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
         return res.json();
@@ -153,9 +156,10 @@ export default function BoardSitePage() {
   function handleEditPage(page: Page) {
     alert(`수정: ${page.title}`);
   }
+  const router = useRouter();
 
   function handleViewStats(page: Page) {
-    alert(`통계 보기: ${page.title}`);
+    router.push(`/visits/${page.contentId}`);
   }
 
   const handlePageChange = (pageNum: number) => {
@@ -163,8 +167,8 @@ export default function BoardSitePage() {
 
     const start = (pageNum - 1) * PAGES_PER_PAGE;
     const end = pageNum * PAGES_PER_PAGE;
-
-    fetch('http://localhost:8088/api/contents/PAGE')
+    const blogId = 2;
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/PAGE?blogId=${blogId}`)
       .then((res) => res.json())
       .then((data: Page[]) => {
         const filteredPages = data.filter((page) => page.contentType === 'PAGE');
@@ -182,7 +186,7 @@ export default function BoardSitePage() {
     const newPrivacy = e.target.value === 'true';
 
     try {
-      const res = await fetch(`http://localhost:8088/api/contents/${page.contentId}/privacy?isPublic=${newPrivacy}`, { method: 'PATCH' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/${page.contentId}/privacy?isPublic=${newPrivacy}`, { method: 'PATCH' });
 
       if (!res.ok) {
         throw new Error(`서버 응답 오류: ${res.status}`);
@@ -203,7 +207,7 @@ export default function BoardSitePage() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://localhost:8088/api/contents/delete/${page.contentId}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/delete/${page.contentId}`, { method: 'DELETE' });
 
       if (!res.ok) {
         throw new Error(`서버 응답 오류: ${res.status}`);
@@ -232,7 +236,7 @@ export default function BoardSitePage() {
       try {
         const idsToDelete = Array.from(selectedPages);
 
-        const res = await fetch('http://localhost:8088/api/contents/delete', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(idsToDelete),
@@ -256,7 +260,7 @@ export default function BoardSitePage() {
       const contentIds = Array.from(selectedPages);
 
       try {
-        const res = await fetch('http://localhost:8088/api/contents/privacy', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/privacy`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contentIds, isPublic: newPrivacy }),
@@ -280,7 +284,7 @@ export default function BoardSitePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-6xl">
+      <div className="max-w-none">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
             페이지 관리
@@ -302,7 +306,7 @@ export default function BoardSitePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl pt-1">
+      <div className="max-w-none pt-1">
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <input

@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -34,7 +35,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
+  const router = useRouter();
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
@@ -79,8 +80,9 @@ export default function BoardSitePage() {
   const POSTS_PER_PAGE = 5;
 
   useEffect(() => {
+    const blogId = 2;
     setIsLoading(true);
-    fetch('http://localhost:8088/api/contents/POST')
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/POST?blogId=${blogId}`)
       .then((res) => {
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
         return res.json();
@@ -155,16 +157,16 @@ export default function BoardSitePage() {
   }
 
   function handleViewStats(post: Post) {
-    alert(`통계 보기: ${post.title}`);
+    router.push(`/visits/${post.contentId}`);
   }
-
   const handlePageChange = (pageNum: number) => {
     if (pageNum < 1 || pageNum > boardData.totalPages) return;
 
     const start = (pageNum - 1) * POSTS_PER_PAGE;
     const end = pageNum * POSTS_PER_PAGE;
+    const blogId = 2;
 
-    fetch('http://localhost:8088/api/contents/POST')
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/POST?blogId=${blogId}`)
       .then((res) => res.json())
       .then((data: Post[]) => {
         const filteredPosts = data.filter((post) => post.contentType === 'POSTS');
@@ -182,7 +184,7 @@ export default function BoardSitePage() {
     const newPrivacy = e.target.value === 'true';
 
     try {
-      const res = await fetch(`http://localhost:8088/api/contents/${post.contentId}/privacy?isPublic=${newPrivacy}`, { method: 'PATCH' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/${post.contentId}/privacy?isPublic=${newPrivacy}`, { method: 'PATCH' });
 
       if (!res.ok) {
         throw new Error(`서버 응답 오류: ${res.status}`);
@@ -203,7 +205,7 @@ export default function BoardSitePage() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://localhost:8088/api/contents/delete/${post.contentId}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/delete/${post.contentId}`, { method: 'DELETE' });
 
       if (!res.ok) {
         throw new Error(`서버 응답 오류: ${res.status}`);
@@ -232,7 +234,7 @@ export default function BoardSitePage() {
       try {
         const idsToDelete = Array.from(selectedPosts);
 
-        const res = await fetch('http://localhost:8088/api/contents/delete', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(idsToDelete),
@@ -256,7 +258,7 @@ export default function BoardSitePage() {
       const contentIds = Array.from(selectedPosts);
 
       try {
-        const res = await fetch('http://localhost:8088/api/contents/privacy', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/privacy`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contentIds, isPublic: newPrivacy }),

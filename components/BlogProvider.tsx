@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { useBlogStore } from '../store/blogStore';
+import { useBlogStore } from '../app/store/blogStore';
 
 interface BlogProviderProps {
   blogId: number;

@@ -17,7 +17,11 @@ interface StatsData {
   };
 }
 
-export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
+type Props = {
+  contentId: number;
+};
+
+export default function EachStatsSummary({ contentId }: Props) {
   const [statsData, setStatsData] = useState<StatsData>({
     today: { views: 0, visitors: 0 },
     yesterday: { views: 0, visitors: 0 },
@@ -33,8 +37,8 @@ export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
         setLoading(true);
 
         const [viewRes, visitRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/view/${blogId}`),
-          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/${blogId}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/each/view/${contentId}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/each/visit/${contentId}`),
         ]);
 
         if (!viewRes.ok || !visitRes.ok) {
@@ -73,7 +77,7 @@ export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
 
     const interval = setInterval(fetchStats, 5 * 60 * 1000); // 5분마다 갱신
     return () => clearInterval(interval);
-  }, [blogId]);
+  }, [contentId]);
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString();
@@ -128,11 +132,6 @@ export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
       <div className="flex-1 text-center">
         <div className="mb-2 text-sm text-gray-500">누적 방문자</div>
         <div className="text-2xl font-medium text-black">{formatNumber(statsData.total.visitors)}</div>
-      </div>
-      <div className="mx-4 h-12 border-l border-gray-400" />
-      <div className="flex-1 text-center">
-        <div className="mb-2 text-sm text-gray-500">구독자</div>
-        <div className="text-2xl font-medium text-black">0</div>
       </div>
     </div>
   );

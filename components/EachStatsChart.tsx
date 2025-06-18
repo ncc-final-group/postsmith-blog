@@ -19,12 +19,19 @@ interface StatsData {
   date: string;
   views: number;
   visitors: number;
+  contentTitle?: string;
+  cotentCreatedAt?: string;
+  cotentRepliesCount?: number;
 }
+
+type Props = {
+  contentId: number;
+};
 
 type PeriodType = 'daily' | 'weekly' | 'monthly';
 type StatType = 'views' | 'visitors';
 
-export default function StatsChart() {
+export default function EachStatsChart({ contentId }: Props) {
   const [statsData, setStatsData] = useState<StatsData[]>([]);
   const [period, setPeriod] = useState<PeriodType>('daily');
   const [statType, setStatType] = useState<StatType>('views');
@@ -32,15 +39,13 @@ export default function StatsChart() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const chartRef = useRef<any>(null);
 
-  const blogId = 2;
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const url =
           statType === 'views'
-            ? `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/views/daily?blogId=${blogId}`
-            : `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/daily?blogId=${blogId}`;
+            ? `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/each/views/daily?contentId=${contentId}`
+            : `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/each/visit/daily?contentId=${contentId}`;
 
         const res = await fetch(url);
         const data: StatsData[] = await res.json();
@@ -52,7 +57,7 @@ export default function StatsChart() {
     };
 
     fetchStats();
-  }, [blogId, period, statType, timeOffset]);
+  }, [contentId, period, statType, timeOffset]);
 
   // 날짜를 YYYY-MM-DD 형식으로 포맷팅하는 함수
   const formatDate = (date: Date): string => {
