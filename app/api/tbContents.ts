@@ -344,6 +344,7 @@ export interface PopularContent {
   content_id: number;
   sequence: number;
   title: string;
+  content_html: string;
   recent_reply_count: number;
   recent_visit_count: number;
   popularity_score: number;
@@ -356,6 +357,7 @@ export const getPopularContentsByBlogId = async (blogId: number, userId?: number
       c.id as content_id,
       c.sequence,
       c.title,
+      SUBSTRING(c.content_html, 1, 1000) as content_html,
       COALESCE(recent_replies.reply_count, 0) as recent_reply_count,
       COALESCE(recent_visits.visit_count, 0) as recent_visit_count,
       (COALESCE(recent_replies.reply_count, 0) + COALESCE(recent_visits.visit_count, 0)) as popularity_score
@@ -383,7 +385,79 @@ export const getPopularContentsByBlogId = async (blogId: number, userId?: number
     ) recent_visits ON c.id = recent_visits.content_id
     WHERE c.blog_id = ? ${userId !== undefined ? '' : 'AND c.is_public = 1'}
     ORDER BY popularity_score DESC, c.created_at DESC
-    LIMIT 5
+    LIMIT 20
+  `;
+
+  return await selectSQL<PopularContent>(query, [blogId]);
+};
+
+// 관리자용 최근 콘텐츠 조회 (is_public 상관없이 모든 콘텐츠)
+export const getRecentContentsForAdmin = async (blogId: number, limit: number = 20): Promise<Content[]> => {
+  const query = `
+    SELECT 
+      c.*,
+      cat.id as category_id,
+      cat.name as category_name,
+      cat.sequence as category_sequence,
+      cat.description as category_description,
+      (SELECT COUNT(*) FROM replies r WHERE r.content_id = c.id AND r.deleted_at IS NULL) as reply_count
+    FROM contents c
+    LEFT JOIN categories cat ON c.category_id = cat.id
+    WHERE c.blog_id = ? AND c.is_temp = 0
+    ORDER BY c.created_at DESC
+    LIMIT ?
+  `;
+  const rows = await selectSQL<any>(query, [blogId, limit]);
+
+  return rows.map((row) => ({
+    ...row,
+    category: row.category_id
+      ? {
+          id: row.category_id,
+          name: row.category_name,
+          sequence: row.category_sequence,
+          description: row.category_description,
+        }
+      : undefined,
+  }));
+};
+
+// 관리자용 인기 콘텐츠 조회 (is_public 상관없이 모든 콘텐츠)
+export const getPopularContentsByBlogIdForAdmin = async (blogId: number): Promise<PopularContent[]> => {
+  const query = `
+    SELECT 
+      c.id as content_id,
+      c.sequence,
+      c.title,
+      SUBSTRING(c.content_html, 1, 1000) as content_html,
+      COALESCE(recent_replies.reply_count, 0) as recent_reply_count,
+      COALESCE(recent_visits.visit_count, 0) as recent_visit_count,
+      (COALESCE(recent_replies.reply_count, 0) + COALESCE(recent_visits.visit_count, 0)) as popularity_score
+    FROM contents c
+    LEFT JOIN (
+      SELECT 
+        r.content_id,
+        COUNT(*) as reply_count
+      FROM replies r
+      WHERE r.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+      GROUP BY r.content_id
+    ) recent_replies ON c.id = recent_replies.content_id
+    LEFT JOIN (
+      SELECT 
+        cv.content_id,
+        COUNT(DISTINCT 
+          CASE 
+            WHEN cv.user_id IS NOT NULL THEN cv.user_id 
+            ELSE cv.ip 
+          END
+        ) as visit_count
+      FROM content_visits cv
+      WHERE cv.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+      GROUP BY cv.content_id
+    ) recent_visits ON c.id = recent_visits.content_id
+    WHERE c.blog_id = ? AND c.is_temp = 0
+    ORDER BY popularity_score DESC, c.created_at DESC
+    LIMIT 20
   `;
 
   return await selectSQL<PopularContent>(query, [blogId]);

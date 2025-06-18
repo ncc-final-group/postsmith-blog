@@ -68,13 +68,10 @@ export async function getActiveSkinId(blogId: number = 1): Promise<string> {
 // 블로그의 테마 업데이트
 export async function updateBlogTheme(blogId: number, themeId: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch('/api/blog/update-theme', {
-      method: 'PUT',
+    const response = await fetch(`/api/manage/blog-themes/${blogId}/apply-theme`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        blogId,
-        themeId,
-      }),
+      body: JSON.stringify({ themeId: parseInt(themeId) }), // themeId를 숫자로 변환
     });
 
     const result = await response.json();
@@ -85,12 +82,69 @@ export async function updateBlogTheme(blogId: number, themeId: string): Promise<
 
     return {
       success: true,
-      message: result.message,
+      message: '테마가 성공적으로 적용되었습니다.',
     };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : '테마 업데이트 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+// 블로그 테마 HTML/CSS 수정
+export async function updateBlogThemeContent(blogId: number, themeHtml?: string, themeCss?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await fetch(`/api/manage/blog-themes/${blogId}/content`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        themeHtml,
+        themeCss,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || '테마 콘텐츠 업데이트 실패');
+    }
+
+    return {
+      success: true,
+      message: '테마 콘텐츠가 성공적으로 업데이트되었습니다.',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '테마 콘텐츠 업데이트 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+// 블로그 테마 설정 수정
+export async function updateBlogThemeSetting(blogId: number, themeSetting: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await fetch(`/api/manage/blog-themes/${blogId}/setting`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ themeSetting }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || '테마 설정 업데이트 실패');
+    }
+
+    return {
+      success: true,
+      message: '테마 설정이 성공적으로 업데이트되었습니다.',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '테마 설정 업데이트 중 오류가 발생했습니다.',
     };
   }
 }

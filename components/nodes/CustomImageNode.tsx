@@ -152,7 +152,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     });
 
     // 드래그 앤 드롭 이벤트 처리
-    let dragStartY = 0;
+
     let dropIndicator: HTMLElement | null = null;
     let isDragImage = false;
     let currentDropTarget: HTMLElement | null = null;
@@ -187,13 +187,12 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
 
       isDragImage = true;
       currentDropTarget = null;
-      dragStartY = e.clientY;
 
       // 드래그 중 스타일
       container.style.opacity = '0.5';
       toggleSelection(false);
 
-      // 마우스 이동 이벤트 등록
+      // 마우스 이동 이벤트 정의
       const handleMouseMove = (moveEvent: MouseEvent) => {
         if (!isDragImage) return;
 
@@ -229,7 +228,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
         }
       };
 
-      // 마우스 업 이벤트에서 실제 드롭 처리
+      // 마우스 업 이벤트 정의
       const handleMouseUp = (upEvent: MouseEvent) => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -260,7 +259,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
                 let imageNode: CustomImageNode | null = null;
 
                 for (const child of root.getChildren()) {
-                  if ($isCustomImageNode(child) && child.__src === this.__src) {
+                  if (child instanceof CustomImageNode && child.__src === this.__src) {
                     imageNode = child;
                     break;
                   }
@@ -272,7 +271,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
                   const isUpperHalf = upEvent.clientY < rect.top + rect.height / 2;
 
                   // 새 이미지 노드 생성
-                  const newImageNode = $createCustomImageNode(imageNode.__src, imageNode.__alt, imageNode.__width, imageNode.__height, imageNode.__mediaId, imageNode.__alignment);
+                  const newImageNode = new CustomImageNode(imageNode.__src, imageNode.__alt, imageNode.__width, imageNode.__height, imageNode.__mediaId, imageNode.__alignment);
 
                   // 빈 paragraph 생성
                   const beforeParagraph = $createParagraphNode();
@@ -313,7 +312,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
                     imageNode.remove();
                   }
                 }
-              } catch (error) {
+              } catch {
                 // 에러 발생 시 조용히 처리
               }
             });
@@ -370,21 +369,7 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
       if (handleInfo.right) handle.style.right = handleInfo.right;
       if (handleInfo.transform) handle.style.transform = handleInfo.transform;
 
-      // 드래그 시작
-      handle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = img.offsetWidth;
-        startHeight = img.offsetHeight;
-        aspectRatio = startWidth / startHeight;
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-      });
-
+      // 리사이즈 핸들 마우스 이벤트 정의
       const handleMouseMove = (e: MouseEvent) => {
         if (!isDragging) return;
 
@@ -462,8 +447,8 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
           editorInstance.update(() => {
             // 현재 이미지 노드 찾기
             const root = $getRoot();
-            const imageNodes = root.getChildren().filter($isCustomImageNode);
-            const currentNode = imageNodes.find((node) => node.__src === this.__src);
+            const imageNodes = root.getChildren().filter((node: LexicalNode) => node instanceof CustomImageNode);
+            const currentNode = imageNodes.find((node) => (node as CustomImageNode).__src === this.__src);
 
             if (currentNode) {
               const writable = currentNode.getWritable();
@@ -473,6 +458,21 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
           });
         }
       };
+
+      // 드래그 시작
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = img.offsetWidth;
+        startHeight = img.offsetHeight;
+        aspectRatio = startWidth / startHeight;
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
 
       resizeContainer.appendChild(handle);
     });
@@ -546,5 +546,3 @@ export function $createCustomImageNode(
 ): CustomImageNode {
   return new CustomImageNode(src, alt, width, height, mediaId, alignment);
 }
-
-

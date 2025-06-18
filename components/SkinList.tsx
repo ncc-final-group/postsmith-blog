@@ -12,6 +12,8 @@ export interface Skin {
   themeHtml?: string;
   themeCss?: string;
   isActive?: boolean;
+  author?: string;
+  authorLink?: string;
 }
 
 type SkinListProps = {

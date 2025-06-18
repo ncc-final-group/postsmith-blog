@@ -173,21 +173,7 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       if (handleInfo.right) handle.style.right = handleInfo.right;
       if (handleInfo.transform) handle.style.transform = handleInfo.transform;
 
-      // 드래그 시작
-      handle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = video.offsetWidth;
-        startHeight = video.offsetHeight;
-        aspectRatio = startWidth / startHeight;
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-      });
-
+      // 함수들을 먼저 정의
       const handleMouseMove = (e: MouseEvent) => {
         if (!isDragging) return;
 
@@ -265,8 +251,8 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
           editorInstance.update(() => {
             // 현재 비디오 노드 찾기
             const root = $getRoot();
-            const videoNodes = root.getChildren().filter($isCustomVideoNode);
-            const currentNode = videoNodes.find((node) => node.__src === this.__src);
+            const videoNodes = root.getChildren().filter((node: LexicalNode) => node instanceof CustomVideoNode);
+            const currentNode = videoNodes.find((node) => (node as CustomVideoNode).__src === this.__src);
 
             if (currentNode) {
               const writable = currentNode.getWritable();
@@ -276,6 +262,21 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
           });
         }
       };
+
+      // 드래그 시작
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = video.offsetWidth;
+        startHeight = video.offsetHeight;
+        aspectRatio = startWidth / startHeight;
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
 
       resizeContainer.appendChild(handle);
     });

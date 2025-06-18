@@ -41,7 +41,7 @@ export async function getThemeByBlogId(blogId: number): Promise<ThemeData | null
 export async function getThemeByBlogAddress(address: string): Promise<ThemeData | null> {
   try {
     // 먼저 블로그 정보로 블로그 ID를 가져와야 함
-    const blogResponse = await fetch(`${process.env.NEXT_PUBLIC_SPRING_API_URL}/api/blog/address/${address}`, {
+    const blogResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/blog/address/${address}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });

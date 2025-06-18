@@ -1,3 +1,5 @@
+import { assert } from 'console';
+
 import { API_BASE_URL } from '../../../../lib/constants';
 import { getBlogByAddress } from '../../../api/tbBlogs';
 
@@ -6,35 +8,45 @@ import SkinList, { Skin } from '@components/SkinList';
 // 서버 컴포넌트용 테마 데이터 가져오기 함수
 async function getSkinsServer(): Promise<Skin[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/manage/themes/list`, {
+    const response = await fetch(`${API_BASE_URL}/api/themes/a`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
     });
-    const themes = await response.json();
 
-    // Spring API의 ThemesDto를 프론트엔드의 Skin 형식으로 변환
-    const skins = themes.map((theme: any) => ({
-      id: theme.id.toString(),
-      name: theme.name,
-      thumbnail: theme.thumbnailImage || 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
-      description: theme.description || '',
-      themeHtml: theme.themeHtml,
-      themeCss: theme.themeCss,
+    if (!response.ok) {
+      assert(false, 'Failed to fetch themes');
+    }
+
+    const themeTagsDtoList = await response.json();
+
+    // Spring API의 ThemeTagsDto를 프론트엔드의 Skin 형식으로 변환
+    const skins = themeTagsDtoList.map((item: any) => ({
+      id: item.theme.id.toString(),
+      name: item.theme.name,
+      thumbnail: item.theme.coverImage || 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
+      description: item.theme.description || '',
+      themeHtml: item.theme.html,
+      themeCss: item.theme.css,
+      author: item.theme.author,
+      authorLink: item.theme.authorLink,
     }));
 
     return skins;
   } catch (error) {
     // 오류 발생 시 기본 스킨 목록 반환
     return [
-      { id: '1', name: 'Odyssey', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', description: '기본 테마' },
-      { id: '2', name: 'Poster', thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb', description: '포스터 스타일' },
-      { id: '3', name: 'Whatever', thumbnail: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308', description: '자유로운 스타일' },
-      { id: '4', name: 'Letter', thumbnail: 'https://images.unsplash.com/photo-1464983953574-0892a716854b', description: '편지 스타일' },
-      { id: '5', name: 'Portfolio', thumbnail: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99', description: '포트폴리오 스타일' },
-      { id: '6', name: 'Book Club', thumbnail: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2', description: '북클럽 스타일' },
-      { id: '7', name: 'Magazine', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', description: '매거진 스타일' },
-      { id: '8', name: 'Square', thumbnail: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99', description: '스퀘어 스타일' },
+      { id: '11', name: 'PostSmith', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', description: '기본 테마' },
+      { id: '13', name: '쇼핑몰 전용 테마', thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb', description: '쇼핑몰에 적합한 기능이 포함된 테마입니다.' },
+      {
+        id: '14',
+        name: '비즈니스 사이트 테마',
+        thumbnail: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308',
+        description: '기업 사이트에 적합한 깔끔한 디자인입니다.',
+      },
+      { id: '16', name: '온라인 매거진 테마', thumbnail: 'https://images.unsplash.com/photo-1464983953574-0892a716854b', description: '온라인 잡지 및 뉴스에 적합한 테마입니다.' },
+      { id: '19', name: '블로그 포트폴리오 테마', thumbnail: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99', description: '포트폴리오에 최적화된 블로그형 테마.' },
+      { id: '20', name: '쇼핑몰 심플 테마', thumbnail: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2', description: '쇼핑몰에 필요한 기본 기능 중심의 테마.' },
     ];
   }
 }
@@ -42,22 +54,28 @@ async function getSkinsServer(): Promise<Skin[]> {
 // 서버 컴포넌트용 활성 스킨 데이터 가져오기 함수
 async function getActiveSkinServer(blogId: number = 1): Promise<Skin> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/manage/themes/my-themes/${blogId}`, {
+    // 새로운 blog-themes API 사용
+    const response = await fetch(`http://localhost:3000/api/manage/blog-themes/${blogId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
     });
-    const activeTheme = await response.json();
 
-    // Spring API의 ThemesDto를 프론트엔드의 Skin 형식으로 변환
+    if (!response.ok) {
+      assert(false, 'Failed to fetch blog theme');
+    }
+
+    const blogTheme = await response.json();
+
+    // BlogThemesDto를 프론트엔드의 Skin 형식으로 변환
     return {
-      id: activeTheme.id.toString(),
-      name: activeTheme.name,
-      thumbnail: activeTheme.thumbnailImage || 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
-      description: activeTheme.description || '',
-      themeHtml: activeTheme.themeHtml,
-      themeCss: activeTheme.themeCss,
-      isActive: true,
+      id: blogTheme.themeId?.toString() || '1',
+      name: blogTheme.themeName || 'Unknown Theme',
+      thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', // 기본 썸네일
+      description: '',
+      themeHtml: blogTheme.themeHtml,
+      themeCss: blogTheme.themeCss,
+      isActive: blogTheme.isActive || true,
     };
   } catch (error) {
     // 오류 발생 시 기본 활성 스킨 반환
