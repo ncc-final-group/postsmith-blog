@@ -35,7 +35,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const router = useRouter(); 
+  const router = useRouter();
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
@@ -45,7 +45,7 @@ export default function BoardSitePage() {
     currentPage: 1,
     totalPages: 1,
   });
-  
+
   const uniqueCategories = useMemo(() => {
     return Array.from(new Set(boardData.posts.map((post) => post.categoryName).filter(Boolean)));
   }, [boardData.posts]);

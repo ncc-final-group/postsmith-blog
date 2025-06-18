@@ -22,7 +22,6 @@ interface StatsData {
   contentTitle?: string;
   cotentCreatedAt?: string;
   cotentRepliesCount?: number;
-
 }
 
 type Props = {
@@ -39,8 +38,6 @@ export default function EachStatsChart({ contentId }: Props) {
   const [timeOffset, setTimeOffset] = useState(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const chartRef = useRef<any>(null);
-
-
 
   useEffect(() => {
     const fetchStats = async () => {
