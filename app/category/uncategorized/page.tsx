@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
@@ -11,8 +13,6 @@ import { getPopularContentsByBlogId, getUncategorizedContentsByBlogIdWithPaging,
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
-import BlogLayout from '../../components/BlogLayout';
-import BlogProvider from '../../components/BlogProvider';
 
 async function getBlogAddress(): Promise<string> {
   try {

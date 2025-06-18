@@ -21,8 +21,8 @@ import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
-import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 import Editor from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능

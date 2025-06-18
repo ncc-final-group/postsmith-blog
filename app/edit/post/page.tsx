@@ -21,8 +21,8 @@ import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
-import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 import Editor from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 
 // 카테고리 타입 정의
 interface Category {

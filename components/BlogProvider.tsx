@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 
 import { SidebarDataProvider } from './SidebarDataProvider';
-import { SidebarData } from '../api/sidebarData';
-import { useBlogStore } from '../store/blogStore';
+import { SidebarData } from '../app/api/sidebarData';
+import { useBlogStore } from '../app/store/blogStore';
 
 interface BlogProviderProps {
   blogId: number;

@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getThemeByBlogId } from '../../../lib/themeService';
@@ -9,8 +11,6 @@ import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getContentsByCategoryNameWithPaging } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
-import BlogLayout from '../../components/BlogLayout';
-import BlogProvider from '../../components/BlogProvider';
 
 async function getSubdomain(): Promise<string> {
   const h = await headers();

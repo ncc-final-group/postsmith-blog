@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
 import ContentStats from '../../../components/ContentStats';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
@@ -10,8 +12,6 @@ import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
-import BlogLayout from '../../components/BlogLayout';
-import BlogProvider from '../../components/BlogProvider';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {

@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import BlogLayout from '../../components/BlogLayout';
+import BlogProvider from '../../components/BlogProvider';
 import { renderTemplate } from '../../lib/template/TemplateEngine';
 import { getThemeByBlogId } from '../../lib/themeService';
 import { getSidebarData } from '../api/sidebarData';
@@ -8,8 +10,6 @@ import { getBlogByAddress } from '../api/tbBlogs';
 import { getCategoriesByBlogId } from '../api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging } from '../api/tbContents';
 import { getMenusByBlogId } from '../api/tbMenu';
-import BlogLayout from '../components/BlogLayout';
-import BlogProvider from '../components/BlogProvider';
 
 async function getBlogAddress(): Promise<string> {
   try {

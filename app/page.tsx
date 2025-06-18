@@ -8,11 +8,11 @@ import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import { getThemeByBlogId } from '../lib/themeService';
-import BlogLayout from './components/BlogLayout';
-import BlogProvider from './components/BlogProvider';
+import BlogLayout from '../components/BlogLayout';
+import BlogProvider from '../components/BlogProvider';
 import { getCurrentUser } from '../lib/auth';
 import { renderTemplate } from '../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../lib/themeService';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수
 function formatDate(date: Date): string {
