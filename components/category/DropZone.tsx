@@ -14,7 +14,6 @@ export function DropZone({ onDropToRoot }: DropZoneProps) {
     accept: 'CATEGORY',
     drop: (dragged: { id: number }, monitor) => {
       if (monitor.didDrop()) return;
-      console.log('DropZone drop', dragged.id);
       onDropToRoot(dragged.id);
     },
     collect: (monitor) => ({ isOver: monitor.isOver() }),

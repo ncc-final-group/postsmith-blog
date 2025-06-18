@@ -60,6 +60,7 @@ export function CategoryItem({
 
 
 
+
   // isExpanded prop이 변경되면 로컬 상태도 업데이트
   useEffect(() => {
     setIsLocalExpanded(isExpanded);
@@ -77,7 +78,6 @@ export function CategoryItem({
   });
 
   const [isHovered, setIsHovered] = useState(false);
-
 
   const [{ isOver }, dropRef] = useDrop({
     accept: 'CATEGORY',
@@ -131,8 +131,6 @@ export function CategoryItem({
   return (
     <div
       ref={ref}
-      onMouseEnter={() => setIsHovered(true)} // hover 시작
-      onMouseLeave={() => setIsHovered(false)} // hover 종료
       className="transition-all duration-200"
       style={{
         opacity: isDragging ? 0.5 : 1,
@@ -149,6 +147,8 @@ export function CategoryItem({
             ? 'text-base font-semibold text-gray-900'
             : 'text-sm font-normal text-gray-700 bg-gray-50')
         }
+        onMouseEnter={() => setIsHovered(true)} // hover 시작
+        onMouseLeave={() => setIsHovered(false)} // hover 종료
         style={{
           padding: '0.5rem 1rem',
           width: '100%',
@@ -258,31 +258,30 @@ export function CategoryItem({
       {/* 자식 노드 재귀 렌더링 */}
       {hasChildren && isLocalExpanded && (
         <div className="mt-2 space-y-1">
-          {category.children?.sort((a, b) => a.sequence - b.sequence)
-            .map((child) => (
-              <CategoryItem
-                key={child.id}
-                category={child}
-                depth={depth + 1}
-                moveItem={moveItem}
-                onAdd={onAdd}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onMove={onMove}
-                isExpanded={isExpanded}
-                showExpandButton={false}
-                onLocalEdit={onLocalEdit}
-                onChangeOrder={onChangeOrder}
-                localCategories={localCategories}
-                editingCategoryId={editingCategoryId}
-                setEditingCategoryId={setEditingCategoryId}
-                editingCategory={editingCategory}
-                setLocalCategories={setLocalCategories}
-                onSaveEdit={onSaveEdit}
-                onCancelEdit={onCancelEdit}
-                setIsDirty={setIsDirty}
-              />
-            ))}
+          {category.children?.map((child) => (
+            <CategoryItem
+              key={`${depth}-${child.id}`}
+              category={child}
+              depth={depth + 1}
+              moveItem={moveItem}
+              onAdd={onAdd}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onMove={onMove}
+              isExpanded={isExpanded}
+              showExpandButton={false}
+              onLocalEdit={onLocalEdit}
+              onChangeOrder={onChangeOrder}
+              localCategories={localCategories}
+              editingCategoryId={editingCategoryId}
+              setEditingCategoryId={setEditingCategoryId}
+              editingCategory={editingCategory}
+              setLocalCategories={setLocalCategories}
+              onSaveEdit={onSaveEdit}
+              onCancelEdit={onCancelEdit}
+              setIsDirty={setIsDirty}
+            />
+          ))}
           {/* 마우스 오버 시에만 화살표 버튼 노출 */}
 
         </div>

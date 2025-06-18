@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { CategoryItem } from './CategoryItem';
 import { DropZone } from './DropZone';
@@ -70,16 +70,32 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
     if (originalCategories.length === 0) {
       setOriginalCategories(JSON.parse(JSON.stringify(cleaned)));
     }
-
-    console.log('초기 originalCategories:', cleaned);
   }, [categories]);
+
+  useEffect(() => {
+    if (editingCategoryId) {
+      const findCategory = (categories: Category[]): Category | null => {
+        for (const cat of categories) {
+          if (cat.id === editingCategoryId) return cat;
+          if (cat.children) {
+            const found = findCategory(cat.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      setEditingCategory(findCategory(localCategories));
+    } else {
+      setEditingCategory(null);
+    }
+  }, [editingCategoryId, localCategories]);
 
 
   const handleUndoChanges = () => {
     if (!isDirty) return;
 
     if (confirm('변경사항을 되돌리시겠습니까?')) {
-      console.log('undo originalCategories:', originalCategories);
       setLocalCategories(originalCategories);
       setIsDirty(false);
       onMoveItem(originalCategories);
@@ -96,7 +112,6 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
 
   //생성
   const handleAddChild = (parentCategory: Category) => {
-    alert('handleAddChild 호출됨');
 
     // 깊이 체크
     if ((parentCategory.depth ?? 0) >= MAX_DEPTH - 1) {
@@ -121,7 +136,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
     }
 
     const newId = tempId;
-    setTempId(prev => prev - 1);  // 비동기적으로 감소
+    setTempId(prev => prev - 1);
 
     // 로컬 상태에 새 카테고리 추가
     const newChild: Category = {
@@ -169,7 +184,6 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
   // 재귀 탐색 함수 자체도 로그 찍어보기 (선택사항)
   function findCategoryByIdDeep(categories: Category[] | undefined, id: number): Category | undefined {
     if (!categories || !Array.isArray(categories)) {
-      console.error('findCategoryByIdDeep - categories is not array:', categories);
       return undefined;
     }
 
@@ -183,24 +197,11 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
     return undefined;
   }
 
-  /*const handleEdit = (id: number) => {
-    const targetCategory = findCategoryByIdDeep(localCategories, id);
-    if (!targetCategory) return;
-    console.log("Edit clicked, id:", id);
-    onEditClick(id);
-
-    setEditingCategory(targetCategory);
-    setEditName(targetCategory.name);
-    setEditDescription(targetCategory.description || '');
-  };*/
 
   const handleEdit = (id: number) => {
-    console.log('handleEdit called with id:', id);
     const categoryToEdit = findCategoryByIdDeep(categories, id);
-    console.log('find result:', categoryToEdit);
 
     if (!categoryToEdit) {
-      console.error('Category with id', id, 'not found');
       return;
     }
 
@@ -210,7 +211,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
   };
 
 
-  /*const updateCategoryInTree = (
+  const updateCategoryInTree = (
     categories: Category[],
     targetId: number,
     updater: (cat: Category) => Partial<Category>
@@ -230,7 +231,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
       }
       return cat;
     });
-  };*/
+  };
 
 
   const updateParentChildren = (categories: Category[], parentId: number, newChildren: Category[]): Category[] => {
@@ -260,13 +261,18 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
   const handleSaveEdit = (name: string, description: string) => {
     if (!editingCategory) return;
 
-    const updated = localCategories.map((cat) => {
-      if (cat.id === editingCategory.id) {
-        return { ...cat, name, description };
-      }
-      return cat;
-    });
+    const updateCategoryById = (categories: Category[]): Category[] => {
+      return categories.map((cat) => {
+        if (cat.id === editingCategory.id) {
+          return { ...cat, name, description };
+        } else if (cat.children) {
+          return { ...cat, children: updateCategoryById(cat.children) };
+        }
+        return cat;
+      });
+    };
 
+    const updated = updateCategoryById(localCategories);
     setLocalCategories(updated);
     setIsDirty(true);
     setEditingCategoryId(null);
@@ -278,58 +284,42 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
     setEditingCategory(null);
   };
 
-  const moveCategoryOrder = (targetCategory: Category, direction: 'up' | 'down') => {
-    console.log('moveCategoryOrder 호출:', targetCategory.name, direction);
+  const moveCategoryOrder = useCallback((targetCategory: Category, direction: 'up' | 'down') => {
+    const reorder = (list: Category[], id: number): Category[] => {
+      const idx = list.findIndex(c => c.id === id);
+      if (idx === -1) return list;
 
-    const clone = [...localCategories];
+      const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapWith < 0 || swapWith >= list.length) return list;
 
-    const swapInList = (list: Category[], idx1: number, idx2: number) => {
       const newList = [...list];
-      [newList[idx1], newList[idx2]] = [newList[idx2], newList[idx1]];
+      [newList[idx], newList[swapWith]] = [newList[swapWith], newList[idx]];
 
-      // sequence도 다시 부여 (1부터 순서대로)
-      return newList.map((cat, i) => ({ ...cat, sequence: i + 1 }));
+      return newList.map((cat, i) => ({
+        ...cat,
+        sequence: i + 1,
+      }));
     };
 
+    let updatedCategories: Category[];
+
     if (targetCategory.depth === 0) {
-      const rootCats = clone.filter(c => c.depth === 0).sort((a, b) => a.sequence - b.sequence);
-      const index = rootCats.findIndex(c => c.id === targetCategory.id);
-      if (index === -1) return;
-
-      const swapWithIndex = direction === 'up' ? index - 1 : index + 1;
-      if (swapWithIndex < 0 || swapWithIndex >= rootCats.length) return;
-
-      const reordered = swapInList(rootCats, index, swapWithIndex);
-
-      // clone 내 rootCats 갱신
-      const updated = clone.map(cat => {
-        const updatedCat = reordered.find(rc => rc.id === cat.id);
-        return updatedCat ? updatedCat : cat;
-      });
-
-      setLocalCategories(updated);
+      const rootList = localCategories.slice().sort((a, b) => a.sequence - b.sequence);
+      const reordered = reorder(rootList, targetCategory.id);
+      updatedCategories = reordered;
     } else {
-      // depth 1 (서브 카테고리)
-      const parent = clone.find(c => c.id === targetCategory.parentId);
-      if (!parent || !parent.children) return;
-
-      const children = [...parent.children].sort((a, b) => a.sequence - b.sequence);
-      const index = children.findIndex(c => c.id === targetCategory.id);
-      if (index === -1) return;
-
-      const swapWithIndex = direction === 'up' ? index - 1 : index + 1;
-      if (swapWithIndex < 0 || swapWithIndex >= children.length) return;
-
-      const reorderedChildren = swapInList(children, index, swapWithIndex);
-
-      // 부모 카테고리에 변경된 children 반영
-      const updated = updateParentChildren(clone, parent.id, reorderedChildren);
-      setLocalCategories(updated);
-
+      updatedCategories = updateCategoryInTree(localCategories, targetCategory.parentId!, (parent) => {
+        const sortedChildren = [...(parent.children || [])].sort((a, b) => a.sequence - b.sequence);
+        const reorderedChildren = reorder(sortedChildren, targetCategory.id);
+        return { children: reorderedChildren };
+      });
     }
 
+    setLocalCategories(updatedCategories);
     setIsDirty(true);
-  };
+  },[localCategories]);
+
+
 
   const sortCategoriesRecursively = (categories: Category[]): Category[] => {
     return categories
@@ -454,7 +444,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
             ...category,
             parentId, // category 안의 parentId를 덮어씀
             sequence: index + 1,
-            blogId: 1,
+            blog: 1,
             children: undefined,
           };
 
@@ -476,11 +466,6 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
         blogId: 1 // 또는 dynamicBlogId
       }));
 
-      flatCategories.forEach(c => {
-        console.log(`- ${c.name} (id: ${c.id}, parent: ${c.parentId}, seq: ${c.sequence}, blogId: ${c.blogId},name: ${c.name}, description: ${c.description})`);
-      });
-
-
       const res = await fetch('http://localhost:8080/api/categories', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -493,17 +478,29 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
         return await res.json();
       };
 
+      const newPostCounts = async (): Promise<Record<number, number>> => {
+        const res = await fetch(`http://localhost:8080/api/categories/posts/counts?blogId=1`);
+        return await res.json();
+      };
+
       if (res.ok) {
         setIsDirty(false);
         const newTree = await fetchNewTree();
         const cleanedTree = setDepth(newTree); // depth 재설정
-        setLocalCategories(cleanedTree)
-        setOriginalCategories(JSON.parse(JSON.stringify(cleanedTree))); // <-- 이거 기준으로 원본 저장
-        onMoveItem(cleanedTree); // 트리 렌더링에 반영
+        const postCounts = await newPostCounts();
+
+        const updatedTreeWithCounts = cleanedTree.map(cat => ({
+          ...cat,
+          posts: postCounts[cat.id] ?? 0
+        }));
+
+        // ✅ 이걸로 덮어쓰기
+        setLocalCategories(updatedTreeWithCounts);
+        setOriginalCategories(JSON.parse(JSON.stringify(updatedTreeWithCounts)));
+        onMoveItem(updatedTreeWithCounts);
 
       }
     } catch (error) {
-      // 에러 처리
       alert('카테고리 저장에 실패했습니다.');
     }
   };
@@ -517,7 +514,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
 
     const newCategory: Category = {
       id: newId,
-      blogId: blogId,
+      blogId: blogId != null ? blogId : 1,  // 이게 더 안전
       name: '',
       description: '',
       parentId: null,
@@ -527,15 +524,10 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
       posts: 0,
     };
 
-    const handleUndoChanges = () => {
-      setLocalCategories(JSON.parse(JSON.stringify(originalCategories)));
-      setIsDirty(false);
-    };
 
     setLocalCategories(prev => [...prev, newCategory]);
     setEditingCategoryId(newId);
     setEditingCategory(newCategory);
-
     setIsDirty(true);
   };
 
@@ -582,13 +574,32 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
     setIsDirty(true);
   };
 
+  useEffect(() => {
+    const fetchPostCounts = async () => {
+      const res = await fetch(`http://localhost:8080/api/categories/posts/counts?blogId=${blogId}`);
+      const counts: Record<number, number> = await res.json();
+
+      const mergeCounts = (categories: Category[]): Category[] => {
+        return categories.map(category => ({
+          ...category,
+          posts: counts[category.id] ?? 0,
+          children: category.children ? mergeCounts(category.children) : [],
+        }));
+      };
+
+      const newCategoriesWithPosts = mergeCounts(localCategories);
+      setLocalCategories(newCategoriesWithPosts);
+    };
+
+    if (localCategories.length > 0) {
+      fetchPostCounts();
+    }
+  }, [blogId]);
+
+
 
   const renderCategory = (category: Category, depth: number) => {
     const isEditing = editingCategory?.id === category.id;
-    const hasChildren = category.children && category.children.length > 0;
-
-    console.log('editingCategory:', editingCategory);
-    console.log(`renderCategory: ${category.name}, isEditing: ${isEditing}`);
 
     return (
 

@@ -62,7 +62,6 @@ export default function CategoryActionMenu({
           {isRoot && (
             <button
               onClick={() => {
-                alert('CategoryActionMenu onAdd 호출됨');
                 onAdd();
                 setOpen(false);
               }}
