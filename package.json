@@ -16,7 +16,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.4",
     "@hello-pangea/dnd": "^18.0.1",
-    "@lexical/react": "^0.31.2",
+    "@lexical/react": "^0.32.1",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.4.9",
     "chartjs-plugin-crosshair": "^2.0.0",
@@ -35,8 +35,8 @@
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
     "react-redux": "^9.2.0",
-    "zustand": "^5.0.5",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

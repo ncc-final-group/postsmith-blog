@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import MenuItem from './MenuItem';
 import { MenuType } from './Types';
 
@@ -6,11 +7,11 @@ interface Props {
   menus: MenuType[];
   setMenus: (menus: MenuType[]) => void;
   onDelete: (id: number) => void;
-  setHasChanges: (v: boolean) => void;  // ✅ 추가
+  setHasChanges: (v: boolean) => void; // ✅ 추가
 }
 
 const MenuList: React.FC<Props> = ({ menus, setMenus, onDelete }) => {
-  const [hasChanges, setHasChanges] = useState(false);  // 변경사항 감지용
+  const [hasChanges, setHasChanges] = useState(false); // 변경사항 감지용
 
   const moveMenu = (dragIndex: number, hoverIndex: number) => {
     const updatedMenus = [...menus];
@@ -23,13 +24,7 @@ const MenuList: React.FC<Props> = ({ menus, setMenus, onDelete }) => {
   return (
     <div>
       {menus.map((menu, index) => (
-        <MenuItem
-          key={menu.id}
-          menu={menu}
-          index={index}
-          moveMenu={moveMenu}
-          onDelete={onDelete}
-        />
+        <MenuItem key={menu.id} menu={menu} index={index} moveMenu={moveMenu} onDelete={onDelete} />
       ))}
     </div>
   );

@@ -26,7 +26,7 @@ body {
 }
 
 .btn {
-  @apply px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200;
+  @apply rounded bg-gray-100 px-3 py-1.5 hover:bg-gray-200;
 }
 .btn-blue {
   @apply bg-blue-500 text-white hover:bg-blue-600;
@@ -38,5 +38,5 @@ body {
   @apply bg-gray-300 text-black hover:bg-gray-400;
 }
 .input {
-  @apply border px-2 py-1 rounded w-full;
+  @apply w-full rounded border px-2 py-1;
 }

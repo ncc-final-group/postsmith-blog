@@ -28,9 +28,9 @@ export interface Category {
   id: number;
   name: string;
   description?: string;
-  categoryId?: number;       // snake_case -> camelCase 변경 및 옵셔널
+  categoryId?: number; // snake_case -> camelCase 변경 및 옵셔널
   sequence: number;
-  postCount?: number;        // snake_case -> camelCase, 옵셔널
-  blogId: number;            // snake_case -> camelCase
+  postCount?: number; // snake_case -> camelCase, 옵셔널
+  blogId: number; // snake_case -> camelCase
   children?: Category[];
 }

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+
 import { MenuType } from './Types';
 
-interface CategoryOption{
+interface CategoryOption {
   id: number;
   name: string;
 }
 
-interface PageOption{
+interface PageOption {
   id: number;
   title: string;
 }
@@ -15,22 +16,20 @@ interface AddMenuFormProps {
   onAdd: (menu: MenuType) => void;
   onCancel: () => void;
   existingMenus: MenuType[];
-  categories:CategoryOption[];
+  categories: CategoryOption[];
   pages: PageOption[];
 }
 
-
-function isPageOption(item:any): item is PageOption {
+function isPageOption(item: any): item is PageOption {
   return item && typeof item.id === 'number' && typeof item.title === 'string';
 }
 
-function isCategoryOption(item:any): item is CategoryOption {
+function isCategoryOption(item: any): item is CategoryOption {
   return item && typeof item.id === 'number' && typeof item.name === 'string';
 }
 
-type pageOption = { id: number; title: string;};
-type categoryOption = { id: number; name: string;};
-
+type pageOption = { id: number; title: string };
+type categoryOption = { id: number; name: string };
 
 const defaultMenus = [
   { name: '홈', uri: '/', key: 'home' },
@@ -38,7 +37,7 @@ const defaultMenus = [
   { name: '방명록', uri: '/guestbook', key: 'guestbook' },
 ];
 
-const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenus ,categories, pages }) => {
+const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenus, categories, pages }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState<'DEFAULT' | 'PAGE' | 'CATEGORY' | 'MANUAL'>('MANUAL');
   const [selectedItem, setSelectedItem] = useState('');
@@ -46,11 +45,7 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
   const [isBlank, setIsBlank] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-
-
-  const availableDefaultMenus = defaultMenus.filter(
-    (m) => !existingMenus.some((em) => em.type === 'DEFAULT' && em.name === m.name)
-  );
+  const availableDefaultMenus = defaultMenus.filter((m) => !existingMenus.some((em) => em.type === 'DEFAULT' && em.name === m.name));
 
   const handleAdd = () => {
     if (type !== 'DEFAULT' && !name.trim()) {
@@ -58,19 +53,13 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
       return;
     }
 
-    if (
-      (type === 'DEFAULT' && !selectedItem) ||
-      ((type === 'PAGE' || type === 'CATEGORY') && !selectedItem) ||
-      (type === 'MANUAL' && !uri.trim())
-    ) {
+    if ((type === 'DEFAULT' && !selectedItem) || ((type === 'PAGE' || type === 'CATEGORY') && !selectedItem) || (type === 'MANUAL' && !uri.trim())) {
       setErrorMessage('유효한 항목 또는 URI를 선택/입력해주세요.');
       return;
     }
 
     // 중복 검사 (이름 + 타입 기준)
-    const duplicate = existingMenus.some(
-      (menu) => menu.name === name.trim() && menu.type === type
-    );
+    const duplicate = existingMenus.some((menu) => menu.name === name.trim() && menu.type === type);
     if (duplicate) {
       setErrorMessage('이미 같은 이름과 유형의 메뉴가 존재합니다.');
       return;
@@ -121,11 +110,7 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
   const renderSelector = () => {
     if (type === 'DEFAULT') {
       return availableDefaultMenus.length > 0 ? (
-        <select
-          value={selectedItem}
-          onChange={(e) => setSelectedItem(e.target.value)}
-          className="border rounded p-2 w-1/2"
-        >
+        <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)} className="w-1/2 rounded border p-2">
           {availableDefaultMenus.map((item) => (
             <option key={item.key} value={item.key}>
               {item.name}
@@ -133,29 +118,17 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
           ))}
         </select>
       ) : (
-        <div className="text-gray-500 p-2 w-1/2">모두 표시 중입니다</div>
+        <div className="w-1/2 p-2 text-gray-500">모두 표시 중입니다</div>
       );
     }
 
     if (type === 'MANUAL') {
-      return (
-        <input
-          type="text"
-          value={uri}
-          onChange={(e) => setUri(e.target.value)}
-          className="border rounded p-2 w-1/2"
-          placeholder="http://..."
-        />
-      );
+      return <input type="text" value={uri} onChange={(e) => setUri(e.target.value)} className="w-1/2 rounded border p-2" placeholder="http://..." />;
     }
 
     const list: (PageOption | CategoryOption)[] = type === 'PAGE' ? pages : categories;
     return (
-      <select
-        value={selectedItem}
-        onChange={(e) => setSelectedItem(e.target.value)}
-        className="border rounded p-2 w-1/2"
-      >
+      <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)} className="w-1/2 rounded border p-2">
         {list.length > 0 ? (
           list.map((item, index) => {
             if (type === 'PAGE' && isPageOption(item)) {
@@ -181,29 +154,21 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
             }
           })
         ) : (
-          <option disabled>
-            {type === 'PAGE' ? '페이지 없음' : '카테고리 없음'}
-          </option>
+          <option disabled>{type === 'PAGE' ? '페이지 없음' : '카테고리 없음'}</option>
         )}
       </select>
     );
   };
 
   return (
-    <div className="border p-4 rounded-lg bg-gray-50 mt-4">
+    <div className="mt-4 rounded-lg border bg-gray-50 p-4">
       {type !== 'DEFAULT' && (
         <div className="mb-2">
-          <input
-            type="text"
-            placeholder="메뉴 이름"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border rounded w-full p-2"
-          />
+          <input type="text" placeholder="메뉴 이름" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border p-2" />
         </div>
       )}
 
-      <div className="flex gap-2 mb-2">
+      <div className="mb-2 flex gap-2">
         <select
           value={type}
           onChange={(e) => {
@@ -217,7 +182,7 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
               setSelectedItem(categories[0]?.name || '');
             }
           }}
-          className="border rounded p-2 w-1/2"
+          className="w-1/2 rounded border p-2"
         >
           <option value="DEFAULT">기본 메뉴</option>
           <option value="PAGE">페이지</option>
@@ -228,27 +193,18 @@ const AddMenuForm: React.FC<AddMenuFormProps> = ({ onAdd, onCancel, existingMenu
         {renderSelector()}
       </div>
 
-      <div className="flex items-center mb-3 gap-2">
-        <input
-          type="checkbox"
-          id="isBlank"
-          checked={isBlank}
-          onChange={(e) => setIsBlank(e.target.checked)}
-        />
+      <div className="mb-3 flex items-center gap-2">
+        <input type="checkbox" id="isBlank" checked={isBlank} onChange={(e) => setIsBlank(e.target.checked)} />
         <label htmlFor="isBlank">새 창에서 열기</label>
       </div>
 
-      {errorMessage && (
-        <div className="text-red-600 text-sm mb-3">
-          {errorMessage}
-        </div>
-      )}
+      {errorMessage && <div className="mb-3 text-sm text-red-600">{errorMessage}</div>}
 
       <div className="flex justify-end gap-2">
-        <button className="border px-4 py-1 rounded" onClick={onCancel}>
+        <button className="rounded border px-4 py-1" onClick={onCancel}>
           취소
         </button>
-        <button className="bg-blue-600 text-white px-4 py-1 rounded" onClick={handleAdd}>
+        <button className="rounded bg-blue-600 px-4 py-1 text-white" onClick={handleAdd}>
           추가
         </button>
       </div>

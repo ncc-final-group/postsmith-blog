@@ -18,7 +18,7 @@ interface CategoryItemProps {
   onMove: (id: number) => void | Promise<void>;
   isExpanded?: boolean; // 펼침 상태 추가
   showExpandButton?: boolean; // 화살표 버튼 표시 여부
-  onChangeOrder?: (category: Category, direction: "up" | "down") => void;
+  onChangeOrder?: (category: Category, direction: 'up' | 'down') => void;
   localCategories: Category[]; // 추가
   editingCategoryId: number | null;
   setEditingCategoryId: (id: number | null) => void;
@@ -29,8 +29,6 @@ interface CategoryItemProps {
   setLocalCategories: (categories: Category[]) => void;
   setIsDirty: (dirty: boolean) => void;
 }
-
-
 
 export function CategoryItem({
   category,
@@ -58,9 +56,6 @@ export function CategoryItem({
   const [editName, setEditName] = useState(editingCategory?.name ?? '');
   const [editDescription, setEditDescription] = useState(editingCategory?.description ?? '');
 
-
-
-
   // isExpanded prop이 변경되면 로컬 상태도 업데이트
   useEffect(() => {
     setIsLocalExpanded(isExpanded);
@@ -74,7 +69,7 @@ export function CategoryItem({
   const [{ isDragging }, dragRef] = useDrag({
     type: 'CATEGORY',
     item: { id: category.id },
-    collect: (monitor) => ({ isDragging: monitor.isDragging(), }),
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 
   const [isHovered, setIsHovered] = useState(false);
@@ -105,9 +100,8 @@ export function CategoryItem({
 
       return true;
     },
-    collect: (monitor) => ({ isOver: monitor.isOver({ shallow: true }), }),
+    collect: (monitor) => ({ isOver: monitor.isOver({ shallow: true }) }),
   });
-
 
   // ✅ ref에 드래그/드롭 연결
   useEffect(() => {
@@ -119,7 +113,6 @@ export function CategoryItem({
   const isRoot = depth === 0;
   const width = isRoot ? '950px' : '900px'; // 루트는 800px, 서브는 750px
   const hasChildren = category.children && category.children.length > 0;
-
 
   useEffect(() => {
     if (editingCategory?.id === category.id) {
@@ -142,25 +135,26 @@ export function CategoryItem({
     >
       <div
         className={
-          'flex items-center justify-between border p-2 rounded-md bg-white shadow-sm h-15' +
-          (isRoot
-            ? 'text-base font-semibold text-gray-900'
-            : 'text-sm font-normal text-gray-700 bg-gray-50')
+          `rounded-md border bg-white p-2 shadow-sm ` +
+          (isRoot ? 'text-base font-semibold text-gray-900' : 'bg-gray-50 text-sm font-normal text-gray-700') +
+          (editingCategory?.id === category.id ? '' : ' flex h-15 items-center')
         }
         onMouseEnter={() => setIsHovered(true)} // hover 시작
         onMouseLeave={() => setIsHovered(false)} // hover 종료
         style={{
           padding: '0.5rem 1rem',
           width: '100%',
-          marginLeft: isRoot ? '0' : '50px' // 루트가 아니면 50px 들여쓰기
+          marginLeft: isRoot ? '0' : '50px', // 루트가 아니면 50px 들여쓰기
+          display: 'flex',
+          justifyContent: 'space-between',
         }}
       >
         <div className="flex items-center space-x-10">
-          <span className="cursor-move text-gray-400 space-x-5 flex items-center">≡</span>
+          <span className="flex cursor-move items-center space-x-5 text-gray-400">≡</span>
           {hasChildren && showExpandButton && (
             <button
               onClick={() => setIsLocalExpanded(!isLocalExpanded)}
-              className="text-gray-400 hover:text-gray-600 transition-transform duration-200"
+              className="text-gray-400 transition-transform duration-200 hover:text-gray-600"
               style={{ transform: isLocalExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
             >
               ▶
@@ -170,31 +164,22 @@ export function CategoryItem({
           {/* 🔧 이름/설명 or 수정폼 */}
           {editingCategory?.id === category.id ? (
             <div className="space-y-1">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="카테고리 이름"
-                className="px-2 py-1 border rounded w-full text-sm"
-              />
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="카테고리 이름" className="w-full rounded border px-2 py-1 text-sm" />
               <input
                 type="text"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="설명 (선택)"
-                className="px-2 py-1 border rounded w-full text-sm"
+                className="w-full rounded border px-2 py-1 text-sm"
               />
               <div className="flex space-x-2 pt-1">
-                <button
-                  onClick={onCancelEdit}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
+                <button onClick={onCancelEdit} className="text-xs text-gray-500 hover:text-gray-700">
                   취소
                 </button>
                 <button
                   onClick={() => onSaveEdit(editName, editDescription)}
                   disabled={!editName.trim()}
-                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                  className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
                 >
                   저장
                 </button>
@@ -206,53 +191,46 @@ export function CategoryItem({
 
               {isHovered && (
                 <div className="flex flex-col">
-                  <button
-                    onClick={() => onChangeOrder?.(category, 'up')}
-                    className="text-xs text-gray-400 hover:text-black"
-                  >
+                  <button onClick={() => onChangeOrder?.(category, 'up')} className="text-xs text-gray-400 hover:text-black">
                     ▲
                   </button>
-                  <button
-                    onClick={() => onChangeOrder?.(category, 'down')}
-                    className="text-xs text-gray-400 hover:text-black"
-                  >
+                  <button onClick={() => onChangeOrder?.(category, 'down')} className="text-xs text-gray-400 hover:text-black">
                     ▼
                   </button>
                 </div>
               )}
 
-              {category.description && (
-                <span className="text-sm text-gray-400">{category.description}</span>
-              )}
+              {category.description && <span className="text-sm text-gray-400">{category.description}</span>}
             </>
           )}
         </div>
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">({category.posts ?? 0} posts)</span>
+          </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">({category.posts ?? 0} posts)</span>
+          <CategoryActionMenu
+            category={{ ...category }}
+            onAdd={handleAddChild}
+            onEdit={(id) => setEditingCategoryId(id)} // 이걸 직접 넘겨도 되고
+            onDelete={() => {
+              const hasChildren = category.children && category.children.length > 0;
+              const isRoot = depth === 0;
+
+              let confirmMessage = '정말 삭제하시겠습니까?';
+
+              if (isRoot && hasChildren) {
+                confirmMessage = '이 카테고리와 모든 하위 항목이 삭제됩니다. 정말 삭제하시겠습니까?';
+              }
+
+              if (confirm(confirmMessage)) {
+                onDelete(category.id);
+              }
+            }}
+            onMove={() => onMove(category.id)}
+            isRoot={isRoot}
+          />
         </div>
-
-        <CategoryActionMenu
-          category={{...category,}}
-          onAdd={handleAddChild}
-          onEdit={(id) => setEditingCategoryId(id)} // 이걸 직접 넘겨도 되고
-          onDelete={() => {
-            const hasChildren = category.children && category.children.length > 0;
-            const isRoot = depth === 0;
-
-            let confirmMessage = '정말 삭제하시겠습니까?';
-
-            if (isRoot && hasChildren) {
-              confirmMessage = '이 카테고리와 모든 하위 항목이 삭제됩니다. 정말 삭제하시겠습니까?';
-            }
-
-            if (confirm(confirmMessage)) {
-              onDelete(category.id);
-            }
-          }}
-          onMove={() => onMove(category.id)}
-          isRoot={isRoot}
-        />
       </div>
 
       {/* 자식 노드 재귀 렌더링 */}
@@ -283,7 +261,6 @@ export function CategoryItem({
             />
           ))}
           {/* 마우스 오버 시에만 화살표 버튼 노출 */}
-
         </div>
       )}
     </div>

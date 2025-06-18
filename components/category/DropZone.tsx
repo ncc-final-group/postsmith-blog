@@ -26,12 +26,7 @@ export function DropZone({ onDropToRoot }: DropZoneProps) {
   }, [drop]);
 
   return (
-    <div
-      ref={ref}
-      className={`p-4 text-center border-2 border-dashed rounded-md mb-4 ${
-        isOver ? 'bg-blue-100 border-blue-400' : 'bg-gray-50 border-gray-300'
-      }`}
-    >
+    <div ref={ref} className={`mb-4 rounded-md border-2 border-dashed p-4 text-center ${isOver ? 'border-blue-400 bg-blue-100' : 'border-gray-300 bg-gray-50'}`}>
       여기로 드롭하면 <strong>루트 카테고리</strong>로 이동합니다
     </div>
   );
