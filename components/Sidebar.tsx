@@ -41,7 +41,7 @@ const menuItems: MenuItem[] = [
     label: '꾸미기',
     subItems: [
       { label: '스킨', route: '/usermanage/customize/skin' },
-      { label: '메뉴 관리', route: '/usermanage/menus' },
+      { label: '메뉴 관리', route: '/usermanage/customize/menu' },
     ],
   },
   {
