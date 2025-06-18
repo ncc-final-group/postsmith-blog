@@ -17,8 +17,7 @@ export async function selectSQL<T>(query: string, params: any[] = []): Promise<T
     const [rows] = await pool.execute(query, params);
     return rows as T[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Database query error:', error);
+    // console.error('Database query error:', error);
     throw error;
   }
 }
@@ -29,8 +28,7 @@ export async function insertSQL(query: string, params: any[] = []): Promise<numb
     const [result] = await pool.execute(query, params);
     return (result as any).insertId;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Database insert error:', error);
+    // console.error('Database insert error:', error);
     throw error;
   }
 }
@@ -41,8 +39,7 @@ export async function updateSQL(query: string, params: any[] = []): Promise<numb
     const [result] = await pool.execute(query, params);
     return (result as any).affectedRows;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Database update error:', error);
+    // console.error('Database update error:', error);
     throw error;
   }
 }
@@ -53,8 +50,7 @@ export async function deleteSQL(query: string, params: any[] = []): Promise<numb
     const [result] = await pool.execute(query, params);
     return (result as any).affectedRows;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Database delete error:', error);
+    // console.error('Database delete error:', error);
     throw error;
   }
 }

@@ -11,6 +11,7 @@ interface Comments {
   parentReplyId?: number;
   replyContent: string;
   contentTitle: string;
+  contentId: number;
   createdAt: string;
   isNotice?: boolean;
   privacy?: 'public' | 'private';
@@ -39,27 +40,32 @@ export default function CommentsData() {
   const [hoveredCommentId, setHoveredCommentId] = useState<number | null>(null);
   const [filterReply, setFilterReply] = useState<'all' | 'true' | 'false'>('all');
 
-  useEffect(() => {
-    const fetchComments = async () => {
-      setIsLoading(true);
-      try {
-        const blogId = 1;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies?blogId=${blogId}`);
-        const data = await res.json();
-        setCommentData({
-          comments: data,
-          totalCount: data.length,
-          currentPage: 1,
-          totalPages: 1,
-        });
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('댓글을 불러오는 중 오류 발생:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<Comments | null>(null);
+  const [replyContent, setReplyContent] = useState('');
 
+  // fetchComments를 컴포넌트 범위로 이동
+  const fetchComments = async () => {
+    setIsLoading(true);
+    try {
+      const blogId = 1;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies?blogId=${blogId}`);
+      const data = await res.json();
+      setCommentData({
+        comments: data,
+        totalCount: data.length,
+        currentPage: 1,
+        totalPages: 1,
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('댓글을 불러오는 중 오류 발생:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchComments();
   }, []);
 
@@ -129,7 +135,47 @@ export default function CommentsData() {
   };
 
   const handleReplyToReply = (comment: Comments) => {
-    alert(`답글 기능: ${comment.contentTitle}`);
+    setReplyTarget(comment);
+    setReplyContent('');
+    setShowReplyModal(true);
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyContent.trim() || !replyTarget) {
+      alert('답글 내용을 입력하세요.');
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.log('보내는 데이터:', {
+      userId: 1,
+      contentId: replyTarget.contentId,
+      replyId: replyTarget.repliesId,
+      contentText: replyContent,
+    });
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies/submitReply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 1, // 실제 로그인 사용자 ID로 교체
+          contentId: replyTarget.contentId, // 콘텐츠 ID
+          replyId: replyTarget.repliesId, // 부모 댓글 ID
+          contentText: replyContent, // 답글 내용
+        }),
+      });
+
+      if (!response.ok) throw new Error('답글 등록 실패');
+
+      setShowReplyModal(false);
+      setReplyTarget(null);
+      setReplyContent('');
+      fetchComments(); // 댓글 목록 새로고침
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+      alert('답글 등록에 실패했습니다.');
+    }
   };
 
   async function handleDeletePost(comment: Comments) {
@@ -149,8 +195,6 @@ export default function CommentsData() {
         comments: prev.comments.filter((c) => c.repliesId !== comment.repliesId),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('삭제 요청 실패:', error);
       alert('삭제에 실패했습니다.');
     }
   }
@@ -199,8 +243,6 @@ export default function CommentsData() {
         }));
         setSelectedComments(new Set());
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('삭제 요청 실패:', error);
         alert('삭제에 실패했습니다.');
       }
     }
@@ -395,6 +437,37 @@ export default function CommentsData() {
           </button>
         </nav>
       </div>
+      {showReplyModal && replyTarget && (
+        <div className="bg-opacity-10 fixed inset-0 z-50 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold">
+              <span className="text-blue-600">{replyTarget.userName}</span> 님에게 답글 달기
+            </h2>
+            <textarea
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              rows={4}
+              className="w-full rounded border p-2 text-sm"
+              placeholder="답글을 입력하세요..."
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowReplyModal(false);
+                  setReplyTarget(null);
+                  setReplyContent('');
+                }}
+                className="rounded bg-gray-300 px-4 py-2"
+              >
+                취소
+              </button>
+              <button onClick={handleSubmitReply} className="rounded bg-blue-600 px-4 py-2 text-white">
+                등록
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,8 +47,7 @@ export const uploadImageToServer = async (file: File, altText?: string, userId?:
     const result: UploadResponse = await response.json();
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('이미지 업로드 오류:', error);
+    // console.error('이미지 업로드 오류:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
@@ -88,37 +87,34 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
       formData.append('blogId', blogId.toString());
     }
 
-    // eslint-disable-next-line no-console
-    console.log('FormData 내용:', { altText, userId, blogId });
+    // console.log('FormData 내용:', { altText, userId, blogId });
 
     const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
       method: 'POST',
       body: formData,
     });
 
-    // eslint-disable-next-line no-console
-    console.log('응답 상태:', response.status, response.statusText);
+    // console.log('응답 상태:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
-      // eslint-disable-next-line no-console
-      console.error('응답 에러:', errorText);
+
+      // console.error('응답 에러:', errorText);
       throw new Error(`Upload failed: ${response.status} - ${errorText}`);
     }
 
     const result: UploadResponse = await response.json();
-    // eslint-disable-next-line no-console
-    console.log('업로드 성공:', result);
+
+    // console.log('업로드 성공:', result);
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('비디오 업로드 오류:', error);
-    // eslint-disable-next-line no-console
-    console.error('에러 상세:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : '알 수 없는 오류',
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    // console.error('비디오 업로드 오류:', error);
+
+    // console.error('에러 상세:', {
+    //   name: error instanceof Error ? error.name : 'Unknown',
+    //   message: error instanceof Error ? error.message : '알 수 없는 오류',
+    //   stack: error instanceof Error ? error.stack : undefined,
+    // });
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
@@ -162,8 +158,7 @@ export const uploadFileToServer = async (file: File, displayName?: string, userI
     const result: UploadResponse = await response.json();
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('파일 업로드 오류:', error);
+    // console.error('파일 업로드 오류:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
@@ -182,8 +177,7 @@ export const deleteMediaFromServer = async (mediaId: number): Promise<{ success:
 
     return { success: true };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('미디어 삭제 오류:', error);
+    // console.error('미디어 삭제 오류:', error);
     return { success: false, message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.' };
   }
 };

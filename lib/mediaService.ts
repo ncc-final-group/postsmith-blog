@@ -118,8 +118,7 @@ export async function getMediaFiles(params: { userId: number; page?: number; siz
 
   // 디버깅용 로그 (개발 환경에서만)
   if (process.env.NODE_ENV === 'development' && data.content && data.content.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log('🔍 [API Debug] 원본 Spring API 응답:', data.content[0]);
+    // console.log('🔍 [API Debug] 원본 Spring API 응답:', data.content[0]);
   }
 
   // Spring API 응답을 프론트엔드 형식으로 변환
@@ -143,10 +142,8 @@ export async function getMediaFiles(params: { userId: number; page?: number; siz
 
       // 첫 번째 항목의 변환 결과 로그 (개발 환경에서만)
       if (process.env.NODE_ENV === 'development' && item === data.content[0]) {
-        // eslint-disable-next-line no-console
-        console.log('🔄 [API Debug] 변환된 데이터:', transformed);
-        // eslint-disable-next-line no-console
-        console.log('📷 [API Debug] 이미지 URL:', transformed.fileUrl);
+        // console.log('🔄 [API Debug] 변환된 데이터:', transformed);
+        // console.log('📷 [API Debug] 이미지 URL:', transformed.fileUrl);
       }
 
       return transformed;

@@ -1,7 +1,7 @@
-import { DecoratorNode, LexicalNode, NodeKey } from 'lexical';
-import React from 'react';
+import { DecoratorNode, NodeKey } from 'lexical';
+import React, { ReactNode } from 'react';
 
-export class CustomHRNode extends DecoratorNode<React.ReactElement> {
+export class CustomHRNode extends DecoratorNode<ReactNode> {
   __style: string;
 
   static getType(): string {

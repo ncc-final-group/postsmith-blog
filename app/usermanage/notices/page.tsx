@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -34,6 +35,7 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const router = useRouter();
 
   const [selectedNotices, setSelectedNotices] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -101,8 +103,7 @@ export default function BoardSitePage() {
         });
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('게시글을 불러오는 중 오류 발생:', err);
+        // console.error('게시글을 불러오는 중 오류 발생:', err);
       })
       .finally(() => {
         setIsLoading(false);
@@ -157,7 +158,7 @@ export default function BoardSitePage() {
   }
 
   function handleViewStats(notice: NOTICE) {
-    alert(`통계 보기: ${notice.title}`);
+    router.push(`/visits/${notice.contentId}`);
   }
 
   const handlePageChange = (pageNum: number) => {
@@ -196,8 +197,7 @@ export default function BoardSitePage() {
         notices: prev.notices.map((p) => (p.contentId === notice.contentId ? { ...p, isPublic: newPrivacy } : p)),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('공개 여부 변경 실패:', error);
+      // console.error('공개 여부 변경 실패:', error);
       alert('공개 여부 변경에 실패했습니다.');
     }
   }
@@ -219,8 +219,7 @@ export default function BoardSitePage() {
         notices: prev.notices.filter((p) => p.contentId !== notice.contentId),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('삭제 요청 실패:', error);
+      // console.error('삭제 요청 실패:', error);
       alert('삭제에 실패했습니다.');
     }
   }
@@ -253,8 +252,7 @@ export default function BoardSitePage() {
         }));
         setSelectedNotices(new Set());
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('삭제 요청 실패:', error);
+        // console.error('삭제 요청 실패:', error);
         alert('삭제에 실패했습니다.');
       }
     } else if (action === 'makePublic' || action === 'makePrivate') {
@@ -278,8 +276,7 @@ export default function BoardSitePage() {
           notices: prev.notices.map((notice) => (selectedNotices.has(notice.contentId) ? { ...notice, isPublic: newPrivacy } : notice)),
         }));
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('공개/비공개 변경 실패:', error);
+        // console.error('공개/비공개 변경 실패:', error);
         alert('공개/비공개 변경에 실패했습니다.');
       }
     }
@@ -309,7 +306,7 @@ export default function BoardSitePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl pt-1">
+      <div className="max-w-none pt-1">
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <input

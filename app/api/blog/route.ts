@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'address 또는 id 파라미터가 필요합니다.' }, { status: 400 });
   }
 
-  const springUrl = address ? `http://localhost:8080/api/blog/address/${address}` : `http://localhost:8080/api/blog/${id}`;
+  const springUrl = address ? process.env.NEXT_PUBLIC_API_URL + `/api/blog/address/${address}` : process.env.NEXT_PUBLIC_API_URL + `/api/blog/${id}`;
 
   try {
     const res = await fetch(springUrl);

@@ -43,8 +43,7 @@ const uploadImageToServer = async (file: File, altText?: string, userId?: number
     const result: UploadResponse = await response.json();
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('이미지 업로드 오류:', error);
+    // console.error('이미지 업로드 오류:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
@@ -79,8 +78,7 @@ const uploadVideoToServer = async (file: File, altText?: string, userId?: number
     const result: UploadResponse = await response.json();
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('비디오 업로드 오류:', error);
+    // console.error('비디오 업로드 오류:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
@@ -115,8 +113,7 @@ const uploadFileToServer = async (file: File, displayName?: string, userId?: num
     const result: UploadResponse = await response.json();
     return result;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('파일 업로드 오류:', error);
+    // console.error('파일 업로드 오류:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',

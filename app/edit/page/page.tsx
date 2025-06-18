@@ -6,7 +6,7 @@ import { CodeHighlightNode, CodeNode } from '@lexical/code';
 import { $generateHtmlFromNodes } from '@lexical/html';
 import { LinkNode } from '@lexical/link';
 import { ListItemNode, ListNode } from '@lexical/list';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
+import { InitialConfigType, LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
@@ -20,6 +20,7 @@ import { BLOG_API_URL } from '../../../lib/constants';
 import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
+import { SpanNode as CCSpanNode } from '@components/CustomSpanNode';
 import EditHeader from '@components/EditHeader';
 import Editor from '@components/Editor';
 import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
@@ -393,7 +394,7 @@ export default function PageEditor() {
   const [slug, setSlug] = useState('');
   const [showInMenu, setShowInMenu] = useState(true);
 
-  const initialConfig = {
+  const initialConfig: InitialConfigType = {
     namespace: 'PageEditor',
     theme,
     nodes: [
@@ -407,6 +408,7 @@ export default function PageEditor() {
       TableCellNode,
       TableRowNode,
       LinkNode,
+      // SpanNode,
       CustomHRNode,
       CustomFileNode,
       CustomImageNode,
