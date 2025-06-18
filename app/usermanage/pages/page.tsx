@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { BarChart2, ChevronLeft, ChevronRight, Edit, Lock, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -156,9 +157,10 @@ export default function BoardSitePage() {
   function handleEditPage(page: Page) {
     alert(`수정: ${page.title}`);
   }
+  const router = useRouter();
 
   function handleViewStats(page: Page) {
-    alert(`통계 보기: ${page.title}`);
+    router.push(`/visits/${page.contentId}`);
   }
 
   const handlePageChange = (pageNum: number) => {
@@ -287,7 +289,7 @@ export default function BoardSitePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-6xl">
+      <div className="max-w-none">
         <div className="flex items-center justify-between">
           <h1 className="font-semilight flex items-center text-xl text-gray-800">
             페이지 관리
@@ -309,7 +311,7 @@ export default function BoardSitePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl pt-1">
+      <div className="max-w-none pt-1">
         <div className="mb-4 flex flex-col items-start gap-4 border border-gray-300 bg-white p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <input

@@ -51,6 +51,12 @@ const menuItems: MenuItem[] = [
     route: 'usermanage/plugins',
   },
   {
+    key: 'stats',
+    label: '통계',
+    subItems: [{ label: '통계 관리', route: '/usermanage/stats/visits' }],
+
+  },
+  {
     key: 'admin',
     label: '관리',
     subItems: [{ label: '블로그', route: '/admin/blog' }],
