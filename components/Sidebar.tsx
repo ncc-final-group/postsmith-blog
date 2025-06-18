@@ -59,7 +59,7 @@ const menuItems: MenuItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const segments = pathname.split('/');
+  const segments = pathname?.split('/') || [];
   const name = segments[1] || '';
 
   return (
@@ -103,7 +103,7 @@ export default function Sidebar() {
                   {item.subItems.map((subItem, index) => {
                     // 현재 경로가 /usermanage인 경우와 /[name]/usermanage인 경우를 구분
                     let fullRoute;
-                    if (pathname === '/usermanage' || pathname.startsWith('/usermanage/')) {
+                    if (pathname === '/usermanage' || pathname?.startsWith('/usermanage/')) {
                       // /usermanage 또는 /usermanage/* 경로인 경우
                       fullRoute = subItem.route;
                     } else {

@@ -5,9 +5,7 @@ export async function getSkins(): Promise<Skin[]> {
   try {
     const response = await fetch('/api/skins', {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       cache: 'no-store', // 캐시 방지로 최신 데이터 가져오기
     });
 
@@ -17,8 +15,6 @@ export async function getSkins(): Promise<Skin[]> {
 
     return await response.json();
   } catch (error) {
-    console.error('스킨 데이터 가져오기 오류:', error);
-    
     // 오류 발생 시 기본 스킨 목록 반환
     return [
       { id: 'odyssey', name: 'Odyssey', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca' },
@@ -38,9 +34,7 @@ export async function getActiveSkin(blogId: number = 1): Promise<Skin> {
   try {
     const response = await fetch(`/api/skins/active?blogId=${blogId}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       cache: 'no-store', // 캐시 방지로 최신 데이터 가져오기
     });
 
@@ -50,15 +44,13 @@ export async function getActiveSkin(blogId: number = 1): Promise<Skin> {
 
     return await response.json();
   } catch (error) {
-    console.error('활성 스킨 가져오기 오류:', error);
-    
     // 오류 발생 시 기본 활성 스킨 반환
     return {
       id: '1',
       name: 'Odyssey',
       thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
       description: '기본 테마',
-      isActive: true
+      isActive: true,
     };
   }
 }
@@ -69,7 +61,6 @@ export async function getActiveSkinId(blogId: number = 1): Promise<string> {
     const activeSkin = await getActiveSkin(blogId);
     return activeSkin.id;
   } catch (error) {
-    console.error('활성 스킨 ID 가져오기 오류:', error);
     return '1';
   }
 }
@@ -79,12 +70,10 @@ export async function updateBlogTheme(blogId: number, themeId: string): Promise<
   try {
     const response = await fetch('/api/blog/update-theme', {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         blogId,
-        themeId
+        themeId,
       }),
     });
 
@@ -96,14 +85,12 @@ export async function updateBlogTheme(blogId: number, themeId: string): Promise<
 
     return {
       success: true,
-      message: result.message
+      message: result.message,
     };
   } catch (error) {
-    console.error('테마 업데이트 오류:', error);
-    
     return {
       success: false,
-      error: error instanceof Error ? error.message : '테마 업데이트 중 오류가 발생했습니다.'
+      error: error instanceof Error ? error.message : '테마 업데이트 중 오류가 발생했습니다.',
     };
   }
-} 
+}

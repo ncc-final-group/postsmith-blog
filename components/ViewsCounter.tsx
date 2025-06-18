@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { getTotalViewsByContentId } from '../lib/contentStats';
 
 interface ViewsCounterProps {
@@ -32,4 +33,4 @@ export default function ViewsCounter({ contentId }: ViewsCounterProps) {
   }
 
   return <span>{views}</span>;
-} 
+}

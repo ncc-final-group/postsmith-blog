@@ -1,5 +1,5 @@
 'use client';
- 
+
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
@@ -21,7 +21,8 @@ import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
-import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
+import Editor from '@components/Editor';
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
@@ -365,10 +366,7 @@ export default function NoticeEditor() {
       CustomImageNode,
       CustomVideoNode,
     ],
-    onError: (error: Error) => {
-      console.error('Lexical error:', error);
-      // 에러를 던지지 않고 로그만 출력
-    },
+    onError: (error: Error) => {},
   };
 
   return (

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getBlogsByUserId } from '../tbBlogs';
 
 export async function GET(request: NextRequest) {
@@ -15,4 +16,4 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: '블로그 리스트 조회에 실패했습니다.' }, { status: 500 });
   }
-} 
+}

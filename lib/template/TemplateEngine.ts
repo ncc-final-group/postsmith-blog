@@ -153,7 +153,7 @@ interface TemplateData {
   }>;
 }
 
-const T3_SCRIPT = `<script type="text/javascript" src="https://t1.daumcdn.net/tistory_admin/blogs/script/blog/common.js"></script>
+const T3_SCRIPT = `<script type=""></script>
 <div style="margin:0; padding:0; border:none; background:none; float:none; clear:none; z-index:0"></div>`;
 
 function formatDate(dateString: string): string {
@@ -276,11 +276,11 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       ? `
     <ul>
       ${data.menus
-    .map((menu) => {
-      const target = menu.is_blank ? ' target="_blank"' : '';
-      return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
-    })
-    .join('')}
+        .map((menu) => {
+          const target = menu.is_blank ? ' target="_blank"' : '';
+          return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
+        })
+        .join('')}
     </ul>
   `
       : `
@@ -332,7 +332,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
         } else if (content.type === 'PAGE') {
           linkUrl = `/pages/${encodeURIComponent(content.title)}`;
         }
-        
+
         let articleHtml = articleTemplate
           .replace(/\[##_article_rep_link_##\]/g, linkUrl)
           .replace(/\[##_article_rep_title_##\]/g, content.title)
@@ -399,7 +399,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       } else if (content.type === 'PAGE') {
         linkUrl = `/pages/${encodeURIComponent(content.title)}`;
       }
-      
+
       let recentHtml = recentTemplate
         .replace(/\[##_rctps_rep_link_##\]/g, linkUrl)
         .replace(/\[##_rctps_rep_title_##\]/g, content.title)
@@ -421,9 +421,10 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 인기 글 반복 블록 처리 (댓글 수 기준 상위 5개)
   const popularPattern = /<s_rctps_popular_rep>([\s\S]*?)<\/s_rctps_popular_rep>/g;
   let popularHtml = '';
-  const popularContents = data.popularContents && data.popularContents.length > 0
-    ? data.popularContents.slice(0, 5)
-    : [...data.contents].sort((a, b) => (b.reply_count ?? 0) - (a.reply_count ?? 0)).slice(0, 5);
+  const popularContents =
+    data.popularContents && data.popularContents.length > 0
+      ? data.popularContents.slice(0, 5)
+      : [...data.contents].sort((a, b) => (b.reply_count ?? 0) - (a.reply_count ?? 0)).slice(0, 5);
 
   popularContents.forEach((content) => {
     const popTemplate = result.match(popularPattern)?.[0]?.replace(/<\/?s_rctps_popular_rep>/g, '') || '';
@@ -435,7 +436,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       } else if ((content as any).type === 'PAGE') {
         linkUrl = `/pages/${encodeURIComponent(content.title)}`;
       }
-      
+
       let pHtml = popTemplate
         .replace(/\[##_rctps_rep_link_##\]/g, linkUrl)
         .replace(/\[##_rctps_rep_title_##\]/g, content.title)
@@ -493,7 +494,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   let repliesHtml = '';
   data.replies.forEach((reply) => {
     let replyTemplate = result.match(repliesPattern)?.[0]?.replace(/\[##_rp_rep_##\]|\[\/##_rp_rep_##\]/g, '') || '';
-    
+
     // 기본 댓글 템플릿이 없는 경우 기본 구조 제공
     if (!replyTemplate.trim()) {
       replyTemplate = `
@@ -512,7 +513,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
         </div>
       `;
     }
-    
+
     if (replyTemplate) {
       // depth에 따른 들여쓰기 계산 (각 레벨당 20px)
       const depth = reply.depth ?? 0;
@@ -525,14 +526,16 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       }
 
       // 답글 버튼 HTML 생성 (depth 3 이하일 때만 표시)
-      const replyButtonHtml = depth < 3 
-        ? `<button onclick="replyToComment(${reply.id})" style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px;">답글</button>`
-        : '';
+      const replyButtonHtml =
+        depth < 3
+          ? `<button onclick="replyToComment(${reply.id})" style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px;">답글</button>`
+          : '';
 
       // 프로필 이미지 HTML 생성
-      const profileImageHtml = (reply.user.profile_image && reply.user.profile_image.trim() !== '')
-        ? `<img src="${reply.user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
-        : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+      const profileImageHtml =
+        reply.user.profile_image && reply.user.profile_image.trim() !== ''
+          ? `<img src="${reply.user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
+          : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
              <span style="color: white; font-weight: bold; font-size: 14px;">${reply.user.nickname ? reply.user.nickname.charAt(0).toUpperCase() : 'U'}</span>
            </div>`;
 
@@ -551,17 +554,9 @@ function replacePlaceholders(template: string, data: TemplateData): string {
 
       // 기존 템플릿에도 ID와 data 속성 추가
       if (replyHtml.includes('class="comment-item"') || replyHtml.includes("class='comment-item'")) {
-        replyHtml = replyHtml.replace(
-          /(class="comment-item[^"]*")/g,
-          `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`
-        );
-        replyHtml = replyHtml.replace(
-          /(class='comment-item[^']*')/g,
-          `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`
-        );
+        replyHtml = replyHtml.replace(/(class="comment-item[^"]*")/g, `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`);
+        replyHtml = replyHtml.replace(/(class='comment-item[^']*')/g, `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`);
       }
-
-
 
       // 댓글 아이템에 depth 클래스 추가
       if (depth > 0) {
@@ -572,7 +567,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       // 템플릿이 기본 구조가 아닌 경우 프로필 이미지를 직접 삽입
       if (!replyHtml.includes('[##_rp_rep_profile_image_##]')) {
         // 간단한 방법: 댓글 전체를 새로운 구조로 래핑
-                          const simpleReplyHtml = `
+        const simpleReplyHtml = `
            <div id="reply-${reply.id}" class="comment-item ${depth > 0 ? 'reply ' + depthClass : ''}" style="${indentStyle}" data-reply-id="${reply.id}">
              <div style="display: flex; gap: 12px; align-items: flex-start;">
                <div style="flex-shrink: 0;">
@@ -608,9 +603,10 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   result = result.replace(/\[##_count_total_##\]/g, String(data.totalContentsCount ?? data.contents.length));
 
   // 댓글 관련 기본 치환자 - PAGE나 NOTICE 타입에서는 댓글 입력 폼 제거
-  const commentFormHtml = (data.currentArticle?.type === 'PAGE' || data.currentArticle?.type === 'NOTICE') 
-    ? '' 
-    : `
+  const commentFormHtml =
+    data.currentArticle?.type === 'PAGE' || data.currentArticle?.type === 'NOTICE'
+      ? ''
+      : `
     <div class="comment-form">
       <div id="login-required-message" style="display: none; padding: 15px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 15px; text-align: center;">
         <p style="margin: 0; color: #6c757d;">댓글을 작성하려면 로그인이 필요합니다.</p>
@@ -1119,10 +1115,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
     </div>
   `;
 
-  result = result.replace(
-    /\[##_rp_input_form_##\]/g,
-    commentFormHtml
-  );
+  result = result.replace(/\[##_rp_input_form_##\]/g, commentFormHtml);
 
   // 개별 글 페이지 관련 치환자 처리
   if (data.currentArticle) {
@@ -1214,36 +1207,36 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 페이지네이션 처리
   if (data.pagination) {
     const pagination = data.pagination;
-    
+
     // 페이지네이션 블록 표시/숨김
     if (pagination.totalPages > 1) {
       result = result.replace(/<s_pagination>([\s\S]*?)<\/s_pagination>/g, '$1');
-      
+
       // 페이지네이션 치환자들
       result = result.replace(/\[##_pagination_first_##\]/g, pagination.currentPage > 1 ? '?page=1' : '#');
       result = result.replace(/\[##_pagination_first_disabled_##\]/g, pagination.currentPage <= 1 ? 'disabled' : '');
-      
+
       result = result.replace(/\[##_pagination_last_##\]/g, pagination.currentPage < pagination.totalPages ? `?page=${pagination.totalPages}` : '#');
       result = result.replace(/\[##_pagination_last_disabled_##\]/g, pagination.currentPage >= pagination.totalPages ? 'disabled' : '');
-      
+
       // 10페이지 블록 계산
       const currentBlock = Math.floor((pagination.currentPage - 1) / 10);
       const prevBlockPage = currentBlock > 0 ? (currentBlock - 1) * 10 + 1 : 1;
       const nextBlockPage = (currentBlock + 1) * 10 + 1;
-      
+
       result = result.replace(/\[##_pagination_prev_block_##\]/g, currentBlock > 0 ? `?page=${prevBlockPage}` : '#');
       result = result.replace(/\[##_pagination_prev_block_disabled_##\]/g, currentBlock <= 0 ? 'disabled' : '');
-      
+
       result = result.replace(/\[##_pagination_next_block_##\]/g, nextBlockPage <= pagination.totalPages ? `?page=${nextBlockPage}` : '#');
       result = result.replace(/\[##_pagination_next_block_disabled_##\]/g, nextBlockPage > pagination.totalPages ? 'disabled' : '');
-      
+
       // 페이지 번호 반복 처리
       const paginationRepPattern = /\[##_pagination_rep_##\]([\s\S]*?)\[\/##_pagination_rep_##\]/g;
       let paginationRepHtml = '';
-      
+
       const startPage = currentBlock * 10 + 1;
       const endPage = Math.min(startPage + 9, pagination.totalPages);
-      
+
       for (let i = startPage; i <= endPage; i++) {
         const pageTemplate = result.match(paginationRepPattern)?.[0]?.replace(/\[##_pagination_rep_##\]|\[\/##_pagination_rep_##\]/g, '') || '';
         if (pageTemplate) {
@@ -1251,11 +1244,11 @@ function replacePlaceholders(template: string, data: TemplateData): string {
             .replace(/\[##_pagination_rep_link_##\]/g, `?page=${i}`)
             .replace(/\[##_pagination_rep_number_##\]/g, String(i))
             .replace(/\[##_pagination_rep_class_##\]/g, i === pagination.currentPage ? 'current' : '');
-          
+
           paginationRepHtml += pageHtml;
         }
       }
-      
+
       result = result.replace(paginationRepPattern, paginationRepHtml);
     } else {
       // 페이지가 1개뿐이면 페이지네이션 숨김

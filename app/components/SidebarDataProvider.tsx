@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, createContext, useContext } from 'react';
+import React, { createContext, ReactNode, useContext } from 'react';
 
 // 사이드바 데이터 타입 정의
 interface SidebarData {
@@ -44,11 +44,7 @@ interface SidebarDataProviderProps {
 
 // Provider 컴포넌트
 export function SidebarDataProvider({ children, sidebarData }: SidebarDataProviderProps) {
-  return (
-    <SidebarDataContext.Provider value={sidebarData}>
-      {children}
-    </SidebarDataContext.Provider>
-  );
+  return <SidebarDataContext.Provider value={sidebarData}>{children}</SidebarDataContext.Provider>;
 }
 
 // Hook for using sidebar data
@@ -60,4 +56,4 @@ export function useSidebarData(): SidebarData {
   return context;
 }
 
-export default SidebarDataProvider; 
+export default SidebarDataProvider;

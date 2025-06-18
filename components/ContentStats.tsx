@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { getClientIP, recordContentView, recordContentVisit } from '../lib/contentStats';
 
 interface ContentStatsProps {
@@ -14,10 +15,10 @@ export default function ContentStats({ contentId, userId }: ContentStatsProps) {
     const recordStats = async () => {
       try {
         const clientIP = getClientIP();
-        
+
         // 조회수 기록
         await recordContentView(contentId);
-        
+
         // 방문자 수 기록
         await recordContentVisit(contentId, userId, clientIP);
       } catch (error) {

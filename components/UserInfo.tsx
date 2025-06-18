@@ -1,6 +1,6 @@
 'use client';
 
-import { useUserStore, getCurrentUserId, getCurrentUser, isUserAuthenticated } from '../app/store/userStore';
+import { getCurrentUser, getCurrentUserId, isUserAuthenticated, useUserStore } from '../app/store/userStore';
 
 export default function UserInfo() {
   const { userInfo, isLoading, error, isAuthenticated } = useUserStore();
@@ -26,12 +26,20 @@ export default function UserInfo() {
     <div className="rounded-lg border p-4">
       <h3 className="mb-2 font-semibold">사용자 정보</h3>
       <div className="space-y-1 text-sm">
-        <p><strong>ID:</strong> {userInfo.id}</p>
-        <p><strong>닉네임:</strong> {userInfo.nickname}</p>
-        <p><strong>이메일:</strong> {userInfo.email}</p>
-        <p><strong>인증 상태:</strong> {authenticated ? '로그인됨' : '로그아웃됨'}</p>
+        <p>
+          <strong>ID:</strong> {userInfo.id}
+        </p>
+        <p>
+          <strong>닉네임:</strong> {userInfo.nickname}
+        </p>
+        <p>
+          <strong>이메일:</strong> {userInfo.email}
+        </p>
+        <p>
+          <strong>인증 상태:</strong> {authenticated ? '로그인됨' : '로그아웃됨'}
+        </p>
       </div>
-      
+
       <div className="mt-4 text-xs text-gray-600">
         <p>편의 함수 사용:</p>
         <p>getCurrentUserId(): {userId}</p>
@@ -40,4 +48,4 @@ export default function UserInfo() {
       </div>
     </div>
   );
-} 
+}

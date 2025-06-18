@@ -31,7 +31,7 @@ export default function MediaManagePage() {
   const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
   const [previewImage, setPreviewImage] = useState<MediaFile | null>(null);
   const [previewVideo, setPreviewVideo] = useState<MediaFile | null>(null);
-  
+
   // 한글 입력 조합 상태 관리
   const [isComposing, setIsComposing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);

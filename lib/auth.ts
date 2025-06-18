@@ -15,9 +15,9 @@ export async function getCurrentUser(): Promise<{ id: number; email: string; nic
       id: parseInt(userId),
       email: `user${userId}@example.com`,
       nickname: `사용자${userId}`,
-      role: 'user'
+      role: 'user',
     };
   } catch (error) {
     return null;
   }
-} 
+}

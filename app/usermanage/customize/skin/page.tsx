@@ -1,24 +1,18 @@
-import SkinList, { Skin } from '@components/SkinList';
 import { API_BASE_URL } from '../../../../lib/constants';
 import { getBlogByAddress } from '../../../api/tbBlogs';
+
+import SkinList, { Skin } from '@components/SkinList';
 
 // 서버 컴포넌트용 테마 데이터 가져오기 함수
 async function getSkinsServer(): Promise<Skin[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/manage/themes/list`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
     });
-
-    if (!response.ok) {
-      throw new Error(`Spring API 요청 실패: ${response.status}`);
-    }
-
     const themes = await response.json();
-    
+
     // Spring API의 ThemesDto를 프론트엔드의 Skin 형식으로 변환
     const skins = themes.map((theme: any) => ({
       id: theme.id.toString(),
@@ -26,13 +20,11 @@ async function getSkinsServer(): Promise<Skin[]> {
       thumbnail: theme.thumbnailImage || 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
       description: theme.description || '',
       themeHtml: theme.themeHtml,
-      themeCss: theme.themeCss
+      themeCss: theme.themeCss,
     }));
 
     return skins;
   } catch (error) {
-    console.error('테마 데이터 가져오기 오류:', error);
-    
     // 오류 발생 시 기본 스킨 목록 반환
     return [
       { id: '1', name: 'Odyssey', thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', description: '기본 테마' },
@@ -52,18 +44,11 @@ async function getActiveSkinServer(blogId: number = 1): Promise<Skin> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/manage/themes/my-themes/${blogId}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
     });
-
-    if (!response.ok) {
-      throw new Error(`Spring API 요청 실패: ${response.status}`);
-    }
-
     const activeTheme = await response.json();
-    
+
     // Spring API의 ThemesDto를 프론트엔드의 Skin 형식으로 변환
     return {
       id: activeTheme.id.toString(),
@@ -72,18 +57,16 @@ async function getActiveSkinServer(blogId: number = 1): Promise<Skin> {
       description: activeTheme.description || '',
       themeHtml: activeTheme.themeHtml,
       themeCss: activeTheme.themeCss,
-      isActive: true
+      isActive: true,
     };
   } catch (error) {
-    console.error('활성 테마 가져오기 오류:', error);
-    
     // 오류 발생 시 기본 활성 스킨 반환
     return {
       id: '1',
       name: 'Odyssey',
       thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
       description: '기본 테마',
-      isActive: true
+      isActive: true,
     };
   }
 }
@@ -122,18 +105,11 @@ export default async function SkinPage() {
     // 현재 블로그 주소에서 블로그 ID 가져오기
     const subdomain = await getBlogAddress();
     const blog = await getBlogByAddress(subdomain);
-    
-    if (!blog) {
-      throw new Error('블로그를 찾을 수 없습니다.');
-    }
 
-    const blogId = blog.id;
+    const blogId = blog?.id;
 
     // Spring API에서 스킨 데이터 가져오기
-    const [skins, activeSkin] = await Promise.all([
-      getSkinsServer(),
-      getActiveSkinServer(blogId)
-    ]);
+    const [skins, activeSkin] = await Promise.all([getSkinsServer(), getActiveSkinServer(blogId)]);
 
     return (
       <main className="min-h-screen bg-gray-100 py-8">
@@ -144,19 +120,14 @@ export default async function SkinPage() {
       </main>
     );
   } catch (error) {
-    console.error('스킨 페이지 로드 오류:', error);
-    
     return (
       <main className="min-h-screen bg-gray-100 py-8">
         <div className="mx-auto max-w-6xl px-4">
           <h1 className="mb-6 text-2xl font-bold text-gray-900">스킨 관리</h1>
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
-              <p className="text-red-600 mb-4">스킨 데이터를 불러오는 중 오류가 발생했습니다.</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
+              <p className="mb-4 text-red-600">스킨 데이터를 불러오는 중 오류가 발생했습니다.</p>
+              <button onClick={() => window.location.reload()} className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
                 다시 시도
               </button>
             </div>

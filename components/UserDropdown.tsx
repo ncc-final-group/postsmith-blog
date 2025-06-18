@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+
 import { getCurrentUser, isUserAuthenticated, logout, useUserStore } from '../app/store/userStore';
 
 interface Blog {
@@ -46,7 +47,7 @@ export default function UserDropdown() {
   // 블로그 리스트 가져오기
   const fetchUserBlogs = async () => {
     if (!user?.id) return;
-    
+
     setBlogsLoading(true);
     try {
       const response = await fetch(`/api/user-blogs?userId=${user.id}`);
@@ -71,7 +72,7 @@ export default function UserDropdown() {
   if (isLoading || !isMounted) {
     return (
       <div className="fixed top-4 right-4 z-50">
-        <div className="w-12 h-12 bg-gray-300 rounded-full animate-pulse"></div>
+        <div className="h-12 w-12 animate-pulse rounded-full bg-gray-300"></div>
       </div>
     );
   }
@@ -79,7 +80,7 @@ export default function UserDropdown() {
   // 서버 API 기반 로그인 (AuthActionButtons와 동일한 방식)
   const handleSimpleLogin = async () => {
     const userId = prompt('사용자 ID를 입력하세요 (숫자):');
-    
+
     if (!userId) {
       return;
     }
@@ -91,9 +92,7 @@ export default function UserDropdown() {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
 
@@ -108,7 +107,7 @@ export default function UserDropdown() {
           nickname: data.user.nickname,
           profile_image: data.user.profile_image,
         });
-        
+
         setIsOpen(false);
         window.location.reload(); // 페이지 새로고침으로 서버 상태 반영
       }
@@ -120,20 +119,20 @@ export default function UserDropdown() {
   // Redis 세션 기반 로그인 (나중에 사용)
   const handleRedisLogin = async () => {
     const sessionKey = prompt('Redis 세션 키를 입력하세요:');
-    
+
     if (sessionKey === null || sessionKey.trim() === '') {
       return;
     }
-    
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionKey: sessionKey.trim() }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         const { setUserInfo } = useUserStore.getState();
         setUserInfo({
@@ -142,7 +141,7 @@ export default function UserDropdown() {
           nickname: data.user.nickname,
           profile_image: data.user.profile_image,
         });
-        
+
         setIsOpen(false);
         alert(`${data.user.nickname}님으로 로그인되었습니다!`);
       } else {
@@ -157,15 +156,13 @@ export default function UserDropdown() {
   const handleLogin = async () => {
     // TODO: Redis 세션 기반 로그인으로 전환할 때 주석 해제
     // return handleRedisLogin();
-    
+
     return handleSimpleLogin();
   };
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
 
       const data = await response.json();
 
@@ -185,34 +182,22 @@ export default function UserDropdown() {
       {/* 프로필 버튼 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 border-2 border-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className="h-12 w-12 rounded-full border-2 border-white bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
       >
         {isMounted && authenticated && user ? (
-          <span className="text-white font-bold text-lg">
-            {user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}
-          </span>
+          <span className="text-lg font-bold text-white">{user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}</span>
         ) : (
-          <svg
-            className="w-6 h-6 text-white mx-auto"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
+          <svg className="mx-auto h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         )}
       </button>
 
       {/* 드롭다운 말풍선 */}
       {isOpen && (
-        <div className="absolute top-16 right-0 w-80 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
-          <div className="absolute -top-2 right-3 w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
-          
+        <div className="absolute top-16 right-0 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+          <div className="absolute -top-2 right-3 h-4 w-4 rotate-45 transform border-t border-l border-gray-200 bg-white"></div>
+
           {isMounted && authenticated && user ? (
             <div className="p-6">
               <div className="mb-4">
@@ -224,58 +209,46 @@ export default function UserDropdown() {
 
               {/* 운영중인 블로그 리스트 */}
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">운영중인 블로그</h4>
+                <h4 className="mb-2 text-sm font-medium text-gray-700">운영중인 블로그</h4>
                 {blogsLoading ? (
-                  <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="rounded-lg bg-gray-50 p-3">
                     <div className="text-sm text-gray-500">로딩 중...</div>
                   </div>
                 ) : blogs.length > 0 ? (
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="max-h-32 space-y-2 overflow-y-auto">
                     {blogs.map((blog) => (
                       <div
                         key={blog.id}
-                        className="p-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-                        onClick={() => window.location.href = `/${blog.address}`}
+                        className="cursor-pointer rounded-lg bg-gray-50 p-2 transition-colors hover:bg-gray-100"
+                        onClick={() => (window.location.href = `/${blog.address}`)}
                       >
                         <div className="flex items-center space-x-2">
                           {blog.logo_image ? (
-                            <img
-                              src={blog.logo_image}
-                              alt={blog.nickname}
-                              className="w-6 h-6 rounded object-cover"
-                            />
+                            <img src={blog.logo_image} alt={blog.nickname} className="h-6 w-6 rounded object-cover" />
                           ) : (
-                            <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">
-                                {blog.nickname.charAt(0).toUpperCase()}
-                              </span>
+                            <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-500">
+                              <span className="text-xs font-bold text-white">{blog.nickname.charAt(0).toUpperCase()}</span>
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {blog.nickname}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              /{blog.address}
-                            </p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-900">{blog.nickname}</p>
+                            <p className="truncate text-xs text-gray-500">/{blog.address}</p>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 text-center">
-                      운영중인 블로그가 없습니다
-                    </p>
+                  <div className="rounded-lg bg-gray-50 p-3">
+                    <p className="text-center text-sm text-gray-500">운영중인 블로그가 없습니다</p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-4 mt-4">
+              <div className="mt-4 space-y-4">
                 <button
-                  onClick={() => window.location.href = '/usermanage'}
-                  className="w-full px-6 text-left text-sm hover:bg-gray-50 rounded-lg transition-colors"
+                  onClick={() => (window.location.href = '/usermanage')}
+                  className="w-full rounded-lg px-6 text-left text-sm transition-colors hover:bg-gray-50"
                   style={{ paddingTop: '16px', paddingBottom: '16px' }}
                 >
                   <span className="text-gray-700">🏠 관리 페이지</span>
@@ -283,7 +256,7 @@ export default function UserDropdown() {
                 <hr className="my-4 border-gray-200" />
                 <button
                   onClick={handleLogout}
-                  className="w-full px-6 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="w-full rounded-lg px-6 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
                   style={{ paddingTop: '16px', paddingBottom: '16px' }}
                 >
                   🚪 로그아웃
@@ -293,17 +266,10 @@ export default function UserDropdown() {
           ) : (
             <div className="p-6">
               <div className="space-y-10">
-                <button
-                  onClick={() => window.location.href = '/'}
-                  className="w-full px-6 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium h-10"
-
-                >
+                <button onClick={() => (window.location.href = '/')} className="h-10 w-full rounded-lg bg-gray-500 px-6 font-medium text-white transition-colors hover:bg-gray-600">
                   🏠 PostSmith 홈페이지
                 </button>
-                <button
-                  onClick={handleLogin}
-                  className="w-full px-6 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium h-10"
-                >
+                <button onClick={handleLogin} className="h-10 w-full rounded-lg bg-blue-500 px-6 font-medium text-white transition-colors hover:bg-blue-600">
                   🔑 로그인하기
                 </button>
               </div>
@@ -313,4 +279,4 @@ export default function UserDropdown() {
       )}
     </div>
   );
-} 
+}

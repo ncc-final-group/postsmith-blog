@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import { getSidebarData } from './api/sidebarData';
 import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
@@ -10,9 +11,8 @@ import { getMenusByBlogId } from './api/tbMenu';
 import { getThemeByBlogId } from '../lib/themeService';
 import BlogLayout from './components/BlogLayout';
 import BlogProvider from './components/BlogProvider';
-import { getSidebarData } from './api/sidebarData';
-import { renderTemplate } from '../lib/template/TemplateEngine';
 import { getCurrentUser } from '../lib/auth';
+import { renderTemplate } from '../lib/template/TemplateEngine';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수
 function formatDate(date: Date): string {
@@ -92,18 +92,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
     // 현재 로그인한 사용자 정보 가져오기
     const currentUser = await getCurrentUser();
-    
+
     // 블로그 소유자인지 확인
     const isOwner = currentUser && currentUser.id === blog.user_id;
     const ownerUserId = isOwner ? currentUser.id : undefined;
-
-
 
     const categories = await getCategoriesByBlogId(blog.id);
     const paginatedContents = await getPostsByBlogIdWithPaging(blog.id, page, 10, ownerUserId);
     const menus = await getMenusByBlogId(blog.id);
     const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
-    
+
     // 사이드바 데이터 불러오기
     const sidebarData = await getSidebarData(blog.id, ownerUserId);
 

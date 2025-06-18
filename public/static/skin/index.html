@@ -93,8 +93,8 @@
                 <h1 class="post-title editor-content mb-4 text-4xl font-bold">[##_article_title_##]</h1>
                 <div class="post-meta mb-4 text-sm text-gray-500">
                   <span class="post-author">[##_article_author_##]</span>
-                  · <time datetime="[##_article_date_##]">[##_article_date_year_##].[##_article_date_month_##].[##_article_date_day_##] [##_article_time_##]</time>
-                  · <span class="post-views">조회수 [##_article_total_views_##]</span>
+                  · <time datetime="[##_article_date_##]">[##_article_date_year_##].[##_article_date_month_##].[##_article_date_day_##] [##_article_time_##]</time> ·
+                  <span class="post-views">조회수 [##_article_total_views_##]</span>
                 </div>
               </header>
 
@@ -128,38 +128,35 @@
                         <div class="comment-content">[##_rp_rep_content_##]</div>
                         <s_comment_form>
                           <div class="comment-actions mt-2">
-                            <button onclick="toggleReplyForm([##_rp_rep_id_##])" class="reply-btn text-xs text-blue-500 hover:underline cursor-pointer border-none bg-transparent">답글</button>
+                            <button onclick="toggleReplyForm([##_rp_rep_id_##])" class="reply-btn cursor-pointer border-none bg-transparent text-xs text-blue-500 hover:underline">
+                              답글
+                            </button>
                           </div>
                         </s_comment_form>
                         <!-- 답글 작성 폼 (POSTS 타입에서만 표시) -->
                         <s_comment_form>
                           <div id="reply-form-[##_rp_rep_id_##]" class="reply-form mt-4 hidden">
-                            <div class="reply-form-inner bg-gray-50 p-4 rounded-lg border border-gray-200">
-                              <div class="reply-to-info mb-2 text-sm text-gray-600">
-                                <strong>[##_rp_rep_name_##]</strong>님에게 답글 작성
-                              </div>
+                            <div class="reply-form-inner rounded-lg border border-gray-200 bg-gray-50 p-4">
+                              <div class="reply-to-info mb-2 text-sm text-gray-600"><strong>[##_rp_rep_name_##]</strong>님에게 답글 작성</div>
                               <form onsubmit="handleReplySubmit(event, [##_rp_rep_id_##])">
                                 <div class="form-group mb-3">
-                                  <textarea 
-                                    id="reply-content-[##_rp_rep_id_##]" 
-                                    name="content" 
-                                    rows="3" 
-                                    placeholder="답글을 입력해주세요..." 
+                                  <textarea
+                                    id="reply-content-[##_rp_rep_id_##]"
+                                    name="content"
+                                    rows="3"
+                                    placeholder="답글을 입력해주세요..."
                                     required
-                                    class="w-full p-2 border border-gray-300 rounded text-sm resize-vertical"
+                                    class="resize-vertical w-full rounded border border-gray-300 p-2 text-sm"
                                   ></textarea>
                                 </div>
                                 <div class="form-actions flex gap-2">
-                                  <button 
-                                    type="submit" 
-                                    class="reply-submit-btn bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 border-none cursor-pointer"
-                                  >
+                                  <button type="submit" class="reply-submit-btn cursor-pointer rounded border-none bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
                                     답글 작성
                                   </button>
-                                  <button 
-                                    type="button" 
-                                    onclick="toggleReplyForm([##_rp_rep_id_##])" 
-                                    class="reply-cancel-btn bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 border-none cursor-pointer"
+                                  <button
+                                    type="button"
+                                    onclick="toggleReplyForm([##_rp_rep_id_##])"
+                                    class="reply-cancel-btn cursor-pointer rounded border-none bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600"
                                   >
                                     취소
                                   </button>
@@ -212,24 +209,22 @@
               <a href="[##_pagination_first_##]" class="pagination-btn first-btn" [##_pagination_first_disabled_##]>
                 <span>&laquo;</span>
               </a>
-              
+
               <!-- 이전 10페이지 버튼 -->
               <a href="[##_pagination_prev_block_##]" class="pagination-btn prev-block-btn" [##_pagination_prev_block_disabled_##]>
                 <span>&lt;</span>
               </a>
-              
+
               <!-- 페이지 번호들 -->
               [##_pagination_rep_##]
-              <a href="[##_pagination_rep_link_##]" class="pagination-btn page-btn [##_pagination_rep_class_##]">
-                [##_pagination_rep_number_##]
-              </a>
+              <a href="[##_pagination_rep_link_##]" class="pagination-btn page-btn [##_pagination_rep_class_##]"> [##_pagination_rep_number_##] </a>
               [/##_pagination_rep_##]
-              
+
               <!-- 다음 10페이지 버튼 -->
               <a href="[##_pagination_next_block_##]" class="pagination-btn next-block-btn" [##_pagination_next_block_disabled_##]>
                 <span>&gt;</span>
               </a>
-              
+
               <!-- 맨 뒷 페이지 버튼 -->
               <a href="[##_pagination_last_##]" class="pagination-btn last-btn" [##_pagination_last_disabled_##]>
                 <span>&raquo;</span>
@@ -242,7 +237,6 @@
       <!-- 사이드바 ------------------------------------------------------- -->
       <aside id="sidebar" class="w-80 space-y-8">
         <s_sidebar>
-
           <s_sidebar_element>
             <!-- 최근 글 -->
             <div class="widget">
@@ -301,39 +295,39 @@
     <footer class="site-footer py-8 text-center text-sm text-gray-500">&copy; [##_title_##] · Powered by PostSmith</footer>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const toggleBtn = document.querySelector(".mobile-menu");
-        const menu = document.querySelector(".menu");
-        const overlay = document.querySelector(".menu-overlay");
+      document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.querySelector('.mobile-menu');
+        const menu = document.querySelector('.menu');
+        const overlay = document.querySelector('.menu-overlay');
 
         if (!toggleBtn || !menu || !overlay) return;
 
         const toggleSidebar = () => {
-          menu.classList.toggle("active");
-          overlay.classList.toggle("active");
-          toggleBtn.classList.toggle("open");
+          menu.classList.toggle('active');
+          overlay.classList.toggle('active');
+          toggleBtn.classList.toggle('open');
 
-          if (menu.classList.contains("active")) {
+          if (menu.classList.contains('active')) {
             const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
-            document.body.style.overflow = "hidden";
-            document.body.style.paddingRight = scrollBarWidth + "px";
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = scrollBarWidth + 'px';
           } else {
-            document.body.style.overflow = "";
-            document.body.style.paddingRight = "";
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
           }
         };
 
-        toggleBtn.addEventListener("click", toggleSidebar);
-        overlay.addEventListener("click", toggleSidebar);
+        toggleBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
       });
 
       // 댓글 답글 폼 토글 함수
       function toggleReplyForm(replyId) {
-        const replyForm = document.getElementById("reply-form-" + replyId);
+        const replyForm = document.getElementById('reply-form-' + replyId);
         if (replyForm) {
-          replyForm.classList.toggle("hidden");
-          if (!replyForm.classList.contains("hidden")) {
-            const textarea = replyForm.querySelector("textarea");
+          replyForm.classList.toggle('hidden');
+          if (!replyForm.classList.contains('hidden')) {
+            const textarea = replyForm.querySelector('textarea');
             if (textarea) {
               textarea.focus();
             }
@@ -345,18 +339,18 @@
       function handleReplySubmit(event, parentId) {
         event.preventDefault();
         const form = event.target;
-        const content = form.querySelector("textarea").value.trim();
-        
+        const content = form.querySelector('textarea').value.trim();
+
         if (!content) {
-          alert("답글 내용을 입력해주세요.");
+          alert('답글 내용을 입력해주세요.');
           return;
         }
 
         // 실제 답글 제출 로직은 서버사이드에서 처리
         // 여기서는 UI 피드백만 제공
-        const submitBtn = form.querySelector(".reply-submit-btn");
+        const submitBtn = form.querySelector('.reply-submit-btn');
         const originalText = submitBtn.textContent;
-        submitBtn.textContent = "제출 중...";
+        submitBtn.textContent = '제출 중...';
         submitBtn.disabled = true;
 
         // 실제 구현시에는 fetch API나 form 제출을 사용

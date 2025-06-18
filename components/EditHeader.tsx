@@ -19,8 +19,8 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import React from 'react';
 import { $getRoot } from 'lexical';
 
-import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_TEXT_COLOR_COMMAND, SET_IMAGE_ALIGNMENT_COMMAND } from './Editor';
-import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './Editor';
+import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_IMAGE_ALIGNMENT_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
+import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './nodes';
 import { getMediaFiles, type MediaFile } from '../lib/mediaService';
 import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
 
@@ -667,12 +667,12 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">이미지 URL</label>
             <input
-                          type="url"
-            value={imageUrl}
-            onChange={(e) => {
-              const url = e.target.value;
-              setImageUrl(url);
-            }}
+              type="url"
+              value={imageUrl}
+              onChange={(e) => {
+                const url = e.target.value;
+                setImageUrl(url);
+              }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="https://example.com/image.jpg"
             />
@@ -710,18 +710,10 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
               <div className="relative h-24 w-full overflow-hidden rounded border">
                 {previewUrl ? (
                   // 파일 업로드 중일 때는 Object URL 사용
-                  <img
-                    src={previewUrl}
-                    alt={altText || '미리보기'}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={previewUrl} alt={altText || '미리보기'} className="h-full w-full object-cover" />
                 ) : (
                   // 서버 업로드 완료 후 이미지 표시
-                  <img
-                    src={imageUrl}
-                    alt={altText || '미리보기'}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={imageUrl} alt={altText || '미리보기'} className="h-full w-full object-cover" />
                 )}
               </div>
               <div className="mt-1 text-xs break-all text-gray-500">
@@ -1127,9 +1119,9 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
         } else {
           alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
         }
-                } catch (error) {
-            alert('파일 업로드 중 오류가 발생했습니다.');
-          }
+      } catch (error) {
+        alert('파일 업로드 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -1266,13 +1258,13 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
           setAltText('');
           setSelectedVideo(null);
         }
-              } catch (error) {
-          alert('비디오 업로드 중 오류가 발생했습니다.');
-          // 에러 발생 시에도 초기값 유지
-          setVideoUrl('');
-          setAltText('');
-          setSelectedVideo(null);
-        }
+      } catch (error) {
+        alert('비디오 업로드 중 오류가 발생했습니다.');
+        // 에러 발생 시에도 초기값 유지
+        setVideoUrl('');
+        setAltText('');
+        setSelectedVideo(null);
+      }
     }
   };
 
@@ -1465,7 +1457,7 @@ export default function EditHeader({ blogId }: EditHeaderProps) {
   const handleAlignment = (alignment: ElementFormatType) => {
     // 먼저 이미지 정렬을 시도
     const imageAlignmentHandled = editor.dispatchCommand(SET_IMAGE_ALIGNMENT_COMMAND, alignment);
-    
+
     // 이미지 정렬이 처리되지 않았다면 일반 텍스트 정렬 적용
     if (!imageAlignmentHandled) {
       editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, alignment);

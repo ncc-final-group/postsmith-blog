@@ -1,14 +1,14 @@
+import { assert } from 'console';
+
 import { NextRequest, NextResponse } from 'next/server';
+
 import { selectSQL } from '../../../../_lib/mysql/db';
 
 // 총 조회수 조회 API
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ contentId: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ contentId: string }> }) {
   try {
     const { contentId } = await params;
-    
+
     if (!contentId || isNaN(Number(contentId))) {
       return NextResponse.json({ error: 'Invalid content ID' }, { status: 400 });
     }
@@ -19,14 +19,13 @@ export async function GET(
       FROM content_views 
       WHERE content_id = ?
     `;
-    
+
     const result = await selectSQL<{ total_views: number }>(query, [Number(contentId)]);
-    
+
     const totalViews = result.length > 0 ? result[0].total_views : 0;
-    
+
     return NextResponse.json(totalViews);
   } catch (error) {
-    console.error('Error fetching total views:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    assert(false, 'error');
   }
-} 
+}

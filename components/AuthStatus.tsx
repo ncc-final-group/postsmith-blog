@@ -1,7 +1,7 @@
 'use client';
 
-import { getCurrentUser, getCurrentUserId, isUserAuthenticated, useUserStore } from '../app/store/userStore';
 import { useBlogStore } from '../app/store/blogStore';
+import { getCurrentUser, getCurrentUserId, isUserAuthenticated, useUserStore } from '../app/store/userStore';
 
 export default function AuthStatus() {
   const { userInfo, isLoading, error, isAuthenticated } = useUserStore();
@@ -30,12 +30,20 @@ export default function AuthStatus() {
       <div className="rounded-lg border p-4">
         <h3 className="mb-2 font-semibold">사용자 정보</h3>
         <div className="space-y-1 text-sm">
-          <p><strong>ID:</strong> {userInfo.id}</p>
-          <p><strong>닉네임:</strong> {userInfo.nickname}</p>
-          <p><strong>이메일:</strong> {userInfo.email}</p>
-          <p><strong>인증 상태:</strong> {authenticated ? '로그인됨' : '로그아웃됨'}</p>
+          <p>
+            <strong>ID:</strong> {userInfo.id}
+          </p>
+          <p>
+            <strong>닉네임:</strong> {userInfo.nickname}
+          </p>
+          <p>
+            <strong>이메일:</strong> {userInfo.email}
+          </p>
+          <p>
+            <strong>인증 상태:</strong> {authenticated ? '로그인됨' : '로그아웃됨'}
+          </p>
         </div>
-        
+
         <div className="mt-4 text-xs text-gray-600">
           <p>편의 함수 사용:</p>
           <p>getCurrentUserId(): {userId}</p>
@@ -47,24 +55,26 @@ export default function AuthStatus() {
       {/* 블로그 정보 */}
       <div className="rounded-lg border p-4">
         <h3 className="mb-2 font-semibold">블로그 정보</h3>
-        {blogError && (
-          <div className="mb-2 text-red-500 text-sm">
-            블로그 오류: {blogError}
-          </div>
-        )}
+        {blogError && <div className="mb-2 text-sm text-red-500">블로그 오류: {blogError}</div>}
         {blogInfo ? (
           <div className="space-y-1 text-sm">
-            <p><strong>블로그 ID:</strong> {blogInfo.id}</p>
-            <p><strong>블로그 닉네임:</strong> {blogInfo.nickname}</p>
-            <p><strong>블로그 주소:</strong> {blogInfo.address}</p>
-            <p><strong>설명:</strong> {blogInfo.description || '없음'}</p>
+            <p>
+              <strong>블로그 ID:</strong> {blogInfo.id}
+            </p>
+            <p>
+              <strong>블로그 닉네임:</strong> {blogInfo.nickname}
+            </p>
+            <p>
+              <strong>블로그 주소:</strong> {blogInfo.address}
+            </p>
+            <p>
+              <strong>설명:</strong> {blogInfo.description || '없음'}
+            </p>
           </div>
         ) : (
-          <div className="text-gray-500 text-sm">
-            {blogId ? `블로그 ID: ${blogId} (정보 로딩 중...)` : '블로그가 설정되지 않음'}
-          </div>
+          <div className="text-sm text-gray-500">{blogId ? `블로그 ID: ${blogId} (정보 로딩 중...)` : '블로그가 설정되지 않음'}</div>
         )}
-        
+
         <div className="mt-2 text-xs text-gray-600">
           <p>현재 URL: {typeof window !== 'undefined' ? window.location.href : 'SSR'}</p>
           <p>호스트: {typeof window !== 'undefined' ? window.location.host : 'SSR'}</p>
@@ -83,11 +93,11 @@ export default function AuthStatus() {
               <li>사용자에게 블로그를 생성해야 합니다</li>
             </ol>
             <p className="mt-2 font-medium">
-              예: userid 1의 블로그 주소가 "myblog"라면 <code>myblog.localhost:3000</code>으로 접속
+              예: userid 1의 블로그 주소가 &quot;myblog&quot;라면 <code>myblog.domain</code>으로 접속
             </p>
           </div>
         </div>
       )}
     </div>
   );
-} 
+}

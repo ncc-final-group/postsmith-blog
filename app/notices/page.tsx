@@ -3,15 +3,15 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import { renderTemplate } from '../../lib/template/TemplateEngine';
+import { getSidebarData } from '../api/sidebarData';
 import { getBlogByAddress } from '../api/tbBlogs';
 import { getCategoriesByBlogId } from '../api/tbCategories';
 import { getNoticesByBlogId, getNoticesByBlogIdWithPaging } from '../api/tbContents';
 import { getMenusByBlogId } from '../api/tbMenu';
-import { getSidebarData } from '../api/sidebarData';
 import { getActiveThemeByBlogId } from '../api/tbThemes';
 import BlogLayout from '../components/BlogLayout';
 import BlogProvider from '../components/BlogProvider';
-import { renderTemplate } from '../../lib/template/TemplateEngine';
 
 async function getBlogAddress(): Promise<string> {
   try {
@@ -44,7 +44,7 @@ export default async function NoticesPage({ searchParams }: { searchParams: Prom
   try {
     const resolvedSearchParams = await searchParams;
     const page = parseInt(resolvedSearchParams.page || '1', 10);
-    
+
     // 1. 블로그 주소 추출
     const subdomain = await getBlogAddress();
 
@@ -172,4 +172,4 @@ export async function generateMetadata(): Promise<Metadata> {
       description: 'PostSmith Blog의 공지사항을 확인해보세요.',
     };
   }
-} 
+}

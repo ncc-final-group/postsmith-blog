@@ -1,12 +1,13 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+
 import { renderTemplate } from '../../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../../lib/themeService';
+import { getSidebarData } from '../api/sidebarData';
 import { getBlogByAddress } from '../api/tbBlogs';
 import { getCategoriesByBlogId } from '../api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging } from '../api/tbContents';
 import { getMenusByBlogId } from '../api/tbMenu';
-import { getSidebarData } from '../api/sidebarData';
-import { getThemeByBlogId } from '../../lib/themeService';
 import BlogLayout from '../components/BlogLayout';
 import BlogProvider from '../components/BlogProvider';
 
@@ -41,7 +42,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
   try {
     const resolvedSearchParams = await searchParams;
     const page = parseInt(resolvedSearchParams.page || '1', 10);
-    
+
     // 1. 블로그 주소 추출
     const subdomain = await getBlogAddress();
 

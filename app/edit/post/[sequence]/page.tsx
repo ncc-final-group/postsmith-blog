@@ -1,9 +1,10 @@
 'use client';
-
+/* eslint-disable no-console */
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
 import { $generateHtmlFromNodes } from '@lexical/html';
+import { $generateNodesFromDOM } from '@lexical/html';
 import { LinkNode } from '@lexical/link';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
@@ -11,18 +12,48 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { TableCellNode, TableNode, TableRowNode } from '@lexical/table';
-import { createEditor } from 'lexical';
-import { $getRoot, $getSelection, $isRangeSelection } from 'lexical';
+import { $getRoot, $parseSerializedNode, $setSelection } from 'lexical';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { BLOG_API_URL } from '../../../lib/constants';
-import { getSubdomain } from '../../../lib/utils';
+import { BLOG_API_URL } from '../../../../lib/constants';
+import { getSubdomain } from '../../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
 import Editor from '@components/Editor';
 import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
+
+// 카테고리 타입 정의
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  parent_id: number | null;
+  type: string;
+  sort_order: number;
+  post_count: number;
+  user_id: number;
+}
+
+// 콘텐츠 타입 정의
+interface Content {
+  id: number;
+  sequence: number;
+  title: string;
+  content_html: string;
+  category_id: number | null;
+  type: string;
+  is_public: boolean;
+  is_temp: boolean;
+  blog_id: number;
+  created_at: string;
+  updated_at: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+}
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
@@ -63,92 +94,117 @@ const theme = {
   characterStyles: { colored: 'styled-text' },
 };
 
-function PageForm({
+function EditorContentLoader({ content }: { content: string }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    if (content && content !== '<p class="mb-2"></p>') {
+      editor.update(() => {
+        // HTML을 DOM으로 파싱
+        const parser = new DOMParser();
+        const dom = parser.parseFromString(content, 'text/html');
+
+        // DOM에서 Lexical 노드 생성
+        const nodes = $generateNodesFromDOM(editor, dom);
+
+        // 에디터의 루트 노드 가져오기
+        const root = $getRoot();
+        root.clear();
+        root.append(...nodes);
+      });
+    }
+  }, [editor, content]);
+
+  return null;
+}
+
+function EditorForm({
+  category,
+  setCategory,
   title,
   setTitle,
-  slug,
-  setSlug,
-  showInMenu,
-  setShowInMenu,
+  content,
 }: {
+  category: string;
+  setCategory: (value: string) => void;
   title: string;
   setTitle: (value: string) => void;
-  slug: string;
-  setSlug: (value: string) => void;
-  showInMenu: boolean;
-  setShowInMenu: (value: boolean) => void;
+  content: Content | null;
 }) {
-  // 제목이 변경될 때 자동으로 slug 생성
-  const generateSlug = (title: string) => {
-    return (
-      title
-        .toLowerCase()
-        .trim()
-        // 특수문자 제거 (한글, 영문, 숫자, 공백, 하이픈만 유지)
-        .replace(/[^a-z0-9가-힣\s-]/g, '')
-        // 연속된 공백을 하나로
-        .replace(/\s+/g, ' ')
-        // 공백을 하이픈으로 변환
-        .replace(/\s/g, '-')
-        // 연속된 하이픈을 하나로
-        .replace(/-+/g, '-')
-        // 앞뒤 하이픈 제거
-        .replace(/^-+|-+$/g, '')
-    );
-  };
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    // 항상 제목에서 자동으로 슬러그 생성
-    setSlug(generateSlug(newTitle));
-  };
+  const fetchCategories = useCallback(async () => {
+    try {
+      setIsLoadingCategories(true);
+      // API Route를 통해 카테고리 가져오기 (subdomain 기반으로 자동 감지)
+      const response = await fetch('/api/categories');
+
+      // 블로그가 존재하지 않는 경우 404 처리
+      if (response.status === 404) {
+        alert('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setCategories(result.data as Category[]);
+      } else {
+        throw new Error(result.message || 'Failed to fetch categories');
+      }
+    } catch (error) {
+      // 에러 발생시 기본 카테고리 사용
+      const fallbackCategories = [
+        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: 1 },
+        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: 1 },
+        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: 1 },
+        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: 1 },
+      ];
+      setCategories(fallbackCategories);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   return (
     <div className="p-4">
       <div className="mb-4">
-        <label htmlFor="title" className="mb-2 block text-sm font-medium text-gray-700">
-          페이지 제목
-        </label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full rounded-md border border-gray-300 p-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+          disabled={isLoadingCategories}
+        >
+          <option value="">{isLoadingCategories ? '카테고리 로딩 중...' : '카테고리 선택'}</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id.toString()}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mb-4">
         <input
           type="text"
           id="title"
           value={title}
-          onChange={(e) => handleTitleChange(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           className="w-full rounded-md border border-gray-300 p-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-          placeholder="페이지 제목을 입력하세요"
+          placeholder="제목을 입력하세요"
           required
         />
-      </div>
-
-      {/* URL 미리보기 */}
-      {title && (
-        <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-gray-700">페이지 URL 미리보기</label>
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-            <span className="text-sm text-gray-600">/page/</span>
-            <span className="text-sm font-medium text-gray-900">{slug}</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-500">✨ 페이지 제목에서 자동으로 생성됩니다</p>
-        </div>
-      )}
-
-      <div className="mb-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={showInMenu}
-            onChange={(e) => setShowInMenu(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 bg-gray-100 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm font-medium text-gray-700">메뉴에 표시</span>
-        </label>
-        <p className="mt-1 text-xs text-gray-500">체크하면 블로그 메뉴에 이 페이지가 자동으로 추가됩니다.</p>
       </div>
     </div>
   );
 }
 
-function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string; showInMenu: boolean }) {
+function SaveButtons({ category, title, sequence, isUpdate }: { category: string; title: string; sequence: number; isUpdate: boolean }) {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,20 +216,6 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const subdomain = getSubdomain();
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 슬러그 유효성 검사
-      if (!slug || slug.trim() === '') {
-        alert('페이지 URL을 입력해주세요.');
-        setIsLoading(false);
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -197,48 +239,41 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
-        blogId,
+        category: parseInt(category) || 0,
         title,
         content: html,
-        slug: slug.trim(),
-        showInMenu, // 메뉴 표시 여부
+        postType: 'POSTS',
+        isTemp: false,
+        isPublic: true,
       };
 
-      // 서버로 POST 요청 (페이지 전용 API 엔드포인트)
-      const response = await fetch(`/api/pages`, {
-        method: 'POST',
+      // 디버깅을 위한 로그 추가
+      console.log('요청 URL:', `/api/contents/${sequence}`);
+      console.log('요청 데이터:', requestBody);
+
+      // 수정 요청
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
       });
-      const responseData = await response.json();
 
-      alert('페이지가 성공적으로 저장되었습니다.');
+      // 응답 로깅
+      console.log('응답 상태:', response.status);
+      const responseData = await response.text();
+      console.log('응답 데이터:', responseData);
 
-      // 저장 완료 후 생성된 페이지로 이동 (sequence 사용)
-      if (responseData.data?.sequence) {
-        router.push(`/posts/${responseData.data.sequence}`);
-      } else {
-        router.push(`/page/${slug}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);
       }
+
+      alert('글이 성공적으로 수정되었습니다.');
+
+      // 수정 완료 후 해당 글로 이동
+      router.push(`/posts/${sequence}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
       alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
@@ -252,13 +287,6 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const subdomain = getSubdomain();
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -267,24 +295,26 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
       });
 
       const requestBody = {
+        category: parseInt(category) || 0,
         title: title || '제목 없음',
         content: html,
-        slug: slug || 'untitled',
-        type: 'page',
-        showInMenu,
-        isDraft: true, // 임시 저장 플래그
+        postType: 'POSTS',
+        isTemp: true, // 임시 저장 플래그
+        isPublic: false,
       };
 
-      // 임시 저장 요청
-      const response = await fetch(`${BLOG_API_URL}/${subdomain}/temp`, {
-        method: 'POST',
+      // 임시 저장 요청 (수정 모드에서도 PUT 사용)
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       alert('임시 저장 완료!');
     } catch (err) {
@@ -317,10 +347,10 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
           onClick={handleSubmit}
           disabled={isLoading}
           className={`rounded-md px-6 py-2 font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
+            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
-          {isLoading ? '저장 중...' : '페이지 저장'}
+          {isLoading ? '수정 중...' : '수정'}
         </button>
       </div>
     </div>
@@ -388,13 +418,62 @@ function ContentSizeMonitor() {
   );
 }
 
-export default function PageEditor() {
+export default function PostEditPage({ params }: { params: Promise<{ sequence: string }> }) {
+  const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [showInMenu, setShowInMenu] = useState(true);
+  const [content, setContent] = useState<Content | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sequence, setSequence] = useState<number>(0);
+
+  // 기존 글 데이터 불러오기
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setIsLoading(true);
+        const resolvedParams = await params;
+        const sequenceNum = parseInt(resolvedParams.sequence);
+
+        if (isNaN(sequenceNum)) {
+          setError('유효하지 않은 게시글 ID입니다.');
+          return;
+        }
+
+        setSequence(sequenceNum);
+
+        const response = await fetch(`/api/contents/${sequenceNum}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('게시글을 찾을 수 없습니다.');
+          } else {
+            setError('게시글을 불러오는 중 오류가 발생했습니다.');
+          }
+          return;
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const contentData = result.data as Content;
+          setContent(contentData);
+          setTitle(contentData.title || '');
+          setCategory(contentData.category_id?.toString() || '');
+        } else {
+          setError('게시글을 불러올 수 없습니다.');
+        }
+      } catch (err) {
+        setError('게시글을 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContent();
+  }, [params]);
 
   const initialConfig = {
-    namespace: 'PageEditor',
+    namespace: 'PostEditor',
     theme,
     nodes: [
       ListNode,
@@ -413,24 +492,47 @@ export default function PageEditor() {
       CustomVideoNode,
     ],
     onError: (error: Error) => {
+      console.error('Lexical error:', error);
       // 에러를 던지지 않고 로그만 출력
     },
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">게시글을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mb-4 text-xl text-red-600">오류 발생</div>
+          <p className="mb-4 text-gray-600">{error}</p>
+          <button onClick={() => window.history.back()} className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <LexicalComposer initialConfig={initialConfig}>
         <ContentSizeMonitor />
+        {content && <EditorContentLoader content={content.content_html || ''} />}
         <EditHeader />
         <div className="mx-auto max-w-4xl px-4 py-8 pb-20">
           <div className="overflow-hidden rounded-lg bg-white shadow-lg">
-            <div className="border-b border-green-200 bg-green-50 p-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-green-800">📄 정적 페이지 작성</h2>
-              <p className="mt-1 text-sm text-green-600">About, Contact 등의 정적 페이지를 생성합니다. 메뉴에 자동으로 추가할 수 있습니다.</p>
-            </div>
-            <PageForm title={title} setTitle={setTitle} slug={slug} setSlug={setSlug} showInMenu={showInMenu} setShowInMenu={setShowInMenu} />
+            <EditorForm category={category} setCategory={setCategory} title={title} setTitle={setTitle} content={content} />
             <Editor />
-            <SaveButtons title={title} slug={slug} showInMenu={showInMenu} />
+            <SaveButtons category={category} title={title} sequence={sequence} isUpdate={true} />
           </div>
         </div>
       </LexicalComposer>

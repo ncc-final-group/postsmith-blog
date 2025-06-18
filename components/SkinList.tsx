@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
 import React, { useState } from 'react';
+
 import { updateBlogTheme } from '../lib/skinService';
 
 export interface Skin {
@@ -28,10 +29,10 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId = 1 }: Skin
   // 테마 적용 핸들러
   const handleApplyTheme = async (themeId: string) => {
     setIsUpdating(themeId);
-    
+
     try {
       const result = await updateBlogTheme(blogId, themeId);
-      
+
       if (result.success) {
         setActiveSkinId(themeId);
         alert('테마가 성공적으로 적용되었습니다!');
@@ -41,7 +42,6 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId = 1 }: Skin
         alert(`테마 적용 실패: ${result.error}`);
       }
     } catch (error) {
-      console.error('테마 적용 오류:', error);
       alert('테마 적용 중 오류가 발생했습니다.');
     } finally {
       setIsUpdating(null);
@@ -63,14 +63,12 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId = 1 }: Skin
               </div>
               <div>
                 <div className="text-base font-bold text-black">{activeSkin.name}</div>
-                {activeSkin.description && (
-                  <div className="text-sm text-gray-600 mt-1">{activeSkin.description}</div>
-                )}
+                {activeSkin.description && <div className="mt-1 text-sm text-gray-600">{activeSkin.description}</div>}
               </div>
             </div>
             <div className="flex-shrink-0">
-              <button 
-                className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-700 transition-colors"
+              <button
+                className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow transition-colors hover:bg-green-700"
                 onClick={() => {
                   window.location.href = `/skin-editor`;
                 }}
@@ -123,9 +121,7 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId = 1 }: Skin
                   )}
                 </div>
                 <div className="mb-1 font-medium text-gray-800">{skin.name}</div>
-                {skin.description && (
-                  <div className="text-xs text-gray-500 mb-1 line-clamp-2">{skin.description}</div>
-                )}
+                {skin.description && <div className="mb-1 line-clamp-2 text-xs text-gray-500">{skin.description}</div>}
                 {isActive && <span className="text-xs font-semibold text-blue-600">사용중</span>}
               </div>
             );

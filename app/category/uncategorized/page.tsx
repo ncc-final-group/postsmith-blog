@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import { getCurrentUser } from '../../../lib/auth';
+import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getPopularContentsByBlogId, getUncategorizedContentsByBlogIdWithPaging, getUncategorizedCountByBlogId } from '../../api/tbContents';
@@ -11,8 +13,6 @@ import { getRecentReplies } from '../../api/tbReplies';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
-import { renderTemplate } from '../../../lib/template/TemplateEngine';
-import { getCurrentUser } from '../../../lib/auth';
 
 async function getBlogAddress(): Promise<string> {
   try {
@@ -45,7 +45,7 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
   try {
     const resolvedSearchParams = await searchParams;
     const page = parseInt(resolvedSearchParams.page || '1', 10);
-    
+
     // 1. 블로그 주소 추출
     const subdomain = await getBlogAddress();
 
@@ -63,7 +63,7 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
 
     // 3.5. 현재 로그인한 사용자 정보 가져오기
     const currentUser = await getCurrentUser();
-    
+
     // 블로그 소유자인지 확인
     const isOwner = currentUser && currentUser.id === blog.user_id;
     const ownerUserId = isOwner ? currentUser.id : undefined;
@@ -182,12 +182,12 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const subdomain = await getBlogAddress();
     const blog = await getBlogByAddress(subdomain);
-    
+
     // 현재 로그인한 사용자 정보 가져오기
     const currentUser = await getCurrentUser();
     const isOwner = currentUser && blog && currentUser.id === blog.user_id;
     const ownerUserId = isOwner ? currentUser.id : undefined;
-    
+
     const uncategorizedContents = await getUncategorizedContentsByBlogIdWithPaging(blog?.id || 0, 1, 10, ownerUserId);
     const totalCount = uncategorizedContents.pagination.totalContents;
 
@@ -201,4 +201,4 @@ export async function generateMetadata(): Promise<Metadata> {
       description: 'PostSmith Blog의 분류되지 않은 글들을 확인해보세요.',
     };
   }
-} 
+}

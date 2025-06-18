@@ -1,17 +1,17 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import ContentStats from '../../../components/ContentStats';
+import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../../../lib/themeService';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
-import { getThemeByBlogId } from '../../../lib/themeService';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
-import ContentStats from '../../../components/ContentStats';
-import { getCurrentUser } from '../../../lib/auth';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {
@@ -134,7 +134,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
 
     // 4.5. 현재 로그인한 사용자 정보 가져오기
     const currentUser = await getCurrentUser();
-    
+
     // 블로그 소유자인지 확인
     const isOwner = currentUser && currentUser.id === blog.user_id;
     const ownerUserId = isOwner ? currentUser.id : undefined;
@@ -275,7 +275,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         content: String(reply.content),
         created_at: String(reply.created_at),
         content_sequence: Number(reply.content_sequence),
-        user: { 
+        user: {
           nickname: String(reply.user_nickname ?? '익명'),
           profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
         },
@@ -287,7 +287,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         content: String(reply.content),
         created_at: String(reply.created_at),
         depth: reply.depth,
-        user: { 
+        user: {
           nickname: String(reply.user_nickname ?? '익명'),
           profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
         },

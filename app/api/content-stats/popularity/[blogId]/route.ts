@@ -1,14 +1,14 @@
+import { assert } from 'console';
+
 import { NextRequest, NextResponse } from 'next/server';
+
 import { selectSQL } from '../../../../_lib/mysql/db';
 
 // 인기글 점수 계산 API (최근 한 달 기준: 댓글 수 + 방문자 수)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ blogId: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ blogId: string }> }) {
   try {
     const { blogId } = await params;
-    
+
     if (!blogId || isNaN(Number(blogId))) {
       return NextResponse.json({ error: 'Invalid blog ID' }, { status: 400 });
     }
@@ -48,7 +48,7 @@ export async function GET(
       ORDER BY popularity_score DESC, c.created_at DESC
       LIMIT 10
     `;
-    
+
     const result = await selectSQL<{
       content_id: number;
       sequence: number;
@@ -57,10 +57,9 @@ export async function GET(
       recent_visit_count: number;
       popularity_score: number;
     }>(query, [Number(blogId)]);
-    
+
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error fetching popularity data:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    assert(false, 'error');
   }
-} 
+}

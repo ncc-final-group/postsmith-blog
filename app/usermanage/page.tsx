@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 export default function UserManagePage() {
   const pathname = usePathname();
-  const segments = pathname.split('/');
+  const segments = (pathname || '').split('/');
   // usermanage 경로에서 username 추출: /username/usermanage 형태에서 username은 segments[1]
   const username = segments[1] || '';
 

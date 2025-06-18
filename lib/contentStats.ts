@@ -39,11 +39,7 @@ export async function recordContentView(contentId: number): Promise<ContentViews
 }
 
 // 방문자 수 증가 API 호출 (Spring API 사용)
-export async function recordContentVisit(
-  contentId: number, 
-  userId?: number, 
-  ipAddress: string = '127.0.0.1'
-): Promise<ContentVisitsDto> {
+export async function recordContentVisit(contentId: number, userId?: number, ipAddress: string = '127.0.0.1'): Promise<ContentVisitsDto> {
   try {
     const requestBody: any = { contentId: contentId, ipAddress: ipAddress };
 
@@ -71,9 +67,9 @@ export async function recordContentVisit(
 // 총 조회수 가져오기 API 호출 (Next.js API 사용)
 export async function getTotalViewsByContentId(contentId: number): Promise<number> {
   try {
-    const response = await fetch(`/api/content-stats/views/${contentId}`, { 
+    const response = await fetch(`/api/content-stats/views/${contentId}`, {
       method: 'GET',
-      cache: 'no-store' // 캐시 방지로 최신 데이터 가져오기
+      cache: 'no-store', // 캐시 방지로 최신 데이터 가져오기
     });
 
     if (!response.ok) {
@@ -82,7 +78,6 @@ export async function getTotalViewsByContentId(contentId: number): Promise<numbe
 
     return await response.json();
   } catch (error) {
-    console.error('Error getting total views:', error);
     return 0; // 오류 시 기본값 0 반환
   }
 }
@@ -90,9 +85,9 @@ export async function getTotalViewsByContentId(contentId: number): Promise<numbe
 // 총 방문자 수 가져오기 API 호출 (Next.js API 사용)
 export async function getTotalVisitsByContentId(contentId: number): Promise<number> {
   try {
-    const response = await fetch(`/api/content-stats/visits/${contentId}`, { 
+    const response = await fetch(`/api/content-stats/visits/${contentId}`, {
       method: 'GET',
-      cache: 'no-store' // 캐시 방지로 최신 데이터 가져오기
+      cache: 'no-store', // 캐시 방지로 최신 데이터 가져오기
     });
 
     if (!response.ok) {
@@ -101,7 +96,6 @@ export async function getTotalVisitsByContentId(contentId: number): Promise<numb
 
     return await response.json();
   } catch (error) {
-    console.error('Error getting total visits:', error);
     return 0; // 오류 시 기본값 0 반환
   }
 }
@@ -109,9 +103,9 @@ export async function getTotalVisitsByContentId(contentId: number): Promise<numb
 // 오늘 조회수 가져오기 API 호출 (Next.js API 사용)
 export async function getTodayViewsByContentId(contentId: number): Promise<number> {
   try {
-    const response = await fetch(`/api/content-stats/views-today/${contentId}`, { 
+    const response = await fetch(`/api/content-stats/views-today/${contentId}`, {
       method: 'GET',
-      cache: 'no-store' // 캐시 방지로 최신 데이터 가져오기
+      cache: 'no-store', // 캐시 방지로 최신 데이터 가져오기
     });
 
     if (!response.ok) {
@@ -120,7 +114,6 @@ export async function getTodayViewsByContentId(contentId: number): Promise<numbe
 
     return await response.json();
   } catch (error) {
-    console.error('Error getting today views:', error);
     return 0; // 오류 시 기본값 0 반환
   }
 }
@@ -131,4 +124,3 @@ export function getClientIP(): string {
   // 실제 환경에서는 서버에서 처리하거나 외부 서비스 이용
   return '127.0.0.1';
 }
-

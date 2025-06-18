@@ -1,16 +1,16 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../../../lib/themeService';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getContentsByCategoryNameWithPaging } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
-import { getThemeByBlogId } from '../../../lib/themeService';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
-import { getCurrentUser } from '../../../lib/auth';
 
 async function getSubdomain(): Promise<string> {
   const h = await headers();
@@ -20,25 +20,19 @@ async function getSubdomain(): Promise<string> {
   return 'testblog';
 }
 
-export default async function CategoryPage({ 
-  params, 
-  searchParams 
-}: { 
-  params: Promise<{ slug: string }>; 
-  searchParams: Promise<{ page?: string }> 
-}) {
+export default async function CategoryPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
   const sub = await getSubdomain();
   const blog = await getBlogByAddress(sub);
   if (!blog) notFound();
-      const themeData = await getThemeByBlogId(blog.id);
-  if (!theme) notFound();
+  const themeData = await getThemeByBlogId(blog.id);
+  if (!themeData) notFound();
 
   // 현재 로그인한 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
-  
+
   // 블로그 소유자인지 확인
   const isOwner = currentUser && currentUser.id === blog.user_id;
   const ownerUserId = isOwner ? currentUser.id : undefined;
@@ -107,7 +101,7 @@ export default async function CategoryPage({
     pagination: paginatedContents.pagination, // 페이지네이션 정보 추가
   };
 
-  const html = renderTemplate(theme.html, theme.css, templateData);
+  const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
   // 카테고리 헤더 삽입
   const headerBlock = `
@@ -130,7 +124,7 @@ export default async function CategoryPage({
 
   return (
     <BlogProvider blogId={blog.id} blogInfo={blogInfo}>
-      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(theme.css)} />
+      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} />
     </BlogProvider>
   );
 }

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,15 +17,14 @@ export async function GET(request: NextRequest) {
       email: `user${userId}@example.com`,
       nickname: `사용자${userId}`,
       profile_image: null,
-      role: 'user'
+      role: 'user',
     };
 
     return NextResponse.json({
       user: userInfo,
-      message: '세션이 유효합니다.'
+      message: '세션이 유효합니다.',
     });
-
   } catch (error) {
     return NextResponse.json({ error: '세션 확인 중 오류가 발생했습니다.' }, { status: 500 });
   }
-} 
+}

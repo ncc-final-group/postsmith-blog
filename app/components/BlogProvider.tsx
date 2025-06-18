@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 
-import { useBlogStore } from '../store/blogStore';
 import { SidebarDataProvider } from './SidebarDataProvider';
 import { SidebarData } from '../api/sidebarData';
+import { useBlogStore } from '../store/blogStore';
 
 interface BlogProviderProps {
   blogId: number;
@@ -27,11 +27,7 @@ export default function BlogProvider({ blogId, blogInfo, sidebarData, children }
   }, [blogInfo, setBlogInfo]);
 
   if (sidebarData) {
-    return (
-      <SidebarDataProvider sidebarData={sidebarData}>
-        {children}
-      </SidebarDataProvider>
-    );
+    return <SidebarDataProvider sidebarData={sidebarData}>{children}</SidebarDataProvider>;
   }
 
   return <>{children}</>;

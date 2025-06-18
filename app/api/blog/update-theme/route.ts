@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { API_BASE_URL } from '../../../../lib/constants';
 
 export async function PUT(request: NextRequest) {
@@ -17,9 +18,7 @@ export async function PUT(request: NextRequest) {
     // 현재 블로그 정보 가져오기
     const getBlogResponse = await fetch(`${API_BASE_URL}/api/blog/${blogId}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!getBlogResponse.ok) {
@@ -32,15 +31,13 @@ export async function PUT(request: NextRequest) {
     const updateBlogDto = {
       ...currentBlogData,
       themeHtml: themeHtml || currentBlogData.themeHtml,
-      themeCss: themeCss || currentBlogData.themeCss
+      themeCss: themeCss || currentBlogData.themeCss,
     };
 
     // Spring의 updateBlog API 호출
     const updateResponse = await fetch(`${API_BASE_URL}/api/blog/${blogId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateBlogDto),
     });
 
@@ -51,18 +48,18 @@ export async function PUT(request: NextRequest) {
 
     const result = await updateResponse.text();
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: '커스텀 테마가 성공적으로 저장되었습니다.',
-      result: result
+      result: result,
     });
-
   } catch (error) {
-    console.error('테마 업데이트 오류:', error);
-    
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : '테마 업데이트 중 오류가 발생했습니다.' 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : '테마 업데이트 중 오류가 발생했습니다.',
+      },
+      { status: 500 },
+    );
   }
-} 
+}

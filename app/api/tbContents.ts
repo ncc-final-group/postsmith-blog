@@ -385,7 +385,7 @@ export const getPopularContentsByBlogId = async (blogId: number, userId?: number
     ORDER BY popularity_score DESC, c.created_at DESC
     LIMIT 5
   `;
-  
+
   return await selectSQL<PopularContent>(query, [blogId]);
 };
 
@@ -403,11 +403,7 @@ export interface PaginatedContents {
 }
 
 // 페이징을 지원하는 블로그별 콘텐츠 조회
-export const getContentsByBlogIdWithPaging = async (
-  blogId: number, 
-  page: number = 1, 
-  pageSize: number = 10
-): Promise<PaginatedContents> => {
+export const getContentsByBlogIdWithPaging = async (blogId: number, page: number = 1, pageSize: number = 10): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
   // 전체 개수 조회
@@ -461,19 +457,12 @@ export const getContentsByBlogIdWithPaging = async (
 };
 
 // POSTS 타입만 페이징하여 조회하는 함수
-export const getPostsByBlogIdWithPaging = async (
-  blogId: number, 
-  page: number = 1, 
-  pageSize: number = 10,
-  userId?: number
-): Promise<PaginatedContents> => {
+export const getPostsByBlogIdWithPaging = async (blogId: number, page: number = 1, pageSize: number = 10, userId?: number): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
   // 블로그 소유자인지 확인하여 조건 설정
   const isOwner = userId !== undefined;
   const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
-
-
 
   // POSTS 타입 전체 개수 조회
   const countQuery = `
@@ -484,8 +473,6 @@ export const getPostsByBlogIdWithPaging = async (
   const countResult = await selectSQL<any>(countQuery, [blogId]);
   const totalContents = countResult[0].total;
   const totalPages = Math.ceil(totalContents / pageSize);
-
-
 
   // 페이징된 POSTS 타입 콘텐츠 조회
   const query = `
@@ -528,13 +515,7 @@ export const getPostsByBlogIdWithPaging = async (
 };
 
 // 카테고리별 페이징 콘텐츠 조회
-export const getContentsByCategoryWithPaging = async (
-  blogId: number,
-  categoryId: number,
-  page: number = 1,
-  pageSize: number = 10,
-  userId?: number
-): Promise<PaginatedContents> => {
+export const getContentsByCategoryWithPaging = async (blogId: number, categoryId: number, page: number = 1, pageSize: number = 10, userId?: number): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
   // 블로그 소유자인지 확인하여 조건 설정
@@ -597,7 +578,7 @@ export const getContentsByCategoryNameWithPaging = async (
   categoryName: string,
   page: number = 1,
   pageSize: number = 10,
-  userId?: number
+  userId?: number,
 ): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
@@ -657,11 +638,7 @@ export const getContentsByCategoryNameWithPaging = async (
 };
 
 // NOTICE 타입 글 페이징 조회
-export const getNoticesByBlogIdWithPaging = async (
-  blogId: number,
-  page: number = 1,
-  pageSize: number = 10
-): Promise<PaginatedContents> => {
+export const getNoticesByBlogIdWithPaging = async (blogId: number, page: number = 1, pageSize: number = 10): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
   // 전체 개수 조회
@@ -760,11 +737,11 @@ export const getNoticeByTitle = async (blogId: number, title: string): Promise<C
   `;
 
   let contents = await selectSQL<any>(query, [blogId, title]);
-  
+
   // 정확한 제목으로 찾지 못한 경우, 정규화된 제목으로 검색
   if (contents.length === 0) {
     const normalizedTitle = title.replace(/\s+/g, ' ').trim();
-    
+
     query = `
       SELECT c.*, 
              cat.id as category_id, 
@@ -778,10 +755,10 @@ export const getNoticeByTitle = async (blogId: number, title: string): Promise<C
       GROUP BY c.id
       LIMIT 1
     `;
-    
+
     contents = await selectSQL<any>(query, [blogId, normalizedTitle]);
   }
-  
+
   // 여전히 찾지 못한 경우, LIKE 검색 사용
   if (contents.length === 0) {
     query = `
@@ -797,10 +774,10 @@ export const getNoticeByTitle = async (blogId: number, title: string): Promise<C
       GROUP BY c.id
       LIMIT 1
     `;
-    
+
     contents = await selectSQL<any>(query, [blogId, `%${title}%`]);
   }
-  
+
   if (contents.length === 0) {
     return null;
   }
@@ -834,7 +811,7 @@ export const getPageByName = async (blogId: number, pageName: string): Promise<C
   `;
 
   const contents = await selectSQL<any>(query, [blogId, pageName, pageName]);
-  
+
   if (contents.length === 0) {
     return null;
   }
@@ -869,12 +846,12 @@ export const getPageByTitle = async (blogId: number, title: string): Promise<Con
   `;
 
   let contents = await selectSQL<any>(query, [blogId, title]);
-  
+
   // 정확한 제목으로 찾지 못한 경우, 정규화된 제목으로 검색
   if (contents.length === 0) {
     // 공백 정규화 후 재검색
     const normalizedTitle = title.replace(/\s+/g, ' ').trim();
-    
+
     query = `
       SELECT c.*, 
              cat.id as category_id, 
@@ -888,10 +865,10 @@ export const getPageByTitle = async (blogId: number, title: string): Promise<Con
       GROUP BY c.id
       LIMIT 1
     `;
-    
+
     contents = await selectSQL<any>(query, [blogId, normalizedTitle]);
   }
-  
+
   // 여전히 찾지 못한 경우, LIKE 검색 사용 (정확한 일치는 아니지만 유사한 제목 찾기)
   if (contents.length === 0) {
     query = `
@@ -907,10 +884,10 @@ export const getPageByTitle = async (blogId: number, title: string): Promise<Con
       GROUP BY c.id
       LIMIT 1
     `;
-    
+
     contents = await selectSQL<any>(query, [blogId, `%${title}%`]);
   }
-  
+
   if (contents.length === 0) {
     return null;
   }
@@ -956,12 +933,7 @@ export const getPagesByBlogId = async (blogId: number): Promise<Content[]> => {
 };
 
 // 카테고리가 없는 글들을 페이징으로 조회
-export const getUncategorizedContentsByBlogIdWithPaging = async (
-  blogId: number,
-  page: number = 1,
-  pageSize: number = 10,
-  userId?: number
-): Promise<PaginatedContents> => {
+export const getUncategorizedContentsByBlogIdWithPaging = async (blogId: number, page: number = 1, pageSize: number = 10, userId?: number): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
 
   // 블로그 소유자인지 확인하여 조건 설정
@@ -1021,7 +993,7 @@ export const getUncategorizedCountByBlogId = async (blogId: number, userId?: num
     FROM contents c
     WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
   `;
-  
+
   const result = await selectSQL<any>(query, [blogId]);
   return result[0].count;
 };

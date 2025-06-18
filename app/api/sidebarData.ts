@@ -1,4 +1,4 @@
-import { getRecentContents, getPopularContentsByBlogId } from './tbContents';
+import { getPopularContentsByBlogId, getRecentContents } from './tbContents';
 import { getRecentReplies } from './tbReplies';
 
 // 사이드바 데이터 타입 정의
@@ -77,7 +77,6 @@ export async function getSidebarData(blogId: number, userId?: number): Promise<S
       })),
     };
   } catch (error) {
-    console.error('사이드바 데이터 로딩 실패:', error);
     // 오류 발생 시 빈 데이터 반환
     return {
       recentContents: [],
@@ -85,4 +84,4 @@ export async function getSidebarData(blogId: number, userId?: number): Promise<S
       recentReplies: [],
     };
   }
-} 
+}

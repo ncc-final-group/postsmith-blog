@@ -3,15 +3,15 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getSidebarData } from '../../api/sidebarData';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getNoticeByTitle, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
-import { getSidebarData } from '../../api/sidebarData';
 import { getActiveThemeByBlogId } from '../../api/tbThemes';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
-import { renderTemplate } from '../../../lib/template/TemplateEngine';
 
 async function getBlogAddress(): Promise<string> {
   try {
@@ -51,14 +51,14 @@ function normalizeNoticeTitle(title: string): string {
   try {
     // 1차: URL 디코딩 (한글 등 유니코드 문자 처리)
     let decoded = decodeURIComponent(title);
-    
+
     // 2차: 공백 관련 인코딩 처리
-    decoded = decoded.replace(/\+/g, ' ');          // + → 공백
-    decoded = decoded.replace(/%20/g, ' ');         // %20 → 공백 (추가 보장)
-    
+    decoded = decoded.replace(/\+/g, ' '); // + → 공백
+    decoded = decoded.replace(/%20/g, ' '); // %20 → 공백 (추가 보장)
+
     // 3차: 연속된 공백 정규화 및 trim
     decoded = decoded.replace(/\s+/g, ' ').trim();
-    
+
     return decoded;
   } catch (error) {
     // 디코딩 실패 시 원본 반환
@@ -85,29 +85,27 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
 
     // 3. title로 공지사항 정보 조회
     let noticeContent = await getNoticeByTitle(blog.id, decodedTitle);
-    
+
     // 공지사항을 찾지 못한 경우 추가 시도
     if (!noticeContent) {
       // 모든 NOTICE 타입 컨텐츠를 조회해서 제목 매칭 시도 (getNoticesByBlogId 사용)
       const { getNoticesByBlogId } = await import('../../api/tbContents');
       const allNotices = await getNoticesByBlogId(blog.id);
-      
+
       // 정확한 제목 매칭
-      noticeContent = allNotices.find(notice => notice.title === decodedTitle) || null;
-      
+      noticeContent = allNotices.find((notice) => notice.title === decodedTitle) || null;
+
       // 여전히 없으면 URL 디코딩 없이 시도
       if (!noticeContent) {
-        noticeContent = allNotices.find(notice => notice.title === title) || null;
+        noticeContent = allNotices.find((notice) => notice.title === title) || null;
       }
-      
+
       // 여전히 없으면 대소문자 무시하고 시도
       if (!noticeContent) {
-        noticeContent = allNotices.find(notice => 
-          notice.title.toLowerCase() === decodedTitle.toLowerCase()
-        ) || null;
+        noticeContent = allNotices.find((notice) => notice.title.toLowerCase() === decodedTitle.toLowerCase()) || null;
       }
     }
-    
+
     if (!noticeContent) {
       notFound();
     }
@@ -212,17 +210,23 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
     const resolvedParams = await params;
     const { title } = resolvedParams;
     const decodedTitle = normalizeNoticeTitle(title);
-    
+
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center max-w-2xl mx-auto p-6">
+        <div className="mx-auto max-w-2xl p-6 text-center">
           <h1 className="mb-4 text-2xl font-bold text-red-600">공지사항을 찾을 수 없습니다</h1>
-          <p className="text-gray-600 mb-4">요청하신 공지사항이 존재하지 않거나 삭제되었습니다.</p>
-          <div className="bg-gray-100 p-4 rounded-lg text-left text-sm">
-            <h3 className="font-bold mb-2">디버깅 정보:</h3>
-            <p><strong>원본 URL 파라미터:</strong> {title}</p>
-            <p><strong>디코딩된 제목:</strong> {decodedTitle}</p>
-            <p><strong>오류:</strong> {error instanceof Error ? error.message : '알 수 없는 오류'}</p>
+          <p className="mb-4 text-gray-600">요청하신 공지사항이 존재하지 않거나 삭제되었습니다.</p>
+          <div className="rounded-lg bg-gray-100 p-4 text-left text-sm">
+            <h3 className="mb-2 font-bold">디버깅 정보:</h3>
+            <p>
+              <strong>원본 URL 파라미터:</strong> {title}
+            </p>
+            <p>
+              <strong>디코딩된 제목:</strong> {decodedTitle}
+            </p>
+            <p>
+              <strong>오류:</strong> {error instanceof Error ? error.message : '알 수 없는 오류'}
+            </p>
           </div>
         </div>
       </div>
@@ -234,10 +238,10 @@ export async function generateMetadata({ params }: NoticeProps): Promise<Metadat
   try {
     const resolvedParams = await params;
     const { title } = resolvedParams;
-    
+
     // URL 디코딩 및 스페이스 처리 (메인 함수와 동일)
     const decodedTitle = normalizeNoticeTitle(title);
-    
+
     const subdomain = await getBlogAddress();
     const blog = await getBlogByAddress(subdomain);
     const noticeContent = await getNoticeByTitle(blog?.id || 0, decodedTitle);
@@ -251,14 +255,10 @@ export async function generateMetadata({ params }: NoticeProps): Promise<Metadat
 
     return {
       title: `${noticeContent.title} | ${blog.nickname}`,
-      description: noticeContent.content_plain ? 
-        noticeContent.content_plain.substring(0, 160) + '...' : 
-        `${blog.nickname}의 ${noticeContent.title} 공지사항입니다.`,
+      description: noticeContent.content_plain ? noticeContent.content_plain.substring(0, 160) + '...' : `${blog.nickname}의 ${noticeContent.title} 공지사항입니다.`,
       openGraph: {
         title: noticeContent.title,
-        description: noticeContent.content_plain ? 
-          noticeContent.content_plain.substring(0, 160) + '...' : 
-          `${blog.nickname}의 ${noticeContent.title} 공지사항입니다.`,
+        description: noticeContent.content_plain ? noticeContent.content_plain.substring(0, 160) + '...' : `${blog.nickname}의 ${noticeContent.title} 공지사항입니다.`,
         type: 'article',
         siteName: blog.nickname,
         ...(noticeContent.thumbnail && {
@@ -277,4 +277,4 @@ export async function generateMetadata({ params }: NoticeProps): Promise<Metadat
       description: '요청하신 공지사항이 존재하지 않습니다.',
     };
   }
-} 
+}
