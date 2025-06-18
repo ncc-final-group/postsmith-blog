@@ -3,18 +3,25 @@ import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    // 쿠키에서 세션 키 확인
+    // 쿠키에서 userId 확인
     const cookieStore = await cookies();
-    const sessionKey = cookieStore.get('sessionKey')?.value;
+    const userId = cookieStore.get('userId')?.value;
 
-    if (!sessionKey) {
+    if (!userId) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    // Redis에서 세션 정보 확인 (여기서는 간단히 세션키만 확인)
-    // 실제로는 Redis에서 세션 정보를 가져와야 함
+    // 간단한 사용자 정보 반환
+    const userInfo = {
+      id: parseInt(userId),
+      email: `user${userId}@example.com`,
+      nickname: `사용자${userId}`,
+      profile_image: null,
+      role: 'user'
+    };
+
     return NextResponse.json({
-      sessionKey,
+      user: userInfo,
       message: '세션이 유효합니다.'
     });
 

@@ -12,6 +12,7 @@ import { getActiveThemeByBlogId } from '../../api/tbThemes';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getCurrentUser } from '../../../lib/auth';
 
 async function getBlogAddress(): Promise<string> {
   try {
@@ -60,14 +61,21 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
       notFound();
     }
 
+    // 3.5. 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
+
     // 4. 카테고리 정보 조회
     const categories = await getCategoriesByBlogId(blog.id);
 
     // 5. 분류 없는 글 목록 조회 (페이징)
-    const paginatedContents = await getUncategorizedContentsByBlogIdWithPaging(blog.id, page, 10);
+    const paginatedContents = await getUncategorizedContentsByBlogIdWithPaging(blog.id, page, 10, ownerUserId);
 
     // 6. 인기글 목록 조회 (최근 한 달 기준)
-    const popularContents = await getPopularContentsByBlogId(blog.id);
+    const popularContents = await getPopularContentsByBlogId(blog.id, ownerUserId);
 
     // 7. 최근 댓글 조회
     const recentReplies = await getRecentReplies(blog.id);
@@ -76,7 +84,7 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
     const menus = await getMenusByBlogId(blog.id);
 
     // 8.5. 분류 없음 글 개수 조회
-    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id);
+    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
 
     // 9. 템플릿 데이터 구성
     const templateData = {
@@ -174,7 +182,13 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const subdomain = await getBlogAddress();
     const blog = await getBlogByAddress(subdomain);
-    const uncategorizedContents = await getUncategorizedContentsByBlogIdWithPaging(blog?.id || 0, 1, 10);
+    
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    const isOwner = currentUser && blog && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
+    
+    const uncategorizedContents = await getUncategorizedContentsByBlogIdWithPaging(blog?.id || 0, 1, 10, ownerUserId);
     const totalCount = uncategorizedContents.pagination.totalContents;
 
     return {

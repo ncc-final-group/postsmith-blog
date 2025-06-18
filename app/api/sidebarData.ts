@@ -33,12 +33,12 @@ export interface SidebarData {
 }
 
 // 사이드바 데이터를 한 번에 불러오는 함수
-export async function getSidebarData(blogId: number): Promise<SidebarData> {
+export async function getSidebarData(blogId: number, userId?: number): Promise<SidebarData> {
   try {
     // 병렬로 데이터 불러오기
     const [recentContents, popularContents, recentReplies] = await Promise.all([
-      getRecentContents(blogId, 5),
-      getPopularContentsByBlogId(blogId),
+      getRecentContents(blogId, 5, userId),
+      getPopularContentsByBlogId(blogId, userId),
       getRecentReplies(blogId),
     ]);
 

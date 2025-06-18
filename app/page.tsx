@@ -7,11 +7,12 @@ import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import { getActiveThemeByBlogId } from './api/tbThemes';
+import { getThemeByBlogId } from '../lib/themeService';
 import BlogLayout from './components/BlogLayout';
 import BlogProvider from './components/BlogProvider';
 import { getSidebarData } from './api/sidebarData';
 import { renderTemplate } from '../lib/template/TemplateEngine';
+import { getCurrentUser } from '../lib/auth';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수
 function formatDate(date: Date): string {
@@ -84,18 +85,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       notFound();
     }
 
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
       notFound();
     }
 
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
+
+
+
     const categories = await getCategoriesByBlogId(blog.id);
-    const paginatedContents = await getPostsByBlogIdWithPaging(blog.id, page, 10);
+    const paginatedContents = await getPostsByBlogIdWithPaging(blog.id, page, 10, ownerUserId);
     const menus = await getMenusByBlogId(blog.id);
-    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id);
+    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
     
     // 사이드바 데이터 불러오기
-    const sidebarData = await getSidebarData(blog.id);
+    const sidebarData = await getSidebarData(blog.id, ownerUserId);
 
     const templateData = {
       blog: {
@@ -151,7 +161,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       })),
     };
 
-    const html = renderTemplate(theme.html, theme.css, templateData);
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
     const blogInfo = {
       id: blog.id,
@@ -163,7 +173,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
     return (
       <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );
   } catch (error) {

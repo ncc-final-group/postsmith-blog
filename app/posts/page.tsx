@@ -6,7 +6,7 @@ import { getCategoriesByBlogId } from '../api/tbCategories';
 import { getPostsByBlogId, getPostsByBlogIdWithPaging } from '../api/tbContents';
 import { getMenusByBlogId } from '../api/tbMenu';
 import { getSidebarData } from '../api/sidebarData';
-import { getActiveThemeByBlogId } from '../api/tbThemes';
+import { getThemeByBlogId } from '../../lib/themeService';
 import BlogLayout from '../components/BlogLayout';
 import BlogProvider from '../components/BlogProvider';
 
@@ -52,8 +52,8 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     }
 
     // 3. 테마 정보 조회
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
       notFound();
     }
 
@@ -124,7 +124,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     };
 
     // 10. 템플릿 렌더링
-    const html = renderTemplate(theme.html, theme.css, templateData);
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
     // 11. 블로그 정보 구성
     const blogInfo = {
@@ -137,7 +137,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
 
     return (
       <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );
   } catch (error) {

@@ -1788,6 +1788,8 @@ img {
   font-size: 0.875rem;
   resize: vertical;
   min-height: 60px;
+  color: #333333 !important;
+  background-color: #ffffff !important;
 }
 
 .reply-form textarea:focus {
@@ -1826,14 +1828,26 @@ img {
   }
 
   .reply-form textarea {
-    background-color: #111827;
+    background-color: #111827 !important;
     border-color: #374151;
-    color: #f9fafb;
+    color: #f9fafb !important;
   }
 
   .reply-form textarea:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+  }
+
+  /* 메인 댓글 폼 다크 모드 */
+  .comment-form textarea {
+    background-color: #111827 !important;
+    border-color: #374151;
+    color: #f9fafb !important;
+  }
+
+  .comment-form textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 }
 

@@ -60,7 +60,11 @@ export const getContentByBlogIdAndSequence = async (blogId: number, contentSeque
   };
 };
 
-export const getContentsByBlogId = async (blogId: number): Promise<Content[]> => {
+export const getContentsByBlogId = async (blogId: number, userId?: number): Promise<Content[]> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
   const query = `
     SELECT c.*, 
            cat.id as category_id, 
@@ -69,7 +73,7 @@ export const getContentsByBlogId = async (blogId: number): Promise<Content[]> =>
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ?
+    WHERE c.blog_id = ? ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
   `;
@@ -88,7 +92,11 @@ export const getContentsByBlogId = async (blogId: number): Promise<Content[]> =>
 };
 
 // POSTS 타입만 가져오는 함수 (페이징 없음)
-export const getPostsByBlogId = async (blogId: number): Promise<Content[]> => {
+export const getPostsByBlogId = async (blogId: number, userId?: number): Promise<Content[]> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
   const query = `
     SELECT c.*, 
            cat.id as category_id, 
@@ -97,7 +105,7 @@ export const getPostsByBlogId = async (blogId: number): Promise<Content[]> => {
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
   `;
@@ -115,7 +123,11 @@ export const getPostsByBlogId = async (blogId: number): Promise<Content[]> => {
   }));
 };
 
-export const getRecentContents = async (blogId: number, limit: number = 5): Promise<Content[]> => {
+export const getRecentContents = async (blogId: number, limit: number = 5, userId?: number): Promise<Content[]> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
   const query = `
     SELECT 
       c.*,
@@ -126,7 +138,7 @@ export const getRecentContents = async (blogId: number, limit: number = 5): Prom
       (SELECT COUNT(*) FROM replies r WHERE r.content_id = c.id AND r.deleted_at IS NULL) as reply_count
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.blog_id = ? AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? ${publicCondition} AND c.is_temp = 0
     ORDER BY c.created_at DESC
     LIMIT ?
   `;
@@ -208,7 +220,11 @@ export const getContentBySequence = async (blogId: number, sequence: number): Pr
 };
 
 // POSTS 타입만 가져오는 함수 (일반 블로그 글용)
-export const getPostBySequence = async (blogId: number, sequence: number): Promise<Content | null> => {
+export const getPostBySequence = async (blogId: number, sequence: number, userId?: number): Promise<Content | null> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
   const query = `
     SELECT c.*, 
            cat.id as category_id, 
@@ -217,7 +233,7 @@ export const getPostBySequence = async (blogId: number, sequence: number): Promi
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND c.sequence = ? AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.sequence = ? AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
   `;
 
@@ -278,11 +294,15 @@ export const getNextContent = async (blogId: number, currentSequence: number): P
 };
 
 // POSTS 타입 이전 글 가져오기
-export const getPrevPost = async (blogId: number, currentSequence: number): Promise<{ sequence: number; title: string } | null> => {
+export const getPrevPost = async (blogId: number, currentSequence: number, userId?: number): Promise<{ sequence: number; title: string } | null> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND is_public = 1';
+
   const query = `
     SELECT sequence, title
     FROM contents
-    WHERE blog_id = ? AND sequence < ? AND type = 'POSTS' AND is_public = 1 AND is_temp = 0
+    WHERE blog_id = ? AND sequence < ? AND type = 'POSTS' ${publicCondition} AND is_temp = 0
     ORDER BY sequence DESC
     LIMIT 1
   `;
@@ -297,11 +317,15 @@ export const getPrevPost = async (blogId: number, currentSequence: number): Prom
 };
 
 // POSTS 타입 다음 글 가져오기
-export const getNextPost = async (blogId: number, currentSequence: number): Promise<{ sequence: number; title: string } | null> => {
+export const getNextPost = async (blogId: number, currentSequence: number, userId?: number): Promise<{ sequence: number; title: string } | null> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND is_public = 1';
+
   const query = `
     SELECT sequence, title
     FROM contents
-    WHERE blog_id = ? AND sequence > ? AND type = 'POSTS' AND is_public = 1 AND is_temp = 0
+    WHERE blog_id = ? AND sequence > ? AND type = 'POSTS' ${publicCondition} AND is_temp = 0
     ORDER BY sequence ASC
     LIMIT 1
   `;
@@ -326,7 +350,7 @@ export interface PopularContent {
 }
 
 // 최근 한 달간 댓글 수와 방문자 수 기준 인기글 가져오기
-export const getPopularContentsByBlogId = async (blogId: number): Promise<PopularContent[]> => {
+export const getPopularContentsByBlogId = async (blogId: number, userId?: number): Promise<PopularContent[]> => {
   const query = `
     SELECT 
       c.id as content_id,
@@ -357,7 +381,7 @@ export const getPopularContentsByBlogId = async (blogId: number): Promise<Popula
       WHERE cv.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
       GROUP BY cv.content_id
     ) recent_visits ON c.id = recent_visits.content_id
-    WHERE c.blog_id = ? AND c.is_public = 1
+    WHERE c.blog_id = ? ${userId !== undefined ? '' : 'AND c.is_public = 1'}
     ORDER BY popularity_score DESC, c.created_at DESC
     LIMIT 5
   `;
@@ -440,19 +464,28 @@ export const getContentsByBlogIdWithPaging = async (
 export const getPostsByBlogIdWithPaging = async (
   blogId: number, 
   page: number = 1, 
-  pageSize: number = 10
+  pageSize: number = 10,
+  userId?: number
 ): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
+
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
+
 
   // POSTS 타입 전체 개수 조회
   const countQuery = `
     SELECT COUNT(*) as total
     FROM contents c
-    WHERE c.blog_id = ? AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
   `;
   const countResult = await selectSQL<any>(countQuery, [blogId]);
   const totalContents = countResult[0].total;
   const totalPages = Math.ceil(totalContents / pageSize);
+
+
 
   // 페이징된 POSTS 타입 콘텐츠 조회
   const query = `
@@ -463,7 +496,7 @@ export const getPostsByBlogIdWithPaging = async (
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
     LIMIT ? OFFSET ?
@@ -499,15 +532,20 @@ export const getContentsByCategoryWithPaging = async (
   blogId: number,
   categoryId: number,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  userId?: number
 ): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
+
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
 
   // 전체 개수 조회
   const countQuery = `
     SELECT COUNT(*) as total
     FROM contents c
-    WHERE c.blog_id = ? AND c.category_id = ? AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.category_id = ? ${publicCondition} AND c.is_temp = 0
   `;
   const countResult = await selectSQL<any>(countQuery, [blogId, categoryId]);
   const totalContents = countResult[0].total;
@@ -522,7 +560,7 @@ export const getContentsByCategoryWithPaging = async (
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND c.category_id = ? AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.category_id = ? ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
     LIMIT ? OFFSET ?
@@ -558,16 +596,21 @@ export const getContentsByCategoryNameWithPaging = async (
   blogId: number,
   categoryName: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  userId?: number
 ): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
+
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
 
   // 전체 개수 조회
   const countQuery = `
     SELECT COUNT(*) as total
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.blog_id = ? AND cat.name = ? AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND cat.name = ? ${publicCondition} AND c.is_temp = 0
   `;
   const countResult = await selectSQL<any>(countQuery, [blogId, categoryName]);
   const totalContents = countResult[0].total;
@@ -582,7 +625,7 @@ export const getContentsByCategoryNameWithPaging = async (
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND cat.name = ? AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND cat.name = ? ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
     LIMIT ? OFFSET ?
@@ -916,15 +959,20 @@ export const getPagesByBlogId = async (blogId: number): Promise<Content[]> => {
 export const getUncategorizedContentsByBlogIdWithPaging = async (
   blogId: number,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  userId?: number
 ): Promise<PaginatedContents> => {
   const offset = (page - 1) * pageSize;
+
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
 
   // 분류 없는 POSTS 타입 글 전체 개수 조회
   const countQuery = `
     SELECT COUNT(*) as total
     FROM contents c
-    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
   `;
   const countResult = await selectSQL<any>(countQuery, [blogId]);
   const totalContents = countResult[0].total;
@@ -936,7 +984,7 @@ export const getUncategorizedContentsByBlogIdWithPaging = async (
            COUNT(DISTINCT r.id) as reply_count
     FROM contents c
     LEFT JOIN replies r ON c.id = r.content_id
-    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
     GROUP BY c.id
     ORDER BY c.sequence DESC
     LIMIT ? OFFSET ?
@@ -963,11 +1011,15 @@ export const getUncategorizedContentsByBlogIdWithPaging = async (
 };
 
 // 카테고리가 없는 글 개수 조회
-export const getUncategorizedCountByBlogId = async (blogId: number): Promise<number> => {
+export const getUncategorizedCountByBlogId = async (blogId: number, userId?: number): Promise<number> => {
+  // 블로그 소유자인지 확인하여 조건 설정
+  const isOwner = userId !== undefined;
+  const publicCondition = isOwner ? '' : 'AND c.is_public = 1';
+
   const query = `
     SELECT COUNT(*) as count
     FROM contents c
-    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' AND c.is_public = 1 AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.category_id IS NULL AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
   `;
   
   const result = await selectSQL<any>(query, [blogId]);

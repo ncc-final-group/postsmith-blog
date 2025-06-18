@@ -76,32 +76,45 @@ export default function UserDropdown() {
     );
   }
 
-  // 간단한 userId 입력 로그인 (개발용)
-  const handleSimpleLogin = () => {
-    const userIdInput = prompt('로그인할 사용자 ID를 입력하세요:');
+  // 서버 API 기반 로그인 (AuthActionButtons와 동일한 방식)
+  const handleSimpleLogin = async () => {
+    const userId = prompt('사용자 ID를 입력하세요 (숫자):');
     
-    if (userIdInput === null) {
+    if (!userId) {
       return;
     }
-    
-    const userId = parseInt(userIdInput.trim());
-    
-    if (isNaN(userId) || userId <= 0) {
-      alert('올바른 사용자 ID를 입력해주세요 (양의 정수)');
+
+    if (!/^\d+$/.test(userId)) {
       return;
     }
-    
-    // 입력받은 userId로 로그인 처리
-    const { setUserInfo } = useUserStore.getState();
-    setUserInfo({
-      id: userId,
-      email: `user${userId}@example.com`,
-      nickname: `사용자${userId}`,
-      profile_image: null,
-    });
-    
-    setIsOpen(false);
-    alert(`사용자 ID ${userId}로 로그인되었습니다!`);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 클라이언트 상태도 업데이트
+        const { setUserInfo } = useUserStore.getState();
+        setUserInfo({
+          id: data.user.id,
+          email: data.user.email,
+          nickname: data.user.nickname,
+          profile_image: data.user.profile_image,
+        });
+        
+        setIsOpen(false);
+        window.location.reload(); // 페이지 새로고침으로 서버 상태 반영
+      }
+    } catch (error) {
+      // 로그인 실패 시 조용히 처리
+    }
   };
 
   // Redis 세션 기반 로그인 (나중에 사용)
@@ -148,9 +161,23 @@ export default function UserDropdown() {
     return handleSimpleLogin();
   };
 
-  const handleLogout = () => {
-    logout();
-    setIsOpen(false); // 드롭다운 닫기
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 클라이언트 상태도 업데이트
+        logout();
+        setIsOpen(false);
+        window.location.reload(); // 페이지 새로고침으로 서버 상태 반영
+      }
+    } catch (error) {
+      // 로그아웃 실패 시 조용히 처리
+    }
   };
 
   return (

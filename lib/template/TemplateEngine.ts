@@ -637,7 +637,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
               rows="4" 
               required 
               placeholder="댓글을 입력하세요..."
-              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 14px; line-height: 1.5;"
+              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 14px; line-height: 1.5; color: #333333 !important; background-color: #ffffff !important;"
             ></textarea>
             <div style="text-align: right; margin-top: 8px;">
               <button 
@@ -968,7 +968,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
                     id="reply-content-\${parentReplyId}" 
                     placeholder="답글을 입력하세요..." 
                     rows="3"
-                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-family: inherit; font-size: 14px;"
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-family: inherit; font-size: 14px; color: #333333 !important; background-color: #ffffff !important;"
                   ></textarea>
                   <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     <button 

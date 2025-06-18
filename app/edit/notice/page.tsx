@@ -366,7 +366,8 @@ export default function NoticeEditor() {
       CustomVideoNode,
     ],
     onError: (error: Error) => {
-      throw error;
+      console.error('Lexical error:', error);
+      // 에러를 던지지 않고 로그만 출력
     },
   };
 

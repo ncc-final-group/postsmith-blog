@@ -41,6 +41,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 export const SET_TEXT_COLOR_COMMAND = createCommand('SET_TEXT_COLOR_COMMAND');
 export const SET_BG_COLOR_COMMAND = createCommand('SET_BG_COLOR_COMMAND');
 export const SET_FONT_FAMILY_COMMAND = createCommand('SET_FONT_FAMILY_COMMAND');
+export const SET_IMAGE_ALIGNMENT_COMMAND = createCommand('SET_IMAGE_ALIGNMENT_COMMAND');
 
 // HTML 추출 유틸리티 함수들
 export const getEditorHtml = (editor: any) => {
@@ -508,6 +509,48 @@ function ColorPlugin() {
   return null;
 }
 
+function ImageAlignmentPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      SET_IMAGE_ALIGNMENT_COMMAND,
+      (alignment: 'left' | 'center' | 'right') => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) return false;
+
+          const nodes = selection.getNodes();
+          
+          // 선택된 노드 중 이미지 노드 찾기
+          for (const node of nodes) {
+            if ($isCustomImageNode(node)) {
+              node.setAlignment(alignment);
+              return true;
+            }
+            
+            // 부모 노드도 확인
+            let currentNode = node.getParent();
+            while (currentNode) {
+              if ($isCustomImageNode(currentNode)) {
+                currentNode.setAlignment(alignment);
+                return true;
+              }
+              currentNode = currentNode.getParent();
+            }
+          }
+          
+          return false;
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor]);
+
+  return null;
+}
+
 // 이미지 컴포넌트 - 크기 조절 기능 포함 (사용하지 않음)
 function ImageComponent({ src, alt, width, height, node }: { src: string; alt: string; width: string; height: string; node: any }) {
   const [editor] = useLexicalComposerContext();
@@ -684,6 +727,19 @@ function ImageComponent({ src, alt, width, height, node }: { src: string; alt: s
   );
 }
 
+// 이미지 노드 관련 타입
+type SerializedImageNode = Spread<
+  {
+    src: string;
+    alt: string;
+    width: string;
+    height: string;
+    mediaId?: number;
+    alignment: 'left' | 'center' | 'right';
+  },
+  SerializedLexicalNode
+>;
+
 // 커스텀 이미지 노드 생성
 export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   __src: string;
@@ -691,22 +747,24 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   __width: string;
   __height: string;
   __mediaId?: number;
+  __alignment: 'left' | 'center' | 'right';
 
   static getType(): string {
     return 'custom-image';
   }
 
   static clone(node: CustomImageNode): CustomImageNode {
-    return new CustomImageNode(node.__src, node.__alt, node.__width, node.__height, node.__mediaId, node.__key);
+    return new CustomImageNode(node.__src, node.__alt, node.__width, node.__height, node.__mediaId, node.__alignment, node.__key);
   }
 
-  constructor(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number, key?: NodeKey) {
+  constructor(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number, alignment: 'left' | 'center' | 'right' = 'center', key?: NodeKey) {
     super(key);
     this.__src = src;
     this.__alt = alt;
     this.__width = width;
     this.__height = height;
     this.__mediaId = mediaId;
+    this.__alignment = alignment;
   }
 
   createDOM(): HTMLElement {
@@ -714,139 +772,494 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
     container.style.position = 'relative';
     container.style.display = 'block';
     container.style.margin = '20px 0';
+    container.setAttribute('data-custom-image', 'true');
+    
+    // 정렬에 따른 스타일 적용
+    switch (this.__alignment) {
+      case 'left':
+        container.style.textAlign = 'left';
+        break;
+      case 'right':
+        container.style.textAlign = 'right';
+        break;
+      case 'center':
+      default:
     container.style.textAlign = 'center';
+        break;
+    }
 
     const img = document.createElement('img');
     img.src = this.__src;
     img.alt = this.__alt;
-    img.style.maxWidth = '100%';
     img.style.width = this.__width;
     img.style.height = this.__height;
     img.style.borderRadius = '8px';
-    img.style.display = 'inline-block';
-    img.style.cursor = 'pointer';
+    img.style.display = 'block';
     img.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
     img.style.transition = 'border-color 0.2s ease';
     img.style.border = '2px solid transparent';
+    img.style.userSelect = 'none';
+    img.draggable = true;
 
-    // 크기 조절 메뉴 생성
-    const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
-    sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
-    sizeMenu.style.background = 'white';
-    sizeMenu.style.border = '2px solid #ccc';
-    sizeMenu.style.borderRadius = '8px';
-    sizeMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-    sizeMenu.style.padding = '12px';
-    sizeMenu.style.zIndex = '9999';
-    sizeMenu.style.minWidth = '200px';
-    sizeMenu.style.display = 'none';
+    // 리사이즈 컨테이너
+    const resizeContainer = document.createElement('div');
+    resizeContainer.style.position = 'relative';
+    resizeContainer.style.display = 'inline-block';
+    resizeContainer.style.border = '2px solid transparent';
+    resizeContainer.style.borderRadius = '8px';
 
-    // 메뉴 제목
-    const title = document.createElement('h4');
-    title.textContent = '이미지 크기';
-    title.style.margin = '0 0 8px 0';
-    title.style.fontSize = '14px';
-    title.style.fontWeight = 'bold';
-    sizeMenu.appendChild(title);
-
-    // 크기 옵션들
-    const sizeOptions = [
-      { label: '작게 (25%)', value: '25%' },
-      { label: '보통 (50%)', value: '50%' },
-      { label: '크게 (75%)', value: '75%' },
-      { label: '최대 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' },
+    // 리사이즈 핸들들 생성
+    const handles = [
+      { position: 'nw', cursor: 'nw-resize', top: '-5px', left: '-5px' },
+      { position: 'ne', cursor: 'ne-resize', top: '-5px', right: '-5px' },
+      { position: 'sw', cursor: 'sw-resize', bottom: '-5px', left: '-5px' },
+      { position: 'se', cursor: 'se-resize', bottom: '-5px', right: '-5px' },
+      { position: 'n', cursor: 'n-resize', top: '-5px', left: '50%', transform: 'translateX(-50%)' },
+      { position: 's', cursor: 's-resize', bottom: '-5px', left: '50%', transform: 'translateX(-50%)' },
+      { position: 'w', cursor: 'w-resize', top: '50%', left: '-5px', transform: 'translateY(-50%)' },
+      { position: 'e', cursor: 'e-resize', top: '50%', right: '-5px', transform: 'translateY(-50%)' },
     ];
 
-    // 현재 크기 표시
-    const currentSize = document.createElement('div');
-    currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
-    currentSize.style.marginTop = '12px';
-    currentSize.style.paddingTop = '12px';
-    currentSize.style.borderTop = '1px solid #eee';
-    currentSize.style.fontSize = '11px';
-    currentSize.style.color = '#666';
+    let isSelected = false;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let aspectRatio = 1;
 
-    sizeOptions.forEach((option) => {
-      const button = document.createElement('button');
-      button.textContent = option.label;
-      button.style.width = '100%';
-      button.style.textAlign = 'left';
-      button.style.padding = '8px';
-      button.style.fontSize = '13px';
-      button.style.border = 'none';
-      button.style.borderRadius = '4px';
-      button.style.background = 'transparent';
-      button.style.cursor = 'pointer';
-      button.style.marginBottom = '4px';
+    // 이미지 선택 상태 토글
+    const toggleSelection = (selected: boolean) => {
+      isSelected = selected;
+      if (selected) {
+        resizeContainer.style.border = '2px solid #3B82F6';
+        handles.forEach(handleInfo => {
+          const handle = resizeContainer.querySelector(`[data-handle="${handleInfo.position}"]`) as HTMLElement;
+          if (handle) {
+            handle.style.display = 'block';
+          }
+        });
+      } else {
+        resizeContainer.style.border = '2px solid transparent';
+        handles.forEach(handleInfo => {
+          const handle = resizeContainer.querySelector(`[data-handle="${handleInfo.position}"]`) as HTMLElement;
+          if (handle) {
+            handle.style.display = 'none';
+          }
+        });
+      }
+    };
 
-      button.addEventListener('mouseenter', () => {
-        button.style.background = '#f5f5f5';
-      });
-
-      button.addEventListener('mouseleave', () => {
-        button.style.background = 'transparent';
-      });
-
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        // 이미지 크기 업데이트
-        img.style.width = option.value;
-
-        // 현재 크기 표시 업데이트
-        currentSize.textContent = `현재 크기: ${option.value} × auto`;
-
-        // 메뉴 닫기
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
-      });
-
-      sizeMenu.appendChild(button);
-    });
-
-    sizeMenu.appendChild(currentSize);
-
-    // 이미지 클릭 이벤트 - 메뉴 토글
-    let menuOpen = false;
+    // 이미지 클릭 이벤트
     img.addEventListener('click', (e) => {
       e.stopPropagation();
-
-      menuOpen = !menuOpen;
-      if (menuOpen) {
-        sizeMenu.style.display = 'block';
-        img.style.border = '3px solid #3B82F6';
-      } else {
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
+      toggleSelection(!isSelected);
+      
+      // 이미지 선택 시 에디터에 포커스 설정하고 노드 선택
+      if (!isSelected) {
+        // 에디터를 통해 이미지 노드 선택
+        setTimeout(() => {
+          const editorElement = container.closest('[contenteditable="true"]');
+          if (editorElement) {
+            (editorElement as HTMLElement).focus();
+            
+            // 이미지 노드를 선택 상태로 만들기
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              const range = document.createRange();
+              range.selectNode(container);
+              selection.addRange(range);
+            }
+          }
+        }, 0);
       }
     });
 
-    // 외부 클릭시 메뉴 닫기
+        // 드래그 앤 드롭 이벤트 처리
+    let dragStartY = 0;
+    let dropIndicator: HTMLElement | null = null;
+    let isDragImage = false;
+    let currentDropTarget: HTMLElement | null = null;
+
+    // 드롭 인디케이터 생성
+    const createDropIndicator = () => {
+      const indicator = document.createElement('div');
+      indicator.style.height = '3px';
+      indicator.style.backgroundColor = '#3B82F6';
+      indicator.style.borderRadius = '2px';
+      indicator.style.margin = '2px 0';
+      indicator.style.opacity = '0.8';
+      indicator.style.boxShadow = '0 0 4px rgba(59, 130, 246, 0.5)';
+      indicator.classList.add('drop-indicator');
+      return indicator;
+    };
+
+    // 드래그 시작 (실제로는 mousedown에서 처리)
+    img.addEventListener('mousedown', (e) => {
+      // 리사이즈 중이면 드래그 방지
+      if (isDragging) {
+        return;
+      }
+      
+      // 오른쪽 클릭은 무시
+      if (e.button !== 0) {
+        return;
+      }
+      
+             e.preventDefault();
+        e.stopPropagation();
+
+      isDragImage = true;
+      currentDropTarget = null;
+      dragStartY = e.clientY;
+      
+      // 드래그 중 스타일
+      container.style.opacity = '0.5';
+      toggleSelection(false);
+      
+      // 마우스 이동 이벤트 등록
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!isDragImage) return;
+        
+        // 현재 마우스 위치의 요소 찾기
+        const elementBelow = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        if (!elementBelow) return;
+        
+        const paragraph = elementBelow.closest('p, div, h1, h2, h3, h4, h5, h6, li, [data-lexical-editor]');
+        
+        if (paragraph && paragraph !== container && !paragraph.closest('[data-custom-image]')) {
+          // 이전 인디케이터 제거
+          document.querySelectorAll('.drop-indicator').forEach(indicator => {
+            if (indicator.parentNode) {
+              indicator.parentNode.removeChild(indicator);
+            }
+          });
+          
+          // 새 드롭 타겟 설정
+          currentDropTarget = paragraph as HTMLElement;
+          
+          // 새 인디케이터 생성
+          dropIndicator = createDropIndicator();
+          
+          // 마우스 위치에 따라 위 또는 아래에 인디케이터 표시
+          const rect = paragraph.getBoundingClientRect();
+          const isUpperHalf = moveEvent.clientY < rect.top + rect.height / 2;
+          
+          if (isUpperHalf) {
+            paragraph.parentNode?.insertBefore(dropIndicator, paragraph);
+      } else {
+            paragraph.parentNode?.insertBefore(dropIndicator, paragraph.nextSibling);
+          }
+          
+          
+        }
+      };
+      
+             // 마우스 업 이벤트에서 실제 드롭 처리
+       const handleMouseUp = (upEvent: MouseEvent) => {
+         document.removeEventListener('mousemove', handleMouseMove);
+         document.removeEventListener('mouseup', handleMouseUp);
+         
+         isDragImage = false;
+         container.style.opacity = '1';
+         
+         // 유효한 드롭 타겟이 있으면 이동 처리
+         if (currentDropTarget) {
+          
+          // 에디터 인스턴스 찾기
+          let editorInstance = (window as any).__lexicalEditor;
+          
+          if (!editorInstance) {
+            const editors = document.querySelectorAll('[contenteditable="true"]');
+            for (const ed of editors) {
+              if ((ed as any)._lexicalEditor) {
+                editorInstance = (ed as any)._lexicalEditor;
+                break;
+              }
+            }
+          }
+          
+                     if (editorInstance) {
+             editorInstance.update(() => {
+              try {
+                // 현재 이미지 노드 찾기
+                const root = $getRoot();
+                let imageNode: CustomImageNode | null = null;
+                
+                for (const child of root.getChildren()) {
+                  if ($isCustomImageNode(child) && child.__src === this.__src) {
+                    imageNode = child;
+                    break;
+                  }
+                }
+
+                                 if (imageNode && currentDropTarget) {
+                   // 드롭 위치 결정
+                   const rect = currentDropTarget.getBoundingClientRect();
+                   const isUpperHalf = upEvent.clientY < rect.top + rect.height / 2;
+                  
+                  // 새 이미지 노드 생성
+                  const newImageNode = $createCustomImageNode(
+                    imageNode.__src, 
+                    imageNode.__alt, 
+                    imageNode.__width, 
+                    imageNode.__height, 
+                    imageNode.__mediaId, 
+                    imageNode.__alignment
+                  );
+                  
+                  // 빈 paragraph 생성
+                  const beforeParagraph = $createParagraphNode();
+                  beforeParagraph.append($createTextNode(''));
+                  
+                  const afterParagraph = $createParagraphNode();
+                  afterParagraph.append($createTextNode(''));
+                  
+                  // 타겟 노드 찾기
+                  let targetNode = null;
+                  for (const node of root.getChildren()) {
+                    const domNode = editorInstance.getElementByKey(node.getKey());
+                    if (domNode && (domNode === currentDropTarget || domNode.contains(currentDropTarget))) {
+                      targetNode = node;
+                      break;
+                    }
+                  }
+                  
+                                     if (targetNode) {
+                     // 새 위치에 삽입
+                    if (isUpperHalf) {
+                      targetNode.insertBefore(beforeParagraph);
+                      beforeParagraph.insertAfter(newImageNode);
+                      newImageNode.insertAfter(afterParagraph);
+                    } else {
+                      targetNode.insertAfter(afterParagraph);
+                      afterParagraph.insertBefore(newImageNode);
+                      newImageNode.insertBefore(beforeParagraph);
+                    }
+                    
+                                         // 기존 노드 제거
+                     imageNode.remove();
+                   } else {
+                     // 타겟을 못 찾으면 루트 끝에 추가
+                     root.append(beforeParagraph);
+                     root.append(newImageNode);
+                     root.append(afterParagraph);
+                     imageNode.remove();
+                   }
+                }
+                               } catch (error) {
+                   // 에러 발생 시 조용히 처리
+                 }
+            });
+                     }
+         }
+        
+        // 인디케이터 제거
+        document.querySelectorAll('.drop-indicator').forEach(indicator => {
+          if (indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+          }
+        });
+        
+        // 변수 초기화
+        currentDropTarget = null;
+        dropIndicator = null;
+      };
+      
+      // 이벤트 리스너 등록
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+
+    // 기본 dragstart 이벤트는 방지
+    img.addEventListener('dragstart', (e) => {
+      e.preventDefault();
+    });
+
+    
+
+    // 외부 클릭시 선택 해제
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target as Node)) {
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
-        menuOpen = false;
+        toggleSelection(false);
       }
     });
 
-    container.appendChild(img);
-    container.appendChild(sizeMenu);
+    // 리사이즈 핸들 생성 및 이벤트 처리
+    handles.forEach(handleInfo => {
+      const handle = document.createElement('div');
+      handle.setAttribute('data-handle', handleInfo.position);
+      handle.style.position = 'absolute';
+      handle.style.width = '10px';
+      handle.style.height = '10px';
+      handle.style.backgroundColor = '#3B82F6';
+      handle.style.border = '1px solid #ffffff';
+      handle.style.borderRadius = '2px';
+      handle.style.cursor = handleInfo.cursor;
+      handle.style.display = 'none';
+      handle.style.zIndex = '1000';
+      
+      // 위치 설정
+      if (handleInfo.top) handle.style.top = handleInfo.top;
+      if (handleInfo.bottom) handle.style.bottom = handleInfo.bottom;
+      if (handleInfo.left) handle.style.left = handleInfo.left;
+      if (handleInfo.right) handle.style.right = handleInfo.right;
+      if (handleInfo.transform) handle.style.transform = handleInfo.transform;
+
+      // 드래그 시작
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = img.offsetWidth;
+        startHeight = img.offsetHeight;
+        aspectRatio = startWidth / startHeight;
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
+
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+
+        // 핸들 위치에 따른 크기 계산
+        switch (handleInfo.position) {
+          case 'se': // 오른쪽 아래
+            newWidth = startWidth + deltaX;
+            newHeight = startHeight + deltaY;
+            break;
+          case 'sw': // 왼쪽 아래
+            newWidth = startWidth - deltaX;
+            newHeight = startHeight + deltaY;
+            break;
+          case 'ne': // 오른쪽 위
+            newWidth = startWidth + deltaX;
+            newHeight = startHeight - deltaY;
+            break;
+          case 'nw': // 왼쪽 위
+            newWidth = startWidth - deltaX;
+            newHeight = startHeight - deltaY;
+            break;
+          case 'e': // 오른쪽
+            newWidth = startWidth + deltaX;
+            newHeight = newWidth / aspectRatio;
+            break;
+          case 'w': // 왼쪽
+            newWidth = startWidth - deltaX;
+            newHeight = newWidth / aspectRatio;
+            break;
+          case 's': // 아래
+            newHeight = startHeight + deltaY;
+            newWidth = newHeight * aspectRatio;
+            break;
+          case 'n': // 위
+            newHeight = startHeight - deltaY;
+            newWidth = newHeight * aspectRatio;
+            break;
+        }
+
+        // Shift 키로 비율 유지
+        if (e.shiftKey) {
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            newHeight = newWidth / aspectRatio;
+          } else {
+            newWidth = newHeight * aspectRatio;
+          }
+        }
+
+        // 최소 크기 제한
+        newWidth = Math.max(50, newWidth);
+        newHeight = Math.max(50, newHeight);
+
+        // 최대 크기 제한 (부모 컨테이너 기준)
+        const maxWidth = container.parentElement?.offsetWidth || 800;
+        newWidth = Math.min(newWidth, maxWidth);
+        newHeight = Math.min(newHeight, (maxWidth / aspectRatio));
+
+        img.style.width = `${newWidth}px`;
+        img.style.height = `${newHeight}px`;
+      };
+
+             const handleMouseUp = () => {
+         isDragging = false;
+         document.removeEventListener('mousemove', handleMouseMove);
+         document.removeEventListener('mouseup', handleMouseUp);
+         
+         // 에디터를 통해 노드의 크기 정보 업데이트
+         const editorInstance = (container.closest('[contenteditable="true"]') as any)?._lexicalEditor;
+         if (editorInstance) {
+           editorInstance.update(() => {
+             // 현재 이미지 노드 찾기
+             const root = $getRoot();
+             const imageNodes = root.getChildren().filter($isCustomImageNode);
+             const currentNode = imageNodes.find(node => node.__src === this.__src);
+             
+             if (currentNode) {
+               const writable = currentNode.getWritable();
+               writable.__width = img.style.width;
+               writable.__height = img.style.height;
+             }
+           });
+         }
+       };
+
+      resizeContainer.appendChild(handle);
+    });
+
+    // 이미지가 로드되면 aspect ratio 계산
+    img.addEventListener('load', () => {
+      aspectRatio = img.naturalWidth / img.naturalHeight;
+    });
+
+    resizeContainer.appendChild(img);
+    container.appendChild(resizeContainer);
 
     return container;
   }
 
-  updateDOM(): false {
-    return false;
+  updateDOM(prevNode: CustomImageNode): boolean {
+    // 정렬이 변경되었으면 DOM을 다시 생성
+    return this.__alignment !== prevNode.__alignment || 
+           this.__width !== prevNode.__width || 
+           this.__height !== prevNode.__height;
   }
 
   setSize(width: string, height: string = 'auto'): void {
     const writable = this.getWritable();
     writable.__width = width;
     writable.__height = height;
+  }
+
+  setAlignment(alignment: 'left' | 'center' | 'right'): void {
+    const writable = this.getWritable();
+    writable.__alignment = alignment;
+  }
+
+  static importJSON(serializedNode: SerializedImageNode): CustomImageNode {
+    const { src, alt, width, height, mediaId, alignment } = serializedNode;
+    return new CustomImageNode(src, alt, width, height, mediaId, alignment);
+  }
+
+  exportJSON(): SerializedImageNode {
+    return {
+      ...super.exportJSON(),
+      src: this.__src,
+      alt: this.__alt,
+      width: this.__width,
+      height: this.__height,
+      mediaId: this.__mediaId,
+      alignment: this.__alignment,
+      type: 'custom-image',
+      version: 1,
+    };
   }
 
   decorate(): React.ReactElement {
@@ -858,8 +1271,8 @@ export class CustomImageNode extends DecoratorNode<React.ReactElement> {
   }
 }
 
-export function $createCustomImageNode(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number): CustomImageNode {
-  return new CustomImageNode(src, alt, width, height, mediaId);
+export function $createCustomImageNode(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number, alignment: 'left' | 'center' | 'right' = 'center'): CustomImageNode {
+  return new CustomImageNode(src, alt, width, height, mediaId, alignment);
 }
 
 export function $isCustomImageNode(node: LexicalNode | null | undefined): node is CustomImageNode {
@@ -1120,13 +1533,19 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
   createDOM(): HTMLElement {
     const container = document.createElement('div');
     container.style.position = 'relative';
-    container.style.display = 'block';
-    container.style.margin = '20px 0';
+    container.style.display = 'inline-block';
+    container.style.margin = '20px auto';
     container.style.textAlign = 'center';
 
+    // 리사이즈 컨테이너
+    const resizeContainer = document.createElement('div');
+    resizeContainer.style.position = 'relative';
+    resizeContainer.style.display = 'inline-block';
+    resizeContainer.style.border = '2px solid transparent';
+    resizeContainer.style.borderRadius = '8px';
+
     const videoCard = document.createElement('div');
-    videoCard.style.display = 'inline-block';
-    videoCard.style.maxWidth = '100%';
+    videoCard.style.display = 'block';
     videoCard.style.border = '2px solid #e5e5e5';
     videoCard.style.borderRadius = '8px';
     videoCard.style.overflow = 'hidden';
@@ -1137,10 +1556,10 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
     video.src = this.__src;
     video.style.width = this.__width;
     video.style.height = this.__height;
-    video.style.maxWidth = '100%';
     video.style.display = 'block';
     video.controls = true;
     video.preload = 'metadata';
+    video.style.userSelect = 'none';
 
     // 비디오 제목/설명
     if (this.__alt && this.__alt !== '비디오') {
@@ -1160,111 +1579,208 @@ export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
       videoCard.appendChild(video);
     }
 
-    // 크기 조절 메뉴 (이미지와 유사)
-    const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
-    sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
-    sizeMenu.style.background = 'white';
-    sizeMenu.style.border = '2px solid #ccc';
-    sizeMenu.style.borderRadius = '8px';
-    sizeMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-    sizeMenu.style.padding = '12px';
-    sizeMenu.style.zIndex = '9999';
-    sizeMenu.style.minWidth = '200px';
-    sizeMenu.style.display = 'none';
-
-    // 메뉴 제목
-    const title = document.createElement('h4');
-    title.textContent = '비디오 크기';
-    title.style.margin = '0 0 8px 0';
-    title.style.fontSize = '14px';
-    title.style.fontWeight = 'bold';
-    sizeMenu.appendChild(title);
-
-    // 크기 옵션들
-    const sizeOptions = [
-      { label: '작게 (50%)', value: '50%' },
-      { label: '보통 (75%)', value: '75%' },
-      { label: '크게 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' },
+    // 리사이즈 핸들들 생성
+    const handles = [
+      { position: 'nw', cursor: 'nw-resize', top: '-5px', left: '-5px' },
+      { position: 'ne', cursor: 'ne-resize', top: '-5px', right: '-5px' },
+      { position: 'sw', cursor: 'sw-resize', bottom: '-5px', left: '-5px' },
+      { position: 'se', cursor: 'se-resize', bottom: '-5px', right: '-5px' },
+      { position: 'n', cursor: 'n-resize', top: '-5px', left: '50%', transform: 'translateX(-50%)' },
+      { position: 's', cursor: 's-resize', bottom: '-5px', left: '50%', transform: 'translateX(-50%)' },
+      { position: 'w', cursor: 'w-resize', top: '50%', left: '-5px', transform: 'translateY(-50%)' },
+      { position: 'e', cursor: 'e-resize', top: '50%', right: '-5px', transform: 'translateY(-50%)' },
     ];
 
-    // 현재 크기 표시
-    const currentSize = document.createElement('div');
-    currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
-    currentSize.style.marginTop = '12px';
-    currentSize.style.paddingTop = '12px';
-    currentSize.style.borderTop = '1px solid #eee';
-    currentSize.style.fontSize = '11px';
-    currentSize.style.color = '#666';
+    let isSelected = false;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let aspectRatio = 16/9; // 기본 비율
 
-    sizeOptions.forEach((option) => {
-      const button = document.createElement('button');
-      button.textContent = option.label;
-      button.style.width = '100%';
-      button.style.textAlign = 'left';
-      button.style.padding = '8px';
-      button.style.fontSize = '13px';
-      button.style.border = 'none';
-      button.style.borderRadius = '4px';
-      button.style.background = 'transparent';
-      button.style.cursor = 'pointer';
-      button.style.marginBottom = '4px';
-
-      button.addEventListener('mouseenter', () => {
-        button.style.background = '#f5f5f5';
-      });
-
-      button.addEventListener('mouseleave', () => {
-        button.style.background = 'transparent';
-      });
-
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        // 비디오 크기 업데이트
-        video.style.width = option.value;
-
-        // 현재 크기 표시 업데이트
-        currentSize.textContent = `현재 크기: ${option.value} × auto`;
-
-        // 메뉴 닫기
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
-      });
-
-      sizeMenu.appendChild(button);
-    });
-
-    sizeMenu.appendChild(currentSize);
-
-    // 비디오 클릭 이벤트 - 메뉴 토글
-    let menuOpen = false;
-    videoCard.addEventListener('click', (e) => {
-      e.stopPropagation();
-
-      menuOpen = !menuOpen;
-      if (menuOpen) {
-        sizeMenu.style.display = 'block';
-        videoCard.style.border = '3px solid #3B82F6';
+    // 비디오 선택 상태 토글
+    const toggleSelection = (selected: boolean) => {
+      isSelected = selected;
+      if (selected) {
+        resizeContainer.style.border = '2px solid #3B82F6';
+        handles.forEach(handleInfo => {
+          const handle = resizeContainer.querySelector(`[data-handle="${handleInfo.position}"]`) as HTMLElement;
+          if (handle) {
+            handle.style.display = 'block';
+          }
+        });
       } else {
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
+        resizeContainer.style.border = '2px solid transparent';
+        handles.forEach(handleInfo => {
+          const handle = resizeContainer.querySelector(`[data-handle="${handleInfo.position}"]`) as HTMLElement;
+          if (handle) {
+            handle.style.display = 'none';
+          }
+        });
       }
+    };
+
+    // 비디오 클릭 이벤트 (비디오 컨트롤과 겹치지 않도록 조정)
+    videoCard.addEventListener('click', (e) => {
+      // 비디오 컨트롤 영역 클릭은 무시
+      if ((e.target as HTMLElement).tagName === 'VIDEO') {
+        const rect = video.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const videoHeight = rect.height;
+        
+        // 하단 컨트롤 영역(전체 높이의 10%) 클릭은 무시
+        if (y > videoHeight * 0.9) {
+          return;
+        }
+      }
+      
+      e.stopPropagation();
+      toggleSelection(!isSelected);
     });
 
-    // 외부 클릭시 메뉴 닫기
+    // 외부 클릭시 선택 해제
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target as Node)) {
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
-        menuOpen = false;
+        toggleSelection(false);
       }
     });
 
-    container.appendChild(videoCard);
-    container.appendChild(sizeMenu);
+    // 리사이즈 핸들 생성 및 이벤트 처리
+    handles.forEach(handleInfo => {
+      const handle = document.createElement('div');
+      handle.setAttribute('data-handle', handleInfo.position);
+      handle.style.position = 'absolute';
+      handle.style.width = '10px';
+      handle.style.height = '10px';
+      handle.style.backgroundColor = '#3B82F6';
+      handle.style.border = '1px solid #ffffff';
+      handle.style.borderRadius = '2px';
+      handle.style.cursor = handleInfo.cursor;
+      handle.style.display = 'none';
+      handle.style.zIndex = '1000';
+      
+      // 위치 설정
+      if (handleInfo.top) handle.style.top = handleInfo.top;
+      if (handleInfo.bottom) handle.style.bottom = handleInfo.bottom;
+      if (handleInfo.left) handle.style.left = handleInfo.left;
+      if (handleInfo.right) handle.style.right = handleInfo.right;
+      if (handleInfo.transform) handle.style.transform = handleInfo.transform;
+
+      // 드래그 시작
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = video.offsetWidth;
+        startHeight = video.offsetHeight;
+        aspectRatio = startWidth / startHeight;
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
+
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+
+        // 핸들 위치에 따른 크기 계산
+        switch (handleInfo.position) {
+          case 'se': // 오른쪽 아래
+            newWidth = startWidth + deltaX;
+            newHeight = startHeight + deltaY;
+            break;
+          case 'sw': // 왼쪽 아래
+            newWidth = startWidth - deltaX;
+            newHeight = startHeight + deltaY;
+            break;
+          case 'ne': // 오른쪽 위
+            newWidth = startWidth + deltaX;
+            newHeight = startHeight - deltaY;
+            break;
+          case 'nw': // 왼쪽 위
+            newWidth = startWidth - deltaX;
+            newHeight = startHeight - deltaY;
+            break;
+          case 'e': // 오른쪽
+            newWidth = startWidth + deltaX;
+            newHeight = newWidth / aspectRatio;
+            break;
+          case 'w': // 왼쪽
+            newWidth = startWidth - deltaX;
+            newHeight = newWidth / aspectRatio;
+            break;
+          case 's': // 아래
+            newHeight = startHeight + deltaY;
+            newWidth = newHeight * aspectRatio;
+            break;
+          case 'n': // 위
+            newHeight = startHeight - deltaY;
+            newWidth = newHeight * aspectRatio;
+            break;
+        }
+
+        // Shift 키로 비율 유지
+        if (e.shiftKey) {
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            newHeight = newWidth / aspectRatio;
+      } else {
+            newWidth = newHeight * aspectRatio;
+          }
+        }
+
+        // 최소 크기 제한
+        newWidth = Math.max(200, newWidth);
+        newHeight = Math.max(112, newHeight); // 16:9 비율 기준
+
+        // 최대 크기 제한 (부모 컨테이너 기준)
+        const maxWidth = container.parentElement?.offsetWidth || 800;
+        newWidth = Math.min(newWidth, maxWidth);
+        newHeight = Math.min(newHeight, (maxWidth / aspectRatio));
+
+        video.style.width = `${newWidth}px`;
+        video.style.height = `${newHeight}px`;
+      };
+
+             const handleMouseUp = () => {
+         isDragging = false;
+         document.removeEventListener('mousemove', handleMouseMove);
+         document.removeEventListener('mouseup', handleMouseUp);
+         
+         // 에디터를 통해 노드의 크기 정보 업데이트
+         const editorInstance = (container.closest('[contenteditable="true"]') as any)?._lexicalEditor;
+         if (editorInstance) {
+           editorInstance.update(() => {
+             // 현재 비디오 노드 찾기
+             const root = $getRoot();
+             const videoNodes = root.getChildren().filter($isCustomVideoNode);
+             const currentNode = videoNodes.find(node => node.__src === this.__src);
+             
+             if (currentNode) {
+               const writable = currentNode.getWritable();
+               writable.__width = video.style.width;
+               writable.__height = video.style.height;
+             }
+           });
+         }
+       };
+
+      resizeContainer.appendChild(handle);
+    });
+
+    // 비디오가 로드되면 aspect ratio 계산
+    video.addEventListener('loadedmetadata', () => {
+      aspectRatio = video.videoWidth / video.videoHeight;
+    });
+
+    resizeContainer.appendChild(videoCard);
+    container.appendChild(resizeContainer);
 
     return container;
   }
@@ -1402,6 +1918,21 @@ export default function Editor() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
+    // 전역에서 에디터에 접근할 수 있도록 설정
+    (window as any).__lexicalEditor = editor;
+    
+    // DOM 요소에도 에디터 참조 저장
+    const editorElement = editor.getRootElement();
+    if (editorElement) {
+      (editorElement as any)._lexicalEditor = editor;
+    }
+    
+    return () => {
+      delete (window as any).__lexicalEditor;
+    };
+  }, [editor]);
+
+  useEffect(() => {
     return editor.registerCommand(
       SET_FONT_FAMILY_COMMAND,
       (fontFamily: string) => {
@@ -1439,6 +1970,7 @@ export default function Editor() {
         <HRKeyboardPlugin />
         <ListTabIndentationPlugin />
         <ColorPlugin />
+        <ImageAlignmentPlugin />
         <HtmlExtractPlugin />
       </div>
     </div>

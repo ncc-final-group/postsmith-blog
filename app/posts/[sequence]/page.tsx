@@ -7,10 +7,11 @@ import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
-import { getActiveThemeByBlogId } from '../../api/tbThemes';
+import { getThemeByBlogId } from '../../../lib/themeService';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
 import ContentStats from '../../../components/ContentStats';
+import { getCurrentUser } from '../../../lib/auth';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {
@@ -126,22 +127,29 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     }
 
     // 4. 테마 정보 조회
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
       notFound();
     }
+
+    // 4.5. 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
 
     // 5. 카테고리 정보 조회
     const categories = await getCategoriesByBlogId(blog.id);
 
     // 6. 글 내용 조회 (POSTS 타입만)
-    const content = await getPostBySequence(blog.id, parseInt(resolvedParams.sequence));
+    const content = await getPostBySequence(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
     if (!content) {
       notFound();
     }
 
     // 7. 전체 글 목록 조회 (최근 글 표시용)
-    const allContents = await getContentsByBlogId(blog.id);
+    const allContents = await getContentsByBlogId(blog.id, ownerUserId);
 
     // 7-1. 인기글 목록 조회 (최근 한 달 기준: 댓글 수 + 방문자 수)
     const popularContents = await getPopularContentsByBlogId(blog.id);
@@ -153,8 +161,8 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     }
 
     // 8. 이전/다음 글 가져오기 (POSTS 타입만)
-    const prevContent = await getPrevPost(blog.id, parseInt(resolvedParams.sequence));
-    const nextContent = await getNextPost(blog.id, parseInt(resolvedParams.sequence));
+    const prevContent = await getPrevPost(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
+    const nextContent = await getNextPost(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
 
     // 9. 최근 댓글 조회
     const recentReplies = await getRecentReplies(blog.id);
@@ -170,7 +178,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     const menus = await getMenusByBlogId(blog.id);
 
     // 12. 분류 없음 글 개수 조회
-    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id);
+    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
 
     // 13. 총 조회수는 클라이언트에서 처리 (서버에서는 0으로 초기화)
     const totalViews = 0;
@@ -287,7 +295,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     };
 
     // 15. 템플릿 렌더링
-    const html = renderTemplate(theme.html, theme.css, templateData);
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
     // 16. 블로그 정보 구성
     const blogInfo = {
@@ -301,7 +309,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     return (
       <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
         <ContentStats contentId={content.id} />
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );
   } catch (error) {

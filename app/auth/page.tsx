@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import AuthStatus from '../../components/AuthStatus';
-import AuthActionButtons from '../../components/AuthActionButtons';
+
 
 export const metadata: Metadata = {
   title: '인증 상태 확인 | PostSmith Blog',
@@ -52,8 +52,19 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* 액션 버튼들 */}
-        <AuthActionButtons />
+        {/* 안내 메시지 */}
+        <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">로그인/로그아웃</h2>
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-blue-800">
+              <strong>💡 안내:</strong> 로그인/로그아웃은 우상단의 프로필 버튼을 클릭하여 이용할 수 있습니다.
+            </p>
+            <p className="text-blue-700 text-sm mt-2">
+              • 로그인되지 않은 경우: 프로필 아이콘 → "🔑 로그인하기" 버튼 클릭<br/>
+              • 로그인된 경우: 프로필 드롭다운 → "🚪 로그아웃" 버튼 클릭
+            </p>
+          </div>
+        </div>
 
         {/* 개발자 정보 */}
         <div className="mt-6 text-center text-sm text-gray-500">

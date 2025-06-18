@@ -4,12 +4,13 @@ import { notFound } from 'next/navigation';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
-import { getContentsByBlogId } from '../../api/tbContents';
+import { getContentsByBlogId, getContentsByCategoryNameWithPaging } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
-import { getActiveThemeByBlogId } from '../../api/tbThemes';
+import { getThemeByBlogId } from '../../../lib/themeService';
 import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
+import { getCurrentUser } from '../../../lib/auth';
 
 async function getSubdomain(): Promise<string> {
   const h = await headers();
@@ -19,20 +20,35 @@ async function getSubdomain(): Promise<string> {
   return 'testblog';
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CategoryPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ slug: string }>; 
+  searchParams: Promise<{ page?: string }> 
+}) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const page = parseInt(resolvedSearchParams.page || '1', 10);
   const sub = await getSubdomain();
   const blog = await getBlogByAddress(sub);
   if (!blog) notFound();
-  const theme = await getActiveThemeByBlogId(blog.id);
+      const themeData = await getThemeByBlogId(blog.id);
   if (!theme) notFound();
+
+  // 현재 로그인한 사용자 정보 가져오기
+  const currentUser = await getCurrentUser();
+  
+  // 블로그 소유자인지 확인
+  const isOwner = currentUser && currentUser.id === blog.user_id;
+  const ownerUserId = isOwner ? currentUser.id : undefined;
 
   const categories = await getCategoriesByBlogId(blog.id);
   const category = categories.find((c) => c.name === decodeURIComponent(slug));
   if (!category) notFound();
 
-  const allContents = await getContentsByBlogId(blog.id);
-  const contents = allContents.filter((c) => c.category && c.category.id === category.id);
+  const allContents = await getContentsByBlogId(blog.id, ownerUserId);
+  const paginatedContents = await getContentsByCategoryNameWithPaging(blog.id, decodeURIComponent(slug), page, 10, ownerUserId);
   const recentReplies = await getRecentReplies(blog.id);
   const menus = await getMenusByBlogId(blog.id);
 
@@ -69,7 +85,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       reply_count: Number(content.reply_count ?? 0),
     })),
     // 현재 카테고리의 글 목록 (메인 콘텐츠 표시용)
-    categoryContents: contents.map((content) => ({
+    categoryContents: paginatedContents.contents.map((content) => ({
       sequence: Number(content.sequence),
       title: String(content.title),
       content_html: String(content.content_html),
@@ -88,6 +104,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       user: { nickname: String(r.user_nickname ?? '익명') },
     })),
     replies: [],
+    pagination: paginatedContents.pagination, // 페이지네이션 정보 추가
   };
 
   const html = renderTemplate(theme.html, theme.css, templateData);
@@ -96,7 +113,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const headerBlock = `
     <section class="category-header container mx-auto py-8">
       <h1 class="text-3xl font-bold mb-2">${category.name}</h1>
-      <p class="text-gray-600">${contents.length}개의 글</p>
+      <p class="text-gray-600">${paginatedContents.pagination.totalContents}개의 글</p>
     </section>
   `;
 
