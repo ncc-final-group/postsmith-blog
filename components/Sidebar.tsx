@@ -45,9 +45,9 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    key: 'plugins',
-    label: '플러그인',
-    subItems: [{ label: '플러그인 관리', route: '/usermanage/plugins' }],
+    key: 'stats',
+    label: '통계',
+    subItems: [{ label: '통계 관리', route: '/usermanage/stats/visits' }],
   },
   {
     key: 'admin',

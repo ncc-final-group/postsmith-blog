@@ -2,8 +2,6 @@
 
 import React from 'react';
 
-import HotPosts from '@components/HotPosts';
-import RecentPosts from '@components/RecentPosts';
 import StatsChart from '@components/StatsChart';
 import StatsSummary from '@components/StatsSummary';
 
