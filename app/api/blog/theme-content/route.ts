@@ -93,8 +93,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Spring API 에러: ${response.status} - ${errorText}`);
+      assert(false, 'Failed to fetch theme content');
     }
 
     const blogTheme = await response.json();

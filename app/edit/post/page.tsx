@@ -414,10 +414,7 @@ export default function PostEditor() {
       CustomImageNode,
       CustomVideoNode,
     ],
-    onError: (error: Error) => {
-      console.error('Lexical error:', error);
-      // 에러를 던지지 않고 로그만 출력
-    },
+    onError: (error: Error) => {},
   };
 
   return (
