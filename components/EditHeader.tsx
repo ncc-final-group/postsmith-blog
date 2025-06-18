@@ -548,8 +548,7 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
 
   // uploadType이 변경될 때 상태 초기화
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('업로드 타입 변경:', uploadType);
+    // console.log('업로드 타입 변경:', uploadType);
     setImageUrl('');
     setAltText('');
     setMediaId(undefined);
@@ -584,16 +583,15 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
       // 서버에 파일 업로드
       try {
         const fileName = file.name.split('.')[0] || '';
-        // eslint-disable-next-line no-console
-        console.log('이미지 업로드 시작:', { fileName, fileSize: file.size });
+
+        // console.log('이미지 업로드 시작:', { fileName, fileSize: file.size });
 
         const result = await uploadImageToServer(file, fileName, undefined, blogId);
-        // eslint-disable-next-line no-console
-        console.log('이미지 업로드 결과:', result);
+
+        // console.log('이미지 업로드 결과:', result);
 
         if (result.success && result.url) {
-          // eslint-disable-next-line no-console
-          console.log('이미지 URL 설정:', result.url);
+          // console.log('이미지 URL 설정:', result.url);
           setImageUrl(result.url);
           setAltText(result.altText || fileName);
           setMediaId(result.mediaId);
@@ -601,16 +599,14 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
           URL.revokeObjectURL(objectUrl);
           setPreviewUrl('');
         } else {
-          // eslint-disable-next-line no-console
-          console.error('업로드 실패:', result);
+          // console.error('업로드 실패:', result);
           alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
           // 업로드 실패 시에도 Object URL 해제
           URL.revokeObjectURL(objectUrl);
           setPreviewUrl('');
         }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('파일 업로드 중 오류 발생:', error);
+        // console.error('파일 업로드 중 오류 발생:', error);
         alert('파일 업로드 중 오류가 발생했습니다.');
         // 오류 발생 시에도 Object URL 해제
         URL.revokeObjectURL(objectUrl);
@@ -684,8 +680,8 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
               onChange={(e) => {
                 const url = e.target.value;
                 setImageUrl(url);
-                // eslint-disable-next-line no-console
-                console.log('URL 입력 변경:', url);
+
+                // console.log('URL 입력 변경:', url);
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="https://example.com/image.jpg"
@@ -729,8 +725,7 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
                     alt={altText || '미리보기'}
                     className="h-full w-full object-cover"
                     onLoad={() => {
-                      // eslint-disable-next-line no-console
-                      console.log('미리보기 로드 성공:', previewUrl);
+                      // console.log('미리보기 로드 성공:', previewUrl);
                     }}
                   />
                 ) : (
@@ -740,12 +735,10 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
                     alt={altText || '미리보기'}
                     className="h-full w-full object-cover"
                     onLoad={() => {
-                      // eslint-disable-next-line no-console
-                      console.log('이미지 로드 성공:', imageUrl);
+                      // console.log('이미지 로드 성공:', imageUrl);
                     }}
                     onError={(e) => {
-                      // eslint-disable-next-line no-console
-                      console.error('이미지 로드 실패:', imageUrl, e);
+                      // console.error('이미지 로드 실패:', imageUrl, e);
                     }}
                   />
                 )}
@@ -1154,8 +1147,7 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
           alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
         }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('파일 업로드 중 오류 발생:', error);
+        // console.error('파일 업로드 중 오류 발생:', error);
         alert('파일 업로드 중 오류가 발생했습니다.');
       }
     }
@@ -1295,8 +1287,7 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
           setSelectedVideo(null);
         }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('비디오 업로드 중 오류 발생:', error);
+        // console.error('비디오 업로드 중 오류 발생:', error);
         alert('비디오 업로드 중 오류가 발생했습니다.');
         // 에러 발생 시에도 초기값 유지
         setVideoUrl('');

@@ -41,7 +41,7 @@ const menuItems: MenuItem[] = [
     label: '꾸미기',
     subItems: [
       { label: '스킨', route: '/usermanage/customize/skin' },
-      { label: '메뉴 관리', route: '/usermanage/menus' },
+      { label: '메뉴 관리', route: '/usermanage/customize/menu' },
     ],
   },
   {
@@ -110,6 +110,7 @@ export default function Sidebar() {
                       fullRoute = `/${name}${subItem.route}`;
                     }
                     const isActive = pathname === fullRoute;
+
                     return (
                       <li key={index}>
                         <Link href={fullRoute} className={`block py-2 pl-7 hover:bg-gray-100 ${isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}>

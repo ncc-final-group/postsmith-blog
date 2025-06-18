@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable no-console */
+
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
@@ -214,8 +214,8 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
       };
 
       // 디버깅을 위한 로그 추가
-      console.log('요청 URL:', `${BLOG_API_URL}/create`);
-      console.log('요청 데이터:', requestBody);
+      // console.log('요청 URL:', `${BLOG_API_URL}/create`);
+      // console.log('요청 데이터:', requestBody);
 
       // 서버로 POST 요청
       const response = await fetch(`/api/contents`, {
@@ -227,9 +227,9 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
       });
 
       // 응답 로깅
-      console.log('응답 상태:', response.status);
+      // console.log('응답 상태:', response.status);
       const responseData = await response.text();
-      console.log('응답 데이터:', responseData);
+      // console.log('응답 데이터:', responseData);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);

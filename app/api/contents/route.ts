@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-/* eslint-disable no-console, object-curly-newline */
+/* object-curly-newline */
 
 import { getContentsByBlogId } from '../tbContents';
 import { extractBlogId } from '../utils/blogUtils';
@@ -67,9 +67,7 @@ export async function POST(request: Request) {
     // Spring ContentsController 엔드포인트로 전달
     const springResponse = await fetch(`http://localhost:8080/api/contents/blog/${blogAddress}/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         // DTO 필드 매핑
         category: body.category,
@@ -83,25 +81,21 @@ export async function POST(request: Request) {
 
     // 응답 로깅
     const responseText = await springResponse.text();
-    console.log('Spring server response:', {
-      status: springResponse.status,
-      body: responseText,
-    });
+    // console.log('Spring server response:', {
+    // status: springResponse.status,
+    //   body: responseText,
+    // });
 
     // Spring 서버의 응답을 그대로 반환
     return new NextResponse(responseText, {
       status: springResponse.status,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error:', error);
+    // console.error('Error:', error);
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

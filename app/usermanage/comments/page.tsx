@@ -195,8 +195,6 @@ export default function CommentsData() {
         comments: prev.comments.filter((c) => c.repliesId !== comment.repliesId),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('삭제 요청 실패:', error);
       alert('삭제에 실패했습니다.');
     }
   }
@@ -245,8 +243,6 @@ export default function CommentsData() {
         }));
         setSelectedComments(new Set());
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('삭제 요청 실패:', error);
         alert('삭제에 실패했습니다.');
       }
     }
