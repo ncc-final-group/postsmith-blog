@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import { Captions, ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // Types
@@ -10,6 +11,8 @@ interface Comments {
   userName: string;
   parentReplyId?: number;
   replyContent: string;
+  sequence: number;
+  address: string;
   contentTitle: string;
   contentId: number;
   createdAt: string;
@@ -39,17 +42,19 @@ export default function CommentsData() {
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredCommentId, setHoveredCommentId] = useState<number | null>(null);
   const [filterReply, setFilterReply] = useState<'all' | 'true' | 'false'>('all');
+  const router = useRouter();
+  const [address, setAddress] = useState<string | null>(null);
+  const [blogId, setBlogId] = useState<number | null>(null);
 
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyTarget, setReplyTarget] = useState<Comments | null>(null);
   const [replyContent, setReplyContent] = useState('');
 
-  // fetchComments를 컴포넌트 범위로 이동
-  const fetchComments = async () => {
+  const fetchComments = async (blogId: number) => {
     setIsLoading(true);
     try {
-      const blogId = 1;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies?blogId=${blogId}`);
+      if (!res.ok) throw new Error('댓글을 불러오는 데 실패했습니다.');
       const data = await res.json();
       setCommentData({
         comments: data,
@@ -66,7 +71,39 @@ export default function CommentsData() {
   };
 
   useEffect(() => {
-    fetchComments();
+    const hostname = window.location.hostname;
+    let subdomain: string | null = null;
+
+    if (hostname.includes('.postsmith.kro.kr')) {
+      subdomain = hostname.split('.postsmith.kro.kr')[0];
+    } else if (hostname.includes('.')) {
+      subdomain = hostname.split('.')[0];
+    }
+
+    if (!subdomain) {
+      //eslint-disable-next-line no-console
+      console.error('유효한 서브도메인을 찾을 수 없습니다:', hostname);
+      throw new Error('서브도메인을 찾을 수 없습니다.');
+    }
+
+    setAddress(subdomain);
+
+    // 주소를 기반으로 blogId 요청
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/blogid?address=${subdomain}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('블로그 ID를 불러오는 데 실패했습니다.');
+        return res.json();
+      })
+      .then((data: { blogId: number }) => {
+        if (!data.blogId) throw new Error('유효한 블로그 ID를 받지 못했습니다.');
+        setBlogId(data.blogId); // 상태에 저장
+        fetchComments(data.blogId); // 즉시 댓글 불러오기
+      })
+      .catch((err) => {
+        //eslint-disable-next-line no-console
+        console.error(err);
+        alert('블로그 정보를 불러오는 데 실패했습니다.');
+      });
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -164,13 +201,17 @@ export default function CommentsData() {
           contentText: replyContent, // 답글 내용
         }),
       });
+      if (blogId === null) {
+        alert('블로그 ID가 없습니다.');
+        return;
+      }
 
       if (!response.ok) throw new Error('답글 등록 실패');
 
       setShowReplyModal(false);
       setReplyTarget(null);
       setReplyContent('');
-      fetchComments(); // 댓글 목록 새로고침
+      fetchComments(blogId); // 댓글 목록 새로고침
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);
@@ -212,9 +253,10 @@ export default function CommentsData() {
     }
   };
 
-  const handlePostClick = (comment: Comments) => {
-    alert(`댓글 클릭: ${comment.contentTitle}`);
-  };
+  function handleReplyClick(comment: Comments) {
+    router.push(`/blog/${comment.sequence}`);
+  }
+
   async function handleBulkAction(action: string) {
     if (selectedComments.size === 0) {
       alert('먼저 댓글을 선택하세요.');
@@ -287,7 +329,7 @@ export default function CommentsData() {
           <div className="ml-auto flex items-center gap-3">
             <div className="flex gap-2">
               {/* 정렬 선택 */}
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortType)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortType)} className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800">
                 <option value="latest">최신순</option>
                 <option value="oldest">오래된순</option>
               </select>
@@ -295,7 +337,7 @@ export default function CommentsData() {
               <select
                 value={filterReply}
                 onChange={(e) => setFilterReply(e.target.value as 'all' | 'true' | 'false')}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
               >
                 <optgroup label="댓글/답글 보기">
                   <option value="all">전체보기</option>
@@ -339,7 +381,7 @@ export default function CommentsData() {
                 className={`relative cursor-pointer border-b border-gray-200 p-4 transition-colors duration-150 hover:bg-gray-100 ${
                   index === commentData.comments.length - 1 ? 'border-b-0' : ''
                 } ${comment.isNotice ? 'border-blue-100 bg-blue-50' : ''}`}
-                onClick={() => handlePostClick(comment)}
+                onClick={() => handleReplyClick(comment)}
                 onMouseEnter={() => setHoveredCommentId(comment.repliesId)}
                 onMouseLeave={() => setHoveredCommentId(null)}
               >

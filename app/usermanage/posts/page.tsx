@@ -19,6 +19,8 @@ interface Post {
   categoryPath?: string;
   totalViewCount: number;
   totalRepliesCount: number;
+  address: string;
+  sequence: number;
 }
 
 interface BoardData {
@@ -35,6 +37,8 @@ export default function BoardSitePage() {
   const [sortOrder, setSortOrder] = useState<SortType>('latest');
   const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'true' | 'false'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [address, setAddress] = useState<string | null>(null);
+
   const router = useRouter();
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -79,9 +83,9 @@ export default function BoardSitePage() {
 
   const POSTS_PER_PAGE = 5;
 
-  useEffect(() => {
-    const blogId = 2;
+  function fetchPosts(blogId: number, page = 1) {
     setIsLoading(true);
+
     fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/POST?blogId=${blogId}`)
       .then((res) => {
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
@@ -90,22 +94,57 @@ export default function BoardSitePage() {
       .then((data: Post[]) => {
         const totalCount = data.length;
         const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE);
-        const currentPage = 1;
-
-        const paginatedPosts = data.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
+        const paginatedPosts = data.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE);
 
         setBoardData({
           posts: paginatedPosts,
           totalCount,
-          currentPage,
+          currentPage: page,
           totalPages,
         });
       })
       .catch((err) => {
-        // console.error('게시글을 불러오는 중 오류 발생:', err);
+        //eslint-disable-next-line no-console
+        console.error('게시글을 불러오는 중 오류 발생:', err);
       })
       .finally(() => {
         setIsLoading(false);
+      });
+  }
+
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    let subdomain: string | null = null;
+
+    if (hostname.includes('.postsmith.kro.kr')) {
+      subdomain = hostname.split('.postsmith.kro.kr')[0];
+    } else if (hostname.includes('.')) {
+      subdomain = hostname.split('.')[0];
+    }
+
+    if (!subdomain) {
+      //eslint-disable-next-line no-console
+      console.error('유효한 서브도메인을 찾을 수 없습니다:', hostname);
+      throw new Error('서브도메인을 찾을 수 없습니다.');
+    }
+
+    setAddress(subdomain);
+
+    // 주소를 기반으로 blogId 요청
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/blogid?address=${subdomain}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('블로그 ID를 불러오는 데 실패했습니다.');
+        return res.json();
+      })
+
+      .then((data: { blogId: number }) => {
+        if (!data.blogId) throw new Error('유효한 블로그 ID를 받지 못했습니다.');
+        fetchPosts(data.blogId);
+      })
+      .catch((err) => {
+        //eslint-disable-next-line no-console
+        console.error(err);
+        alert('블로그 정보를 불러오는 데 실패했습니다.');
       });
   }, []);
 
@@ -125,10 +164,12 @@ export default function BoardSitePage() {
   }
 
   function handleCreatePost() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/post');
   }
 
-  function handlePostClick(post: Post) {}
+  function handlePostClick(post: Post) {
+    router.push(`/blog/${post.sequence}`);
+  }
 
   function handleSelectOne(postId: number) {
     setSelectedPosts((prev) => {
@@ -153,7 +194,7 @@ export default function BoardSitePage() {
   }
 
   function handleEditPost(post: Post) {
-    alert(`수정: ${post.title}`);
+    router.push(`/edit/post/${post.sequence}`);
   }
 
   function handleViewStats(post: Post) {
@@ -298,8 +339,7 @@ export default function BoardSitePage() {
               'text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-blue-500 hover:text-white',
             )}
           >
-            <Edit className="h-4 w-4" />
-            글쓰기
+            <Edit className="h-4 w-4" />글 작성
           </button>
         </div>
       </div>
@@ -335,7 +375,7 @@ export default function BoardSitePage() {
           <div className="ml-auto flex items-center gap-2">
             <div className="flex gap-2">
               {/* 정렬 선택 */}
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortType)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as SortType)} className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800">
                 <option value="latest">최신순</option>
                 <option value="oldest">오래된순</option>
               </select>
@@ -348,7 +388,7 @@ export default function BoardSitePage() {
                   setFilterPrivacy(privacy as 'all' | 'true' | 'false');
                   setSelectedCategory(category);
                 }}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
               >
                 <optgroup label="공개 설정">
                   <option value="all|all">전체 보기</option>
@@ -393,7 +433,7 @@ export default function BoardSitePage() {
             </div>
           ) : boardData.posts.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              <p>게시글이 없습니다.</p>
+              <p>작성한 포스트가 없습니다.</p>
             </div>
           ) : (
             filteredAndSortedPosts.map((post, index) => (
