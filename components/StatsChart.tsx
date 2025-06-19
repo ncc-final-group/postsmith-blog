@@ -32,17 +32,40 @@ export default function StatsChart() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const chartRef = useRef<any>(null);
 
-  const blogId = 2;
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // 1. 서브도메인(주소) 얻기
+        const hostname = window.location.hostname;
+        let subdomain: string | null = null;
+
+        if (hostname.includes('.postsmith.kro.kr')) {
+          subdomain = hostname.split('.postsmith.kro.kr')[0];
+        } else if (hostname.includes('.')) {
+          subdomain = hostname.split('.')[0];
+        }
+
+        if (!subdomain) {
+          throw new Error('유효한 서브도메인을 찾을 수 없습니다.');
+        }
+
+        // 2. blogId 요청
+        const blogIdRes = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/blogid?address=${subdomain}`);
+        if (!blogIdRes.ok) throw new Error('블로그 ID를 불러오는 데 실패했습니다.');
+        const blogIdData = await blogIdRes.json();
+        const resolvedBlogId = blogIdData.blogId ?? blogIdData;
+
+        if (!resolvedBlogId) throw new Error('유효한 블로그 ID를 받지 못했습니다.');
+
+        // 3. 통계 데이터 요청
         const url =
           statType === 'views'
-            ? `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/views/daily?blogId=${blogId}`
-            : `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/daily?blogId=${blogId}`;
+            ? `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/views/daily?blogId=${resolvedBlogId}&period=${period}&timeOffset=${timeOffset}`
+            : `${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/daily?blogId=${resolvedBlogId}&period=${period}&timeOffset=${timeOffset}`;
 
         const res = await fetch(url);
+        if (!res.ok) throw new Error('통계 데이터를 불러오는 데 실패했습니다.');
+
         const data: StatsData[] = await res.json();
         setStatsData(data);
       } catch (e) {
@@ -52,7 +75,7 @@ export default function StatsChart() {
     };
 
     fetchStats();
-  }, [blogId, period, statType, timeOffset]);
+  }, [period, statType, timeOffset]); // blogId 제거
 
   // 날짜를 YYYY-MM-DD 형식으로 포맷팅하는 함수
   const formatDate = (date: Date): string => {

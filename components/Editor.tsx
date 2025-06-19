@@ -34,6 +34,17 @@ import { DecoratorNode, EditorConfig, LexicalEditor, LexicalNode, NodeKey, Seria
 import React, { useEffect, useState } from 'react';
 
 import { CustomHRNode } from './CustomHRNode';
+import {
+  $createCustomFileNode,
+  $createCustomImageNode,
+  $createCustomVideoNode,
+  $isCustomFileNode,
+  $isCustomImageNode,
+  $isCustomVideoNode,
+  CustomFileNode,
+  CustomImageNode,
+  CustomVideoNode,
+} from './nodes';
 
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -41,6 +52,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 export const SET_TEXT_COLOR_COMMAND = createCommand('SET_TEXT_COLOR_COMMAND');
 export const SET_BG_COLOR_COMMAND = createCommand('SET_BG_COLOR_COMMAND');
 export const SET_FONT_FAMILY_COMMAND = createCommand('SET_FONT_FAMILY_COMMAND');
+export const SET_IMAGE_ALIGNMENT_COMMAND = createCommand('SET_IMAGE_ALIGNMENT_COMMAND');
 
 // HTML 추출 유틸리티 함수들
 export const getEditorHtml = (editor: any) => {
@@ -508,6 +520,48 @@ function ColorPlugin() {
   return null;
 }
 
+function ImageAlignmentPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      SET_IMAGE_ALIGNMENT_COMMAND,
+      (alignment: 'left' | 'center' | 'right') => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) return false;
+
+          const nodes = selection.getNodes();
+
+          // 선택된 노드 중 이미지 노드 찾기
+          for (const node of nodes) {
+            if ($isCustomImageNode(node)) {
+              node.setAlignment(alignment);
+              return true;
+            }
+
+            // 부모 노드도 확인
+            let currentNode = node.getParent();
+            while (currentNode) {
+              if ($isCustomImageNode(currentNode)) {
+                currentNode.setAlignment(alignment);
+                return true;
+              }
+              currentNode = currentNode.getParent();
+            }
+          }
+
+          return false;
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor]);
+
+  return null;
+}
+
 // 이미지 컴포넌트 - 크기 조절 기능 포함 (사용하지 않음)
 function ImageComponent({ src, alt, width, height, node }: { src: string; alt: string; width: string; height: string; node: any }) {
   const [editor] = useLexicalComposerContext();
@@ -684,636 +738,6 @@ function ImageComponent({ src, alt, width, height, node }: { src: string; alt: s
   );
 }
 
-// 커스텀 이미지 노드 생성
-export class CustomImageNode extends DecoratorNode<React.ReactElement> {
-  __src: string;
-  __alt: string;
-  __width: string;
-  __height: string;
-  __mediaId?: number;
-
-  static getType(): string {
-    return 'custom-image';
-  }
-
-  static clone(node: CustomImageNode): CustomImageNode {
-    return new CustomImageNode(node.__src, node.__alt, node.__width, node.__height, node.__mediaId, node.__key);
-  }
-
-  constructor(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number, key?: NodeKey) {
-    super(key);
-    this.__src = src;
-    this.__alt = alt;
-    this.__width = width;
-    this.__height = height;
-    this.__mediaId = mediaId;
-  }
-
-  createDOM(): HTMLElement {
-    const container = document.createElement('div');
-    container.style.position = 'relative';
-    container.style.display = 'block';
-    container.style.margin = '20px 0';
-    container.style.textAlign = 'center';
-
-    const img = document.createElement('img');
-    img.src = this.__src;
-    img.alt = this.__alt;
-    img.style.maxWidth = '100%';
-    img.style.width = this.__width;
-    img.style.height = this.__height;
-    img.style.borderRadius = '8px';
-    img.style.display = 'inline-block';
-    img.style.cursor = 'pointer';
-    img.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-    img.style.transition = 'border-color 0.2s ease';
-    img.style.border = '2px solid transparent';
-
-    // 크기 조절 메뉴 생성
-    const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
-    sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
-    sizeMenu.style.background = 'white';
-    sizeMenu.style.border = '2px solid #ccc';
-    sizeMenu.style.borderRadius = '8px';
-    sizeMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-    sizeMenu.style.padding = '12px';
-    sizeMenu.style.zIndex = '9999';
-    sizeMenu.style.minWidth = '200px';
-    sizeMenu.style.display = 'none';
-
-    // 메뉴 제목
-    const title = document.createElement('h4');
-    title.textContent = '이미지 크기';
-    title.style.margin = '0 0 8px 0';
-    title.style.fontSize = '14px';
-    title.style.fontWeight = 'bold';
-    sizeMenu.appendChild(title);
-
-    // 크기 옵션들
-    const sizeOptions = [
-      { label: '작게 (25%)', value: '25%' },
-      { label: '보통 (50%)', value: '50%' },
-      { label: '크게 (75%)', value: '75%' },
-      { label: '최대 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' },
-    ];
-
-    // 현재 크기 표시
-    const currentSize = document.createElement('div');
-    currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
-    currentSize.style.marginTop = '12px';
-    currentSize.style.paddingTop = '12px';
-    currentSize.style.borderTop = '1px solid #eee';
-    currentSize.style.fontSize = '11px';
-    currentSize.style.color = '#666';
-
-    sizeOptions.forEach((option) => {
-      const button = document.createElement('button');
-      button.textContent = option.label;
-      button.style.width = '100%';
-      button.style.textAlign = 'left';
-      button.style.padding = '8px';
-      button.style.fontSize = '13px';
-      button.style.border = 'none';
-      button.style.borderRadius = '4px';
-      button.style.background = 'transparent';
-      button.style.cursor = 'pointer';
-      button.style.marginBottom = '4px';
-
-      button.addEventListener('mouseenter', () => {
-        button.style.background = '#f5f5f5';
-      });
-
-      button.addEventListener('mouseleave', () => {
-        button.style.background = 'transparent';
-      });
-
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        // 이미지 크기 업데이트
-        img.style.width = option.value;
-
-        // 현재 크기 표시 업데이트
-        currentSize.textContent = `현재 크기: ${option.value} × auto`;
-
-        // 메뉴 닫기
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
-      });
-
-      sizeMenu.appendChild(button);
-    });
-
-    sizeMenu.appendChild(currentSize);
-
-    // 이미지 클릭 이벤트 - 메뉴 토글
-    let menuOpen = false;
-    img.addEventListener('click', (e) => {
-      e.stopPropagation();
-
-      menuOpen = !menuOpen;
-      if (menuOpen) {
-        sizeMenu.style.display = 'block';
-        img.style.border = '3px solid #3B82F6';
-      } else {
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
-      }
-    });
-
-    // 외부 클릭시 메뉴 닫기
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target as Node)) {
-        sizeMenu.style.display = 'none';
-        img.style.border = '2px solid transparent';
-        menuOpen = false;
-      }
-    });
-
-    container.appendChild(img);
-    container.appendChild(sizeMenu);
-
-    return container;
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  setSize(width: string, height: string = 'auto'): void {
-    const writable = this.getWritable();
-    writable.__width = width;
-    writable.__height = height;
-  }
-
-  decorate(): React.ReactElement {
-    return <div style={{ display: 'none' }} />;
-  }
-
-  isInline(): false {
-    return false;
-  }
-}
-
-export function $createCustomImageNode(src: string, alt: string, width: string = 'auto', height: string = 'auto', mediaId?: number): CustomImageNode {
-  return new CustomImageNode(src, alt, width, height, mediaId);
-}
-
-export function $isCustomImageNode(node: LexicalNode | null | undefined): node is CustomImageNode {
-  return node instanceof CustomImageNode;
-}
-
-// 파일 노드 관련 타입
-type SerializedFileNode = Spread<
-  {
-    fileName: string;
-    fileSize: number;
-    fileType: string;
-    fileData: string; // Base64 데이터 또는 Object URL
-  },
-  SerializedLexicalNode
->;
-
-// 커스텀 파일 노드 클래스
-export class CustomFileNode extends DecoratorNode<React.ReactElement> {
-  __fileName: string;
-  __fileSize: number;
-  __fileType: string;
-  __fileData: string;
-
-  static getType(): string {
-    return 'custom-file';
-  }
-
-  static clone(node: CustomFileNode): CustomFileNode {
-    return new CustomFileNode(node.__fileName, node.__fileSize, node.__fileType, node.__fileData, node.__key);
-  }
-
-  constructor(fileName: string, fileSize: number, fileType: string, fileData: string, key?: NodeKey) {
-    super(key);
-    this.__fileName = fileName;
-    this.__fileSize = fileSize;
-    this.__fileType = fileType;
-    this.__fileData = fileData;
-  }
-
-  createDOM(): HTMLElement {
-    const container = document.createElement('div');
-    container.style.position = 'relative';
-    container.style.display = 'block';
-    container.style.margin = '20px 0';
-    container.style.textAlign = 'center';
-
-    const fileCard = document.createElement('div');
-    fileCard.style.display = 'inline-block';
-    fileCard.style.padding = '16px 20px';
-    fileCard.style.border = '2px solid #e5e5e5';
-    fileCard.style.borderRadius = '8px';
-    fileCard.style.backgroundColor = '#f9f9f9';
-    fileCard.style.cursor = 'pointer';
-    fileCard.style.transition = 'all 0.2s ease';
-    fileCard.style.maxWidth = '300px';
-    fileCard.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-
-    // 파일 아이콘
-    const icon = document.createElement('div');
-    icon.style.fontSize = '32px';
-    icon.style.marginBottom = '8px';
-    icon.innerHTML = this.getFileIcon();
-
-    // 파일 이름
-    const fileName = document.createElement('div');
-    fileName.style.fontWeight = 'bold';
-    fileName.style.marginBottom = '4px';
-    fileName.style.color = '#333';
-    fileName.textContent = this.__fileName;
-
-    // 파일 정보
-    const fileInfo = document.createElement('div');
-    fileInfo.style.fontSize = '12px';
-    fileInfo.style.color = '#666';
-    fileInfo.textContent = `${this.__fileType.toUpperCase()} • ${this.formatFileSize(this.__fileSize)}`;
-
-    // 다운로드 버튼
-    const downloadBtn = document.createElement('button');
-    downloadBtn.style.marginTop = '8px';
-    downloadBtn.style.padding = '6px 12px';
-    downloadBtn.style.backgroundColor = '#3b82f6';
-    downloadBtn.style.color = 'white';
-    downloadBtn.style.border = 'none';
-    downloadBtn.style.borderRadius = '4px';
-    downloadBtn.style.fontSize = '12px';
-    downloadBtn.style.cursor = 'pointer';
-    downloadBtn.textContent = '다운로드';
-
-    // 호버 효과
-    fileCard.addEventListener('mouseenter', () => {
-      fileCard.style.borderColor = '#3b82f6';
-      fileCard.style.backgroundColor = '#f0f9ff';
-    });
-
-    fileCard.addEventListener('mouseleave', () => {
-      fileCard.style.borderColor = '#e5e5e5';
-      fileCard.style.backgroundColor = '#f9f9f9';
-    });
-
-    // 다운로드 기능
-    downloadBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.downloadFile();
-    });
-
-    fileCard.appendChild(icon);
-    fileCard.appendChild(fileName);
-    fileCard.appendChild(fileInfo);
-    fileCard.appendChild(downloadBtn);
-    container.appendChild(fileCard);
-
-    return container;
-  }
-
-  private getFileIcon(): string {
-    const extension = this.__fileName.split('.').pop()?.toLowerCase() || '';
-
-    switch (extension) {
-      case 'pdf':
-        return '📄';
-      case 'doc':
-      case 'docx':
-        return '📝';
-      case 'xls':
-      case 'xlsx':
-        return '📊';
-      case 'ppt':
-      case 'pptx':
-        return '📋';
-      case 'zip':
-      case 'rar':
-      case '7z':
-        return '🗜️';
-      case 'txt':
-        return '📃';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return '🖼️';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return '🎥';
-      case 'mp3':
-      case 'wav':
-        return '🎵';
-      default:
-        return '📁';
-    }
-  }
-
-  private formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
-
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
-
-  private downloadFile(): void {
-    try {
-      // Base64 데이터인 경우
-      if (this.__fileData.startsWith('data:')) {
-        const link = document.createElement('a');
-        link.href = this.__fileData;
-        link.download = this.__fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // Object URL인 경우
-        const link = document.createElement('a');
-        link.href = this.__fileData;
-        link.download = this.__fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (error) {
-      alert('파일 다운로드 중 오류가 발생했습니다.');
-    }
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  static importJSON(serializedNode: SerializedFileNode): CustomFileNode {
-    const { fileName, fileSize, fileType, fileData } = serializedNode;
-    const node = new CustomFileNode(fileName, fileSize, fileType, fileData);
-    return node;
-  }
-
-  exportJSON(): SerializedFileNode {
-    return {
-      ...super.exportJSON(),
-      fileName: this.__fileName,
-      fileSize: this.__fileSize,
-      fileType: this.__fileType,
-      fileData: this.__fileData,
-      type: 'custom-file',
-      version: 1,
-    };
-  }
-
-  decorate(): React.ReactElement {
-    return <div style={{ display: 'none' }} />;
-  }
-}
-
-export function $createCustomFileNode(fileName: string, fileSize: number, fileType: string, fileData: string): CustomFileNode {
-  return new CustomFileNode(fileName, fileSize, fileType, fileData);
-}
-
-export function $isCustomFileNode(node: LexicalNode | null | undefined): node is CustomFileNode {
-  return node instanceof CustomFileNode;
-}
-
-// 비디오 노드 관련 타입
-type SerializedVideoNode = Spread<
-  {
-    src: string;
-    alt: string;
-    width: string;
-    height: string;
-  },
-  SerializedLexicalNode
->;
-
-// 커스텀 비디오 노드 클래스
-export class CustomVideoNode extends DecoratorNode<React.ReactElement> {
-  __src: string;
-  __alt: string;
-  __width: string;
-  __height: string;
-
-  static getType(): string {
-    return 'custom-video';
-  }
-
-  static clone(node: CustomVideoNode): CustomVideoNode {
-    return new CustomVideoNode(node.__src, node.__alt, node.__width, node.__height, node.__key);
-  }
-
-  constructor(src: string, alt: string, width: string = '100%', height: string = 'auto', key?: NodeKey) {
-    super(key);
-    this.__src = src;
-    this.__alt = alt;
-    this.__width = width;
-    this.__height = height;
-  }
-
-  createDOM(): HTMLElement {
-    const container = document.createElement('div');
-    container.style.position = 'relative';
-    container.style.display = 'block';
-    container.style.margin = '20px 0';
-    container.style.textAlign = 'center';
-
-    const videoCard = document.createElement('div');
-    videoCard.style.display = 'inline-block';
-    videoCard.style.maxWidth = '100%';
-    videoCard.style.border = '2px solid #e5e5e5';
-    videoCard.style.borderRadius = '8px';
-    videoCard.style.overflow = 'hidden';
-    videoCard.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-    videoCard.style.backgroundColor = '#000';
-
-    const video = document.createElement('video');
-    video.src = this.__src;
-    video.style.width = this.__width;
-    video.style.height = this.__height;
-    video.style.maxWidth = '100%';
-    video.style.display = 'block';
-    video.controls = true;
-    video.preload = 'metadata';
-
-    // 비디오 제목/설명
-    if (this.__alt && this.__alt !== '비디오') {
-      const title = document.createElement('div');
-      title.textContent = this.__alt;
-      title.style.padding = '12px 16px';
-      title.style.backgroundColor = '#f9f9f9';
-      title.style.borderTop = '1px solid #e5e5e5';
-      title.style.fontSize = '14px';
-      title.style.fontWeight = 'bold';
-      title.style.color = '#333';
-      title.style.textAlign = 'left';
-
-      videoCard.appendChild(video);
-      videoCard.appendChild(title);
-    } else {
-      videoCard.appendChild(video);
-    }
-
-    // 크기 조절 메뉴 (이미지와 유사)
-    const sizeMenu = document.createElement('div');
-    sizeMenu.style.position = 'absolute';
-    sizeMenu.style.top = '0px';
-    sizeMenu.style.right = '-220px';
-    sizeMenu.style.background = 'white';
-    sizeMenu.style.border = '2px solid #ccc';
-    sizeMenu.style.borderRadius = '8px';
-    sizeMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-    sizeMenu.style.padding = '12px';
-    sizeMenu.style.zIndex = '9999';
-    sizeMenu.style.minWidth = '200px';
-    sizeMenu.style.display = 'none';
-
-    // 메뉴 제목
-    const title = document.createElement('h4');
-    title.textContent = '비디오 크기';
-    title.style.margin = '0 0 8px 0';
-    title.style.fontSize = '14px';
-    title.style.fontWeight = 'bold';
-    sizeMenu.appendChild(title);
-
-    // 크기 옵션들
-    const sizeOptions = [
-      { label: '작게 (50%)', value: '50%' },
-      { label: '보통 (75%)', value: '75%' },
-      { label: '크게 (100%)', value: '100%' },
-      { label: '자동', value: 'auto' },
-    ];
-
-    // 현재 크기 표시
-    const currentSize = document.createElement('div');
-    currentSize.textContent = `현재 크기: ${this.__width} × ${this.__height}`;
-    currentSize.style.marginTop = '12px';
-    currentSize.style.paddingTop = '12px';
-    currentSize.style.borderTop = '1px solid #eee';
-    currentSize.style.fontSize = '11px';
-    currentSize.style.color = '#666';
-
-    sizeOptions.forEach((option) => {
-      const button = document.createElement('button');
-      button.textContent = option.label;
-      button.style.width = '100%';
-      button.style.textAlign = 'left';
-      button.style.padding = '8px';
-      button.style.fontSize = '13px';
-      button.style.border = 'none';
-      button.style.borderRadius = '4px';
-      button.style.background = 'transparent';
-      button.style.cursor = 'pointer';
-      button.style.marginBottom = '4px';
-
-      button.addEventListener('mouseenter', () => {
-        button.style.background = '#f5f5f5';
-      });
-
-      button.addEventListener('mouseleave', () => {
-        button.style.background = 'transparent';
-      });
-
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        // 비디오 크기 업데이트
-        video.style.width = option.value;
-
-        // 현재 크기 표시 업데이트
-        currentSize.textContent = `현재 크기: ${option.value} × auto`;
-
-        // 메뉴 닫기
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
-      });
-
-      sizeMenu.appendChild(button);
-    });
-
-    sizeMenu.appendChild(currentSize);
-
-    // 비디오 클릭 이벤트 - 메뉴 토글
-    let menuOpen = false;
-    videoCard.addEventListener('click', (e) => {
-      e.stopPropagation();
-
-      menuOpen = !menuOpen;
-      if (menuOpen) {
-        sizeMenu.style.display = 'block';
-        videoCard.style.border = '3px solid #3B82F6';
-      } else {
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
-      }
-    });
-
-    // 외부 클릭시 메뉴 닫기
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target as Node)) {
-        sizeMenu.style.display = 'none';
-        videoCard.style.border = '2px solid #e5e5e5';
-        menuOpen = false;
-      }
-    });
-
-    container.appendChild(videoCard);
-    container.appendChild(sizeMenu);
-
-    return container;
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  setSize(width: string, height: string = 'auto'): void {
-    const writable = this.getWritable();
-    writable.__width = width;
-    writable.__height = height;
-  }
-
-  static importJSON(serializedNode: SerializedVideoNode): CustomVideoNode {
-    const { src, alt, width, height } = serializedNode;
-    const node = new CustomVideoNode(src, alt, width, height);
-    return node;
-  }
-
-  exportJSON(): SerializedVideoNode {
-    return {
-      ...super.exportJSON(),
-      src: this.__src,
-      alt: this.__alt,
-      width: this.__width,
-      height: this.__height,
-      type: 'custom-video',
-      version: 1,
-    };
-  }
-
-  decorate(): React.ReactElement {
-    return <div style={{ display: 'none' }} />;
-  }
-
-  isInline(): false {
-    return false;
-  }
-}
-
-export function $createCustomVideoNode(src: string, alt: string, width: string = '100%', height: string = 'auto'): CustomVideoNode {
-  return new CustomVideoNode(src, alt, width, height);
-}
-
-export function $isCustomVideoNode(node: LexicalNode | null | undefined): node is CustomVideoNode {
-  return node instanceof CustomVideoNode;
-}
-
 // LinkClickPlugin 추가
 function LinkClickPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -1402,6 +826,21 @@ export default function Editor() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
+    // 전역에서 에디터에 접근할 수 있도록 설정
+    (window as any).__lexicalEditor = editor;
+
+    // DOM 요소에도 에디터 참조 저장
+    const editorElement = editor.getRootElement();
+    if (editorElement) {
+      (editorElement as any)._lexicalEditor = editor;
+    }
+
+    return () => {
+      delete (window as any).__lexicalEditor;
+    };
+  }, [editor]);
+
+  useEffect(() => {
     return editor.registerCommand(
       SET_FONT_FAMILY_COMMAND,
       (fontFamily: string) => {
@@ -1439,6 +878,7 @@ export default function Editor() {
         <HRKeyboardPlugin />
         <ListTabIndentationPlugin />
         <ColorPlugin />
+        <ImageAlignmentPlugin />
         <HtmlExtractPlugin />
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   deleteMediaFile,
@@ -31,6 +31,10 @@ export default function MediaManagePage() {
   const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
   const [previewImage, setPreviewImage] = useState<MediaFile | null>(null);
   const [previewVideo, setPreviewVideo] = useState<MediaFile | null>(null);
+
+  // 한글 입력 조합 상태 관리
+  const [isComposing, setIsComposing] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 임시 사용자 ID (실제로는 인증된 사용자 정보에서 가져올 것)
   const userId = 1;
@@ -216,10 +220,25 @@ export default function MediaManagePage() {
             <form onSubmit={handleSearch} className="flex flex-wrap gap-4">
               <div className="min-w-64 flex-1">
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="파일명, 설명으로 검색..."
                   value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onChange={(e) => {
+                    // 한글 조합 중이 아닐 때만 상태 업데이트
+                    if (!isComposing) {
+                      setSearchKeyword(e.target.value);
+                    }
+                  }}
+                  onCompositionStart={() => {
+                    // 한글 입력 조합 시작
+                    setIsComposing(true);
+                  }}
+                  onCompositionEnd={(e) => {
+                    // 한글 입력 조합 완료
+                    setIsComposing(false);
+                    setSearchKeyword(e.currentTarget.value);
+                  }}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 />
               </div>

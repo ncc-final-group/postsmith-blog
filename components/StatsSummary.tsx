@@ -17,7 +17,7 @@ interface StatsData {
   };
 }
 
-export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
+export default function StatsSummary() {
   const [statsData, setStatsData] = useState<StatsData>({
     today: { views: 0, visitors: 0 },
     yesterday: { views: 0, visitors: 0 },
@@ -28,10 +28,32 @@ export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchBlogIdAndStats = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
+        // 1. 서브도메인 추출
+        const hostname = window.location.hostname;
+        let subdomain: string | null = null;
 
+        if (hostname.includes('.postsmith.kro.kr')) {
+          subdomain = hostname.split('.postsmith.kro.kr')[0];
+        } else if (hostname.includes('.')) {
+          subdomain = hostname.split('.')[0];
+        }
+
+        if (!subdomain) {
+          throw new Error('유효한 서브도메인을 찾을 수 없습니다.');
+        }
+
+        // 2. blogId 요청
+        const blogIdRes = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Posts/blogid?address=${subdomain}`);
+        if (!blogIdRes.ok) throw new Error('블로그 ID를 불러오는 데 실패했습니다.');
+        const blogIdData = await blogIdRes.json();
+        const blogId = blogIdData.blogId ?? blogIdData;
+
+        if (!blogId) throw new Error('유효한 블로그 ID를 받지 못했습니다.');
+
+        // 3. 통계 API 호출
         const [viewRes, visitRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/view/${blogId}`),
           fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/Stats/visit/${blogId}`),
@@ -63,21 +85,19 @@ export default function StatsSummary({ blogId = 2 }: { blogId?: number }) {
       } catch (err) {
         //eslint-disable-next-line no-console
         console.error(err);
-        setError(err instanceof Error ? err.message : '통계 데이터를 불러오는데 실패했습니다');
+        setError(err instanceof Error ? err.message : '통계 데이터를 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchBlogIdAndStats();
 
-    const interval = setInterval(fetchStats, 5 * 60 * 1000); // 5분마다 갱신
+    const interval = setInterval(fetchBlogIdAndStats, 5 * 60 * 1000); // 5분마다 갱신
     return () => clearInterval(interval);
-  }, [blogId]);
+  }, []);
 
-  const formatNumber = (num: number): string => {
-    return num.toLocaleString();
-  };
+  const formatNumber = (num: number): string => num.toLocaleString();
 
   if (loading) {
     return (

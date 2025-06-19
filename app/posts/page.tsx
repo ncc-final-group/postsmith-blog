@@ -1,204 +1,173 @@
-'use client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState } from 'react';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 
-interface Content {
-  id: number;
-  blog_id: number;
-  sequence: number;
-  title: string;
-  content_html: string | null;
-  content_plain: string | null;
-  category_id: number | null;
-  created_at: string;
-  updated_at: string;
-  type: string;
-  is_temp: number;
-  is_public: number;
-  likes: number;
-  views: number;
-  thumbnail?: string;
-  summary?: string;
-  tags?: string;
-}
+import BlogLayout from '../../components/BlogLayout';
+import BlogProvider from '../../components/BlogProvider';
+import { renderTemplate } from '../../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../../lib/themeService';
+import { getSidebarData } from '../api/sidebarData';
+import { getBlogByAddress } from '../api/tbBlogs';
+import { getCategoriesByBlogId } from '../api/tbCategories';
+import { getPostsByBlogId, getPostsByBlogIdWithPaging } from '../api/tbContents';
+import { getMenusByBlogId } from '../api/tbMenu';
 
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-}
+async function getBlogAddress(): Promise<string> {
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
 
-export default function PostsListPage() {
-  const router = useRouter();
-  const [contents, setContents] = useState<Content[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    // address.localhost:3000 형태에서 address 추출
+    if (host.includes('.localhost')) {
+      const subdomain = host.split('.localhost')[0];
+      return subdomain;
+    }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // 카테고리와 콘텐츠를 병렬로 가져오기 (subdomain 기반으로 자동 감지)
-        const [contentsResponse, categoriesResponse] = await Promise.all([fetch('/api/contents'), fetch('/api/categories')]);
-
-        // 블로그가 존재하지 않는 경우 404 처리
-        if (contentsResponse.status === 404 || categoriesResponse.status === 404) {
-          setError('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
-          return;
-        }
-
-        const contentsResult = await contentsResponse.json();
-        const categoriesResult = await categoriesResponse.json();
-
-        if (contentsResult.success && contentsResult.data) {
-          setContents(contentsResult.data);
-        }
-
-        if (categoriesResult.success && categoriesResult.data) {
-          setCategories(categoriesResult.data);
-        }
-      } catch (err) {
-        setError('데이터를 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setLoading(false);
+    // address.domain.com 형태에서 address 추출
+    if (host.includes('.')) {
+      const parts = host.split('.');
+      if (parts.length >= 2) {
+        return parts[0];
       }
+    }
+
+    // 기본값 (개발 환경)
+    return 'testblog';
+  } catch (error) {
+    // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
+    return 'testblog';
+  }
+}
+
+export default async function PostsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  try {
+    const resolvedSearchParams = await searchParams;
+    const page = parseInt(resolvedSearchParams.page || '1', 10);
+
+    // 1. 블로그 주소 추출
+    const subdomain = await getBlogAddress();
+
+    // 2. 블로그 정보 조회
+    const blog = await getBlogByAddress(subdomain);
+    if (!blog) {
+      notFound();
+    }
+
+    // 3. 테마 정보 조회
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
+      notFound();
+    }
+
+    // 4. 카테고리 정보 조회
+    const categories = await getCategoriesByBlogId(blog.id);
+
+    // 5. 전체 POSTS 글 목록 조회 (최신순, 페이징)
+    const paginatedContents = await getPostsByBlogIdWithPaging(blog.id, page, 10);
+
+    // 6. 사이드바 데이터 불러오기
+    const sidebarData = await getSidebarData(blog.id);
+
+    // 7. 메뉴 정보 조회
+    const menus = await getMenusByBlogId(blog.id);
+
+    // 9. 템플릿 데이터 구성
+    const templateData = {
+      blog: {
+        nickname: String(blog.nickname),
+        description: blog.description ? String(blog.description) : null,
+        logo_image: blog.logo_image ? String(blog.logo_image) : null,
+        address: String(blog.address),
+        author: undefined, // 전체 글 목록 페이지에서는 작성자 정보 불필요
+      },
+      categories: categories.map((category) => ({
+        id: Number(category.id),
+        name: String(category.name),
+        post_count: Number(category.post_count),
+        category_id: category.category_id == null ? null : Number(category.category_id),
+      })),
+      totalContentsCount: Number(paginatedContents.pagination.totalContents),
+      menus: menus.map((menu) => ({
+        id: Number(menu.id),
+        name: String(menu.name),
+        type: String(menu.type),
+        uri: String(menu.uri),
+        is_blank: Boolean(menu.is_blank),
+      })),
+      contents: paginatedContents.contents.map((content) => ({
+        sequence: Number(content.sequence),
+        title: String(content.title),
+        content_html: String(content.content_html),
+        content_plain: String(content.content_plain),
+        created_at: String(content.created_at),
+        thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
+        category: content.category
+          ? {
+              id: Number(content.category.id),
+              name: String(content.category.name),
+            }
+          : undefined,
+        reply_count: Number(content.reply_count ?? 0),
+      })),
+      // 사이드바 데이터 추가
+      recentContents: sidebarData.recentContents,
+      popularContents: sidebarData.popularContents.map((item) => ({
+        ...item,
+        created_at: '',
+        content_html: '',
+        content_plain: '',
+        thumbnail: undefined,
+        category: undefined,
+      })),
+      recentReplies: sidebarData.recentReplies,
+      replies: [], // 전체 글 목록 페이지에서는 댓글 목록 불필요
+      isAllPostsPage: true, // 전체 글 목록 페이지 플래그
+      pagination: paginatedContents.pagination, // 페이지네이션 정보 추가
     };
 
-    fetchData();
-  }, []);
+    // 10. 템플릿 렌더링
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
-  const getCategoryName = (categoryId: number | null): string => {
-    if (!categoryId) return '미분류';
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category ? category.name : '미분류';
-  };
+    // 11. 블로그 정보 구성
+    const blogInfo = {
+      id: blog.id,
+      nickname: blog.nickname,
+      description: blog.description,
+      logo_image: blog.logo_image,
+      address: blog.address,
+    };
 
-  const truncateContent = (html: string | null, maxLength: number = 150): string => {
-    if (!html) return '';
-    // HTML 태그 제거
-    const textContent = html.replace(/<[^>]*>/g, '');
-    return textContent.length > maxLength ? textContent.substring(0, maxLength) + '...' : textContent;
-  };
-
-  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="animate-pulse">
-            <div className="mb-8 h-8 w-1/3 rounded bg-gray-300"></div>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="rounded-lg bg-white p-6 shadow-sm">
-                  <div className="mb-2 h-4 w-1/4 rounded bg-gray-300"></div>
-                  <div className="mb-4 h-6 rounded bg-gray-300"></div>
-                  <div className="mb-2 h-4 rounded bg-gray-300"></div>
-                  <div className="mb-2 h-4 w-5/6 rounded bg-gray-300"></div>
-                  <div className="h-4 w-3/4 rounded bg-gray-300"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
+      </BlogProvider>
     );
-  }
-
-  if (error) {
+  } catch (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 text-6xl text-red-500">⚠️</div>
-          <h1 className="mb-2 text-2xl font-bold text-gray-800">오류 발생</h1>
-          <p className="mb-4 text-gray-600">{error}</p>
-          <button onClick={() => window.location.reload()} className="rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700">
-            다시 시도
-          </button>
+          <h1 className="mb-4 text-2xl font-bold text-red-600">오류가 발생했습니다</h1>
+          <p className="text-gray-600">페이지를 불러오는 중 문제가 발생했습니다.</p>
         </div>
       </div>
     );
   }
+}
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* 헤더 */}
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">블로그 포스트</h1>
-          <button onClick={() => router.push('/edit')} className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700">
-            새 글 작성
-          </button>
-        </div>
+export async function generateMetadata() {
+  try {
+    const subdomain = await getBlogAddress();
+    const blog = await getBlogByAddress(subdomain);
+    const contents = await getPostsByBlogId(blog?.id || 0);
+    const totalPosts = contents.length;
 
-        {/* 포스트 목록 */}
-        {contents.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="mb-4 text-6xl text-gray-400">📝</div>
-            <h2 className="mb-2 text-xl font-semibold text-gray-600">작성된 포스트가 없습니다</h2>
-            <p className="mb-6 text-gray-500">첫 번째 포스트를 작성해보세요!</p>
-            <button onClick={() => router.push('/edit')} className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700">
-              포스트 작성하기
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {contents.map((content) => (
-              <div
-                key={content.id}
-                className="cursor-pointer rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md"
-                onClick={() => router.push(`/posts/${content.sequence}`)}
-              >
-                {/* 썸네일 영역 */}
-                {content.thumbnail && (
-                  <div className="aspect-video overflow-hidden rounded-t-lg bg-gray-200">
-                    <img src={content.thumbnail} alt={content.title} className="h-full w-full object-cover" />
-                  </div>
-                )}
-
-                <div className="p-6">
-                  {/* 카테고리 배지 */}
-                  <div className="mb-3">
-                    <span className="inline-block rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800">{getCategoryName(content.category_id)}</span>
-                  </div>
-
-                  {/* 제목 */}
-                  <h2 className="mb-3 line-clamp-2 text-xl font-bold text-gray-900">{content.title}</h2>
-
-                  {/* 요약 또는 콘텐츠 미리보기 */}
-                  <p className="mb-4 line-clamp-3 text-sm text-gray-600">{content.summary || truncateContent(content.content_plain || content.content_html)}</p>
-
-                  {/* 메타 정보 */}
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{new Date(content.created_at).toLocaleDateString('ko-KR')}</span>
-                    <div className="flex items-center space-x-3">
-                      <span>👁️ {content.views}</span>
-                      <span>❤️ {content.likes}</span>
-                      {/* <span>💬 {content.comments_count}</span> */}
-                    </div>
-                  </div>
-
-                  {/* 태그 */}
-                  {content.tags && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {content.tags
-                        .split(',')
-                        .slice(0, 3)
-                        .map((tag, index) => (
-                          <span key={index} className="inline-block rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                            #{tag.trim()}
-                          </span>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    return {
+      title: `전체 글 (${totalPosts}개) | ${blog?.nickname || 'PostSmith Blog'}`,
+      description: `${blog?.nickname || 'PostSmith Blog'}의 모든 글을 확인해보세요. 총 ${totalPosts}개의 글이 있습니다.`,
+    };
+  } catch (error) {
+    return {
+      title: '전체 글 | PostSmith Blog',
+      description: 'PostSmith Blog의 모든 글을 확인해보세요.',
+    };
+  }
 }

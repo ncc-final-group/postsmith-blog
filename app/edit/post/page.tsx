@@ -21,7 +21,8 @@ import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
-import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/Editor';
+import Editor from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 
 // 카테고리 타입 정의
 interface Category {
@@ -413,9 +414,7 @@ export default function PostEditor() {
       CustomImageNode,
       CustomVideoNode,
     ],
-    onError: (error: Error) => {
-      throw error;
-    },
+    onError: (error: Error) => {},
   };
 
   return (
