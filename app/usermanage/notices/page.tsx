@@ -21,7 +21,6 @@ interface NOTICE {
   totalViewCount: number;
   totalRepliesCount: number;
   address: string;
-  sequence: number;
 }
 
 interface BoardData {
