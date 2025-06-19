@@ -21,7 +21,8 @@ import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import EditHeader from '@components/EditHeader';
-import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/Editor';
+import Editor from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
@@ -365,9 +366,7 @@ export default function NoticeEditor() {
       CustomImageNode,
       CustomVideoNode,
     ],
-    onError: (error: Error) => {
-      throw error;
-    },
+    onError: (error: Error) => {},
   };
 
   return (

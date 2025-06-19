@@ -34,7 +34,7 @@ const menuItems: MenuItem[] = [
   {
     key: 'comments',
     label: '댓글',
-    subItems: [{ label: '댓글 관리', route: '/usermanage/comments' }],
+    subItems: [{ label: '댓글 관리', route: '/comments' }],
   },
   {
     key: 'customize',
@@ -50,15 +50,21 @@ const menuItems: MenuItem[] = [
     subItems: [{ label: '통계 관리', route: '/usermanage/stats/visits' }],
   },
   {
+    key: 'plugins',
+    label: '플러그인',
+    subItems: [{ label: '플러그인 관리', route: '/plugins' }],
+    route: 'usermanage/plugins',
+  },
+  {
     key: 'admin',
     label: '관리',
-    subItems: [{ label: '블로그', route: '/usermanage/blogs' }],
+    subItems: [{ label: '블로그', route: '/admin/blog' }],
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const segments = pathname.split('/');
+  const segments = pathname?.split('/') || [];
   const name = segments[1] || '';
 
   return (
@@ -102,7 +108,7 @@ export default function Sidebar() {
                   {item.subItems.map((subItem, index) => {
                     // 현재 경로가 /usermanage인 경우와 /[name]/usermanage인 경우를 구분
                     let fullRoute;
-                    if (pathname === '/usermanage' || pathname.startsWith('/usermanage/')) {
+                    if (pathname === '/usermanage' || pathname?.startsWith('/usermanage/')) {
                       // /usermanage 또는 /usermanage/* 경로인 경우
                       fullRoute = subItem.route;
                     } else {

@@ -3,13 +3,15 @@ import { notFound } from 'next/navigation';
 
 import BlogLayout from '../../../components/BlogLayout';
 import BlogProvider from '../../../components/BlogProvider';
+import ContentStats from '../../../components/ContentStats';
+import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../../../lib/themeService';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
-import { getContentByBlogIdAndSequence, getContentsByBlogId, getNextContent, getPrevContent } from '../../api/tbContents';
+import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
-import { getActiveThemeByBlogId } from '../../api/tbThemes';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {
@@ -125,22 +127,32 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     }
 
     // 4. 테마 정보 조회
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
       notFound();
     }
+
+    // 4.5. 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
 
     // 5. 카테고리 정보 조회
     const categories = await getCategoriesByBlogId(blog.id);
 
-    // 6. 글 내용 조회
-    const content = await getContentByBlogIdAndSequence(blog.id, parseInt(resolvedParams.sequence));
+    // 6. 글 내용 조회 (POSTS 타입만)
+    const content = await getPostBySequence(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
     if (!content) {
       notFound();
     }
 
-    // 7. 전체 글 목록 조회 (최근 글, 인기글 표시용)
-    const allContents = await getContentsByBlogId(blog.id);
+    // 7. 전체 글 목록 조회 (최근 글 표시용)
+    const allContents = await getContentsByBlogId(blog.id, ownerUserId);
+
+    // 7-1. 인기글 목록 조회 (최근 한 달 기준: 댓글 수 + 방문자 수)
+    const popularContents = await getPopularContentsByBlogId(blog.id);
 
     // content_html이 비어있는 경우 처리
     if (!content.content_html || content.content_html.trim() === '') {
@@ -148,9 +160,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
       content.content_html = content.content_plain ? `<p>${content.content_plain}</p>` : '<p>내용이 없습니다.</p>';
     }
 
-    // 8. 이전/다음 글 가져오기
-    const prevContent = await getPrevContent(blog.id, parseInt(resolvedParams.sequence));
-    const nextContent = await getNextContent(blog.id, parseInt(resolvedParams.sequence));
+    // 8. 이전/다음 글 가져오기 (POSTS 타입만)
+    const prevContent = await getPrevPost(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
+    const nextContent = await getNextPost(blog.id, parseInt(resolvedParams.sequence), ownerUserId);
 
     // 9. 최근 댓글 조회
     const recentReplies = await getRecentReplies(blog.id);
@@ -165,7 +177,13 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     // 11. 메뉴 정보 조회
     const menus = await getMenusByBlogId(blog.id);
 
-    // 12. 템플릿 데이터 구성
+    // 12. 분류 없음 글 개수 조회
+    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
+
+    // 13. 총 조회수는 클라이언트에서 처리 (서버에서는 0으로 초기화)
+    const totalViews = 0;
+
+    // 14. 템플릿 데이터 구성
     const templateData = {
       blog: {
         nickname: String(blog.nickname),
@@ -202,13 +220,31 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
           : undefined,
         reply_count: Number(contentItem.reply_count ?? 0),
       })),
+      // 인기글 데이터 추가 (최근 한 달 기준: 댓글 수 + 방문자 수)
+      popularContents: popularContents.map((popularContent) => ({
+        sequence: Number(popularContent.sequence),
+        title: String(popularContent.title),
+        content_id: Number(popularContent.content_id),
+        recent_reply_count: Number(popularContent.recent_reply_count),
+        recent_visit_count: Number(popularContent.recent_visit_count),
+        popularity_score: Number(popularContent.popularity_score),
+        created_at: '', // 필요시 추가 조회
+        content_html: '',
+        content_plain: '',
+        thumbnail: undefined,
+        category: undefined,
+        reply_count: Number(popularContent.recent_reply_count), // 최근 한 달 댓글 수로 설정
+      })),
+      uncategorizedCount: Number(uncategorizedCount), // 분류 없음 글 개수 추가
       // 개별 글 페이지용 데이터 추가
       currentArticle: {
+        id: Number(content.id), // 실제 contents 테이블의 id (조회수용)
         sequence: Number(content.sequence),
         title: String(content.title),
         content_html: String(content.content_html),
         content_plain: String(content.content_plain),
         created_at: String(content.created_at),
+        type: content.type as 'POSTS' | 'PAGE' | 'NOTICE', // 글 타입 추가
         thumbnail: content.thumbnail ? String(content.thumbnail) : undefined,
         category: content.category
           ? {
@@ -231,6 +267,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
               title: String(nextContent.title),
             }
           : undefined,
+        total_views: totalViews,
       },
       recentReplies: recentReplies.map((reply) => ({
         id: Number(reply.id),
@@ -238,7 +275,10 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         content: String(reply.content),
         created_at: String(reply.created_at),
         content_sequence: Number(reply.content_sequence),
-        user: { nickname: String(reply.user_nickname ?? '익명') },
+        user: {
+          nickname: String(reply.user_nickname ?? '익명'),
+          profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
+        },
       })),
       replies: flattenedReplies.map((reply) => ({
         id: Number(reply.id),
@@ -247,14 +287,17 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
         content: String(reply.content),
         created_at: String(reply.created_at),
         depth: reply.depth,
-        user: { nickname: String(reply.user_nickname ?? '익명') },
+        user: {
+          nickname: String(reply.user_nickname ?? '익명'),
+          profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
+        },
       })),
     };
 
-    // 13. 템플릿 렌더링
-    const html = renderTemplate(theme.html, theme.css, templateData);
+    // 15. 템플릿 렌더링
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
-    // 14. 블로그 정보 구성
+    // 16. 블로그 정보 구성
     const blogInfo = {
       id: blog.id,
       nickname: blog.nickname,
@@ -265,7 +308,8 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
 
     return (
       <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+        <ContentStats contentId={content.id} />
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );
   } catch (error) {

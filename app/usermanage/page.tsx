@@ -1,59 +1,155 @@
-'use client';
 import { BarChart3, Edit, FileImage, MessageSquare, Settings, Users } from 'lucide-react';
+import { headers } from 'next/headers';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
-export default function UserManagePage() {
-  const pathname = usePathname();
-  const segments = pathname.split('/');
-  // usermanage 경로에서 username 추출: /username/usermanage 형태에서 username은 segments[1]
-  const username = segments[1] || '';
+import { getCurrentUser } from '../../lib/auth';
+import { getAdminSidebarData, getSidebarData } from '../api/sidebarData';
+import { getBlogByAddress } from '../api/tbBlogs';
 
-  // 현재 경로가 /usermanage인 경우 (root usermanage)와 /username/usermanage 구분
-  const isRootUsermanage = segments.length === 2 && segments[1] === 'usermanage';
-  const actualUsername = isRootUsermanage ? '' : username;
+import HotPosts from '@components/HotPosts';
+import RecentComments from '@components/RecentComments';
+import RecentPosts from '@components/RecentPosts';
+
+// 블로그 주소 추출 함수
+async function getBlogAddress(): Promise<string> {
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+
+    // address.localhost:3000 형태에서 address 추출
+    if (host.includes('.localhost')) {
+      const subdomain = host.split('.localhost')[0];
+      return subdomain;
+    }
+
+    // address.domain.com 형태에서 address 추출
+    if (host.includes('.')) {
+      const parts = host.split('.');
+      if (parts.length >= 2) {
+        return parts[0];
+      }
+    }
+
+    // 기본값 (개발 환경)
+    return 'testblog';
+  } catch (error) {
+    // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
+    return 'testblog';
+  }
+}
+
+// HTML 컨텐츠에서 첫 번째 이미지 URL 추출하는 함수
+function extractFirstImageFromHtml(htmlContent: string): string | undefined {
+  if (!htmlContent) return undefined;
+
+  // img 태그의 src 속성을 찾는 정규표현식
+  const imgRegex = /<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>/i;
+  const match = htmlContent.match(imgRegex);
+
+  return match ? match[1] : undefined;
+}
+
+// 사이드바 데이터를 Post 형식으로 변환하는 함수
+function transformRecentContents(recentContents: any[]) {
+  return recentContents.map((content) => ({
+    id: content.sequence,
+    title: content.title,
+    excerpt: content.content_plain.substring(0, 100) + (content.content_plain.length > 100 ? '...' : ''),
+    imageUrl: content.thumbnail || extractFirstImageFromHtml(content.content_html),
+    commentCount: content.reply_count || 0,
+    likeCount: 0, // API에서 제공되지 않으므로 0으로 설정
+  }));
+}
+
+function transformPopularContents(popularContents: any[]) {
+  return popularContents.map((content) => ({
+    id: content.sequence,
+    title: content.title,
+    excerpt: `조회수 ${content.recent_visit_count || 0} · 댓글 ${content.recent_reply_count || 0}`,
+    imageUrl: undefined, // 인기글에는 썸네일이 없음
+    commentCount: content.recent_reply_count || 0,
+    likeCount: content.popularity_score || 0,
+  }));
+}
+
+export default async function UserManagePage() {
+  // 현재 블로그와 사용자 정보 가져오기
+  const subdomain = await getBlogAddress();
+  const blog = await getBlogByAddress(subdomain);
+  const currentUser = await getCurrentUser();
+
+  let sidebarData = null;
+  let recentComments: any[] = [];
+  let recentPosts: any[] = [];
+  let hotPosts: any[] = [];
+
+  if (blog) {
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
+
+    // 관리자 대시보드용 사이드바 데이터 가져오기 (블로그 소유자 제외한 댓글)
+    sidebarData = await getAdminSidebarData(blog.id, blog.user_id, ownerUserId);
+
+    // 데이터 변환
+    recentPosts = transformRecentContents(sidebarData.recentContents);
+    hotPosts = transformPopularContents(sidebarData.popularContents);
+    recentComments = sidebarData.recentReplies.map((reply: any) => ({
+      id: reply.id,
+      author: reply.user.nickname,
+      content: reply.content,
+      postTitle: reply.content_title,
+      createdAt: new Date(reply.created_at).toLocaleString('ko-KR'),
+      avatar: reply.user.profile_image || '/defaultProfile.png', // DB의 profile_image 사용, 없으면 기본 이미지
+      content_sequence: reply.content_sequence,
+    }));
+  }
+
+  // URL 경로 분석 (클라이언트 사이드 로직을 서버 사이드로 이동)
+  const isRootUsermanage = true; // 서버 컴포넌트에서는 단순화
+  const actualUsername = blog?.address || '';
 
   const dashboardItems = [
     {
       title: '글 관리',
       description: '블로그 글과 페이지를 관리하세요',
       icon: Edit,
-      href: isRootUsermanage ? '/usermanage/posts' : `/${actualUsername}/usermanage/posts`,
+      href: '/usermanage/posts',
       color: 'bg-blue-500',
     },
     {
       title: '미디어 관리',
       description: '이미지, 동영상, 파일을 관리하세요',
       icon: FileImage,
-      href: isRootUsermanage ? '/usermanage/media' : `/${actualUsername}/usermanage/media`,
+      href: '/usermanage/media',
       color: 'bg-green-500',
     },
     {
       title: '댓글 관리',
       description: '댓글과 방명록을 관리하세요',
       icon: MessageSquare,
-      href: isRootUsermanage ? '/usermanage/comments' : `/${actualUsername}/usermanage/comments`,
+      href: '/usermanage/comments',
       color: 'bg-yellow-500',
     },
     {
       title: '방문 통계',
       description: '블로그 방문 통계를 확인하세요',
       icon: BarChart3,
-      href: isRootUsermanage ? '/usermanage/stats/visits' : `/${actualUsername}/usermanage/stats/visits`,
+      href: '/usermanage/stats/visits',
       color: 'bg-purple-500',
     },
     {
       title: '꾸미기',
       description: '블로그 테마와 스킨을 설정하세요',
       icon: Settings,
-      href: isRootUsermanage ? '/usermanage/customize/skin' : `/${actualUsername}/usermanage/customize/skin`,
+      href: '/usermanage/customize/skin',
       color: 'bg-pink-500',
     },
     {
       title: '블로그 관리',
       description: '블로그 설정을 관리하세요',
       icon: Users,
-      href: isRootUsermanage ? '/usermanage/admin/blog' : `/${actualUsername}/usermanage/admin/blog`,
+      href: '/usermanage/admin/blog',
       color: 'bg-indigo-500',
     },
   ];
@@ -63,7 +159,7 @@ export default function UserManagePage() {
       <div className="mx-auto max-w-none">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold text-gray-900">관리자 대시보드</h1>
-          <p className="text-gray-600">{isRootUsermanage ? '블로그를 관리하세요' : `${actualUsername}님의 블로그를 관리하세요`}</p>
+          <p className="text-gray-600">{blog ? `${blog.nickname} 블로그를 관리하세요` : '블로그를 관리하세요'}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -80,46 +176,28 @@ export default function UserManagePage() {
           ))}
         </div>
 
-        <div className="mt-12 rounded-lg bg-white p-6 shadow-md">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">빠른 작업</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href={isRootUsermanage ? '/usermanage/posts' : `/${actualUsername}/usermanage/posts`}
-              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-blue-500 hover:bg-blue-50"
-            >
-              <div className="text-center">
-                <Edit className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-blue-500" />
-                <span className="text-sm text-gray-600 group-hover:text-blue-600">새 글 작성</span>
-              </div>
-            </Link>
-            <Link
-              href={isRootUsermanage ? '/usermanage/media/upload' : `/${actualUsername}/usermanage/media/upload`}
-              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-green-500 hover:bg-green-50"
-            >
-              <div className="text-center">
-                <FileImage className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-green-500" />
-                <span className="text-sm text-gray-600 group-hover:text-green-600">파일 업로드</span>
-              </div>
-            </Link>
-            <Link
-              href={isRootUsermanage ? '/usermanage/categories' : `/${actualUsername}/usermanage/categories`}
-              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-yellow-500 hover:bg-yellow-50"
-            >
-              <div className="text-center">
-                <Settings className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-yellow-500" />
-                <span className="text-sm text-gray-600 group-hover:text-yellow-600">카테고리 관리</span>
-              </div>
-            </Link>
-            <Link
-              href={isRootUsermanage ? '/usermanage/stats/visits' : `/${actualUsername}/usermanage/stats/visits`}
-              className="group flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-purple-500 hover:bg-purple-50"
-            >
-              <div className="text-center">
-                <BarChart3 className="mx-auto mb-2 h-8 w-8 text-gray-400 group-hover:text-purple-500" />
-                <span className="text-sm text-gray-600 group-hover:text-purple-600">통계 보기</span>
-              </div>
-            </Link>
-          </div>
+        {/* 최근 댓글, 최근 글, 인기글 섹션 */}
+        <div className="mt-12 space-y-6">
+          {recentComments.length > 0 && (
+            <div className="rounded-lg bg-white p-6 shadow-md">
+              <h2 className="mb-4 text-xl font-semibold text-gray-900">최근 댓글</h2>
+              <RecentComments comments={recentComments.slice(0, 4)} blogAddress={blog?.address} />
+            </div>
+          )}
+
+          {recentPosts.length > 0 && (
+            <div className="rounded-lg bg-white p-6 shadow-md">
+              <h2 className="mb-4 text-xl font-semibold text-gray-900">최근 게시글</h2>
+              <RecentPosts posts={recentPosts} blogAddress={blog?.address} itemsPerPage={4} />
+            </div>
+          )}
+
+          {hotPosts.length > 0 && (
+            <div className="rounded-lg bg-white p-6 shadow-md">
+              <h2 className="mb-4 text-xl font-semibold text-gray-900">인기 게시글</h2>
+              <HotPosts posts={hotPosts} blogAddress={blog?.address} itemsPerPage={4} />
+            </div>
+          )}
         </div>
       </div>
     </div>

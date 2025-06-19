@@ -3,23 +3,21 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+import { getSidebarData } from './api/sidebarData';
 import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
-import { getContentsByBlogId } from './api/tbContents';
+import { getPostsByBlogId, getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import { getRecentReplies } from './api/tbReplies';
-import { getActiveThemeByBlogId } from './api/tbThemes';
 import BlogLayout from '../components/BlogLayout';
 import BlogProvider from '../components/BlogProvider';
+import { getCurrentUser } from '../lib/auth';
 import { renderTemplate } from '../lib/template/TemplateEngine';
+import { getThemeByBlogId } from '../lib/themeService';
 
 // 날짜를 ISO 문자열로 변환하는 유틸리티 함수
 function formatDate(date: Date): string {
   return date.toISOString();
 }
-
-// 첫 번째 테마(id=1)를 불러와 SSR 로 렌더링합니다.
-// 필요하다면 요청 도메인/쿼리로 theme id 를 결정하도록 수정하세요.
 
 export async function generateMetadata(): Promise<Metadata> {
   // 요청 호스트에서 블로그 주소 추출
@@ -76,8 +74,10 @@ async function getBlogAddress(): Promise<string> {
   }
 }
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   try {
+    const resolvedSearchParams = await searchParams;
+    const page = parseInt(resolvedSearchParams.page || '1', 10);
     const subdomain = await getBlogAddress();
 
     const blog = await getBlogByAddress(subdomain);
@@ -85,15 +85,25 @@ export default async function HomePage() {
       notFound();
     }
 
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
+    const themeData = await getThemeByBlogId(blog.id);
+    if (!themeData) {
       notFound();
     }
 
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+
+    // 블로그 소유자인지 확인
+    const isOwner = currentUser && currentUser.id === blog.user_id;
+    const ownerUserId = isOwner ? currentUser.id : undefined;
+
     const categories = await getCategoriesByBlogId(blog.id);
-    const contents = await getContentsByBlogId(blog.id);
-    const recentReplies = await getRecentReplies(blog.id);
+    const paginatedContents = await getPostsByBlogIdWithPaging(blog.id, page, 10, ownerUserId);
     const menus = await getMenusByBlogId(blog.id);
+    const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
+
+    // 사이드바 데이터 불러오기
+    const sidebarData = await getSidebarData(blog.id, ownerUserId);
 
     const templateData = {
       blog: {
@@ -109,6 +119,8 @@ export default async function HomePage() {
         post_count: Number(category.post_count),
         category_id: category.category_id == null ? null : Number(category.category_id),
       })),
+      uncategorizedCount: Number(uncategorizedCount),
+      totalContentsCount: Number(paginatedContents.pagination.totalContents),
       menus: menus.map((menu) => ({
         id: Number(menu.id),
         name: String(menu.name),
@@ -116,7 +128,7 @@ export default async function HomePage() {
         uri: String(menu.uri),
         is_blank: Boolean(menu.is_blank),
       })),
-      contents: contents.map((content) => ({
+      contents: paginatedContents.contents.map((content) => ({
         sequence: Number(content.sequence),
         title: String(content.title),
         content_html: String(content.content_html),
@@ -131,18 +143,23 @@ export default async function HomePage() {
           : undefined,
         reply_count: Number(content.reply_count ?? 0),
       })),
-      recentReplies: recentReplies.map((reply) => ({
-        id: Number(reply.id),
-        content_id: Number(reply.content_id),
-        content: String(reply.content),
-        created_at: String(reply.created_at),
-        content_sequence: Number(reply.content_sequence),
-        user: { nickname: String(reply.user_nickname ?? '익명') },
-      })),
+      recentReplies: sidebarData.recentReplies,
       replies: [],
+      isAllPostsPage: true, // 메인 페이지 플래그 추가
+      pagination: paginatedContents.pagination, // 페이지네이션 정보 추가
+      // 사이드바 데이터 추가 (기존 recentReplies는 유지)
+      recentContents: sidebarData.recentContents,
+      popularContents: sidebarData.popularContents.map((item) => ({
+        ...item,
+        created_at: '',
+        content_html: '',
+        content_plain: '',
+        thumbnail: undefined,
+        category: undefined,
+      })),
     };
 
-    const html = renderTemplate(theme.html, theme.css, templateData);
+    const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
 
     const blogInfo = {
       id: blog.id,
@@ -153,8 +170,8 @@ export default async function HomePage() {
     };
 
     return (
-      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );
   } catch (error) {

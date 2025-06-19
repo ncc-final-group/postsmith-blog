@@ -22,7 +22,8 @@ import { getSubdomain } from '../../../lib/utils';
 import { CustomHRNode } from '@components/CustomHRNode';
 import { SpanNode as CCSpanNode } from '@components/CustomSpanNode';
 import EditHeader from '@components/EditHeader';
-import Editor, { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/Editor';
+import Editor from '@components/Editor';
+import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
 
 const theme = {
   // 기본 테마: 필요시 커스터마이즈 가능
@@ -229,12 +230,6 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         },
         body: JSON.stringify(requestBody),
       });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
-      }
-
       const responseData = await response.json();
 
       alert('페이지가 성공적으로 저장되었습니다.');
@@ -291,10 +286,6 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         credentials: 'include',
         body: JSON.stringify(requestBody),
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       alert('임시 저장 완료!');
     } catch (err) {
@@ -424,7 +415,7 @@ export default function PageEditor() {
       CustomVideoNode,
     ],
     onError: (error: Error) => {
-      throw error;
+      // 에러를 던지지 않고 로그만 출력
     },
   };
 

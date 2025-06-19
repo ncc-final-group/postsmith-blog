@@ -24,12 +24,17 @@ interface TemplateData {
     uri: string;
     is_blank: boolean;
   }>;
+  // 분류 없음 글 개수
+  uncategorizedCount?: number;
+  // 전체 글 개수 (페이징 고려)
+  totalContentsCount?: number;
   contents: Array<{
     sequence: number;
     title: string;
     content_html: string;
     content_plain: string;
     created_at: string;
+    type?: 'POSTS' | 'PAGE' | 'NOTICE'; // 콘텐츠 타입 추가
     thumbnail?: string;
     category?: {
       id: number;
@@ -44,6 +49,40 @@ interface TemplateData {
     content_html: string;
     content_plain: string;
     created_at: string;
+    type?: 'POSTS' | 'PAGE' | 'NOTICE'; // 콘텐츠 타입 추가
+    thumbnail?: string;
+    category?: {
+      id: number;
+      name: string;
+    };
+    reply_count: number;
+  }>;
+  // 인기글 데이터 (최근 한 달 기준: 댓글 수 + 방문자 수)
+  popularContents?: Array<{
+    sequence: number;
+    title: string;
+    content_id: number;
+    recent_reply_count: number;
+    recent_visit_count: number;
+    popularity_score: number;
+    created_at: string;
+    content_html: string;
+    content_plain: string;
+    thumbnail?: string;
+    category?: {
+      id: number;
+      name: string;
+    };
+    reply_count: number;
+  }>;
+  // 최근 글 데이터 (사이드바용)
+  recentContents?: Array<{
+    sequence: number;
+    title: string;
+    content_html: string;
+    content_plain: string;
+    created_at: string;
+    type?: 'POSTS' | 'PAGE' | 'NOTICE'; // 콘텐츠 타입 추가
     thumbnail?: string;
     category?: {
       id: number;
@@ -53,17 +92,20 @@ interface TemplateData {
   }>;
   // 개별 글 페이지용 데이터 추가
   currentArticle?: {
+    id: number; // 실제 contents 테이블의 id (조회수용)
     sequence: number;
     title: string;
     content_html: string;
     content_plain: string;
     created_at: string;
+    type?: 'POSTS' | 'PAGE' | 'NOTICE'; // 글 타입 추가
     thumbnail?: string;
     category?: {
       id: number;
       name: string;
     };
     reply_count: number;
+    total_views?: number; // 총 조회수 추가
     author?: string;
     tags?: string[];
     prev_article?: {
@@ -75,6 +117,17 @@ interface TemplateData {
       title: string;
     };
   };
+  // 페이지 타입 구분 (전체 글 목록 페이지인지 확인)
+  isAllPostsPage?: boolean;
+  // 페이징 정보
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalContents: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    pageSize: number;
+  };
   recentReplies: Array<{
     id: number;
     content_id: number;
@@ -83,6 +136,7 @@ interface TemplateData {
     content_sequence: number;
     user: {
       nickname: string;
+      profile_image?: string | null;
     };
   }>;
   replies: Array<{
@@ -94,11 +148,12 @@ interface TemplateData {
     depth?: number;
     user: {
       nickname: string;
+      profile_image?: string | null;
     };
   }>;
 }
 
-const T3_SCRIPT = `<script type="text/javascript" src="https://t1.daumcdn.net/tistory_admin/blogs/script/blog/common.js"></script>
+const T3_SCRIPT = `<script type=""></script>
 <div style="margin:0; padding:0; border:none; background:none; float:none; clear:none; z-index:0"></div>`;
 
 function formatDate(dateString: string): string {
@@ -216,13 +271,25 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   result = result.replace(/\[##_blog_image_##\]/g, data.blog.logo_image ? `<img src="${data.blog.logo_image}" alt="${data.blog.nickname}" class="blog-logo" />` : '');
 
   // 블로그 메뉴 치환 (데이터베이스에서 가져온 메뉴)
-  const menus = data.menus
-    .map((menu) => {
-      const target = menu.is_blank ? ' target="_blank"' : '';
-      return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
-    })
-    .join('');
-  const blogMenuHtml = `<ul>${menus}</ul>`;
+  const blogMenuHtml =
+    data.menus.length > 0
+      ? `
+    <ul>
+      ${data.menus
+        .map((menu) => {
+          const target = menu.is_blank ? ' target="_blank"' : '';
+          return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
+        })
+        .join('')}
+    </ul>
+  `
+      : `
+    <ul>
+      <li><a href="/">홈</a></li>
+      <li><a href="/about">소개</a></li>
+      <li><a href="/contact">연락처</a></li>
+    </ul>
+  `;
   result = result.replace(/\[##_blog_menu_##\]/g, blogMenuHtml);
 
   // 계층형 카테고리 HTML 생성
@@ -258,8 +325,16 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       const articleTemplate = result.match(articleRepPattern)?.[0]?.replace(/<\/?s_article_rep>/g, '') || '';
       if (articleTemplate) {
         // 글 목록에서는 제목을 단순 텍스트로 표시 (Editor 스타일 적용 안함)
+        // 타입에 따라 다른 링크 생성
+        let linkUrl = `/posts/${content.sequence}`;
+        if (content.type === 'NOTICE') {
+          linkUrl = `/notices/${encodeURIComponent(content.title)}`;
+        } else if (content.type === 'PAGE') {
+          linkUrl = `/pages/${encodeURIComponent(content.title)}`;
+        }
+
         let articleHtml = articleTemplate
-          .replace(/\[##_article_rep_link_##\]/g, `/posts/${content.sequence}`)
+          .replace(/\[##_article_rep_link_##\]/g, linkUrl)
           .replace(/\[##_article_rep_title_##\]/g, content.title)
           .replace(/\[##_article_rep_date_##\]/g, content.created_at)
           .replace(/\[##_article_rep_simple_date_##\]/g, formatSimpleDate(content.created_at))
@@ -276,7 +351,14 @@ function replacePlaceholders(template: string, data: TemplateData): string {
             .replace(/\[##_article_rep_category_link_##\]/g, `/category/${content.category.name}`)
             .replace(/\[##_article_rep_category_##\]/g, content.category.name);
         } else {
-          articleHtml = articleHtml.replace(/\[##_article_rep_category_link_##\]/g, '#').replace(/\[##_article_rep_category_##\]/g, '미분류');
+          // 타입에 따라 기본 카테고리명 설정 (content에 type이 있다면)
+          let defaultCategory = '미분류';
+          if ((content as any).type === 'PAGE') {
+            defaultCategory = '페이지';
+          } else if ((content as any).type === 'NOTICE') {
+            defaultCategory = '공지';
+          }
+          articleHtml = articleHtml.replace(/\[##_article_rep_category_link_##\]/g, '#').replace(/\[##_article_rep_category_##\]/g, defaultCategory);
         }
 
         // 썸네일 처리
@@ -306,12 +388,20 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 최근 글 반복 블록 처리 (예시와 동일한 방식)
   const recentPostsPattern = /<s_rctps_rep>([\s\S]*?)<\/s_rctps_rep>/g;
   let recentPostsHtml = '';
-  data.contents.slice(0, 5).forEach((content) => {
+  (data.recentContents || data.contents.slice(0, 5)).forEach((content) => {
     const recentTemplate = result.match(recentPostsPattern)?.[0]?.replace(/<\/?s_rctps_rep>/g, '') || '';
     if (recentTemplate) {
       // 최근 글 목록에서는 제목을 단순 텍스트로 표시 (Editor 스타일 적용 안함)
+      // 타입에 따라 다른 링크 생성
+      let linkUrl = `/posts/${content.sequence}`;
+      if (content.type === 'NOTICE') {
+        linkUrl = `/notices/${encodeURIComponent(content.title)}`;
+      } else if (content.type === 'PAGE') {
+        linkUrl = `/pages/${encodeURIComponent(content.title)}`;
+      }
+
       let recentHtml = recentTemplate
-        .replace(/\[##_rctps_rep_link_##\]/g, `/posts/${content.sequence}`)
+        .replace(/\[##_rctps_rep_link_##\]/g, linkUrl)
         .replace(/\[##_rctps_rep_title_##\]/g, content.title)
         .replace(/\[##_rctps_rep_rp_cnt_##\]/g, String(content.reply_count));
 
@@ -331,13 +421,24 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 인기 글 반복 블록 처리 (댓글 수 기준 상위 5개)
   const popularPattern = /<s_rctps_popular_rep>([\s\S]*?)<\/s_rctps_popular_rep>/g;
   let popularHtml = '';
-  const popularContents = [...data.contents].sort((a, b) => (b.reply_count ?? 0) - (a.reply_count ?? 0)).slice(0, 5);
+  const popularContents =
+    data.popularContents && data.popularContents.length > 0
+      ? data.popularContents.slice(0, 5)
+      : [...data.contents].sort((a, b) => (b.reply_count ?? 0) - (a.reply_count ?? 0)).slice(0, 5);
 
   popularContents.forEach((content) => {
     const popTemplate = result.match(popularPattern)?.[0]?.replace(/<\/?s_rctps_popular_rep>/g, '') || '';
     if (popTemplate) {
+      // 타입에 따라 다른 링크 생성
+      let linkUrl = `/posts/${content.sequence}`;
+      if ((content as any).type === 'NOTICE') {
+        linkUrl = `/notices/${encodeURIComponent(content.title)}`;
+      } else if ((content as any).type === 'PAGE') {
+        linkUrl = `/pages/${encodeURIComponent(content.title)}`;
+      }
+
       let pHtml = popTemplate
-        .replace(/\[##_rctps_rep_link_##\]/g, `/posts/${content.sequence}`)
+        .replace(/\[##_rctps_rep_link_##\]/g, linkUrl)
         .replace(/\[##_rctps_rep_title_##\]/g, content.title)
         .replace(/\[##_rctps_rep_rp_cnt_##\]/g, String(content.reply_count ?? 0))
         .replace(/\[##_rctps_rep_author_##\]/g, '')
@@ -348,7 +449,14 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       if (content.category) {
         pHtml = pHtml.replace(/\[##_rctps_rep_category_link_##\]/g, `/category/${content.category.name}`).replace(/\[##_rctps_rep_category_##\]/g, content.category.name);
       } else {
-        pHtml = pHtml.replace(/\[##_rctps_rep_category_link_##\]/g, '#').replace(/\[##_rctps_rep_category_##\]/g, '미분류');
+        // 타입에 따라 기본 카테고리명 설정
+        let defaultCategory = '미분류';
+        if ((content as any).type === 'PAGE') {
+          defaultCategory = '페이지';
+        } else if ((content as any).type === 'NOTICE') {
+          defaultCategory = '공지';
+        }
+        pHtml = pHtml.replace(/\[##_rctps_rep_category_link_##\]/g, '#').replace(/\[##_rctps_rep_category_##\]/g, defaultCategory);
       }
 
       // 썸네일
@@ -385,7 +493,27 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   const repliesPattern = /\[##_rp_rep_##\]([\s\S]*?)\[\/##_rp_rep_##\]/g;
   let repliesHtml = '';
   data.replies.forEach((reply) => {
-    const replyTemplate = result.match(repliesPattern)?.[0]?.replace(/\[##_rp_rep_##\]|\[\/##_rp_rep_##\]/g, '') || '';
+    let replyTemplate = result.match(repliesPattern)?.[0]?.replace(/\[##_rp_rep_##\]|\[\/##_rp_rep_##\]/g, '') || '';
+
+    // 기본 댓글 템플릿이 없는 경우 기본 구조 제공
+    if (!replyTemplate.trim()) {
+      replyTemplate = `
+        <div class="comment-item" style="[##_rp_rep_indent_style_##]">
+          <div class="comment-profile">
+            [##_rp_rep_profile_image_##]
+          </div>
+          <div class="comment-body">
+            <div class="comment-meta">
+              <span class="comment-author">[##_rp_rep_name_##]</span>
+              <span class="comment-date">[##_rp_rep_time_##]</span>
+            </div>
+            <div class="comment-content">[##_rp_rep_content_##]</div>
+            <div class="comment-actions">[##_rp_rep_reply_button_##]</div>
+          </div>
+        </div>
+      `;
+    }
+
     if (replyTemplate) {
       // depth에 따른 들여쓰기 계산 (각 레벨당 20px)
       const depth = reply.depth ?? 0;
@@ -397,21 +525,69 @@ function replacePlaceholders(template: string, data: TemplateData): string {
         depthClass = depth <= 3 ? `reply-depth-${depth}` : 'reply-depth-3';
       }
 
+      // 답글 버튼 HTML 생성 (depth 3 이하일 때만 표시)
+      const replyButtonHtml =
+        depth < 3
+          ? `<button onclick="replyToComment(${reply.id})" style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px;">답글</button>`
+          : '';
+
+      // 프로필 이미지 HTML 생성
+      const profileImageHtml =
+        reply.user.profile_image && reply.user.profile_image.trim() !== ''
+          ? `<img src="${reply.user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
+          : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+             <span style="color: white; font-weight: bold; font-size: 14px;">${reply.user.nickname ? reply.user.nickname.charAt(0).toUpperCase() : 'U'}</span>
+           </div>`;
+
       let replyHtml = replyTemplate
         .replace(/\[##_rp_rep_id_##\]/g, String(reply.id))
         .replace(/\[##_rp_rep_name_##\]/g, reply.user.nickname)
-        .replace(/\[##_rp_rep_content_##\]/g, reply.content)
+        .replace(/\[##_rp_rep_content_##\]/g, reply.content + '\n')
         .replace(/\[##_rp_rep_date_##\]/g, formatDateTime(reply.created_at))
         .replace(/\[##_rp_rep_time_##\]/g, formatSimpleDate(reply.created_at))
         .replace(/\[##_rp_rep_link_##\]/g, `#reply-${reply.id}`)
-        .replace(/\[##_rp_rep_depth_##\]/g, String(depth))
+        .replace(/\[##_rp_rep_depth_##\]/g, String(depth) + '\n')
         .replace(/\[##_rp_rep_depth_class_##\]/g, depthClass)
-        .replace(/\[##_rp_rep_indent_style_##\]/g, indentStyle);
+        .replace(/\[##_rp_rep_indent_style_##\]/g, indentStyle)
+        .replace(/\[##_rp_rep_reply_button_##\]/g, replyButtonHtml)
+        .replace(/\[##_rp_rep_profile_image_##\]/g, profileImageHtml);
+
+      // 기존 템플릿에도 ID와 data 속성 추가
+      if (replyHtml.includes('class="comment-item"') || replyHtml.includes("class='comment-item'")) {
+        replyHtml = replyHtml.replace(/(class="comment-item[^"]*")/g, `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`);
+        replyHtml = replyHtml.replace(/(class='comment-item[^']*')/g, `id="reply-${reply.id}" data-reply-id="${reply.id}" $1`);
+      }
 
       // 댓글 아이템에 depth 클래스 추가
       if (depth > 0) {
         // comment-item 클래스에 reply 클래스와 depth 클래스 추가
         replyHtml = replyHtml.replace(/(<div[^>]*class="[^"]*comment-item[^"]*")/g, `$1 reply ${depthClass}"`);
+      }
+
+      // 템플릿이 기본 구조가 아닌 경우 프로필 이미지를 직접 삽입
+      if (!replyHtml.includes('[##_rp_rep_profile_image_##]')) {
+        // 간단한 방법: 댓글 전체를 새로운 구조로 래핑
+        const simpleReplyHtml = `
+           <div id="reply-${reply.id}" class="comment-item ${depth > 0 ? 'reply ' + depthClass : ''}" style="${indentStyle}" data-reply-id="${reply.id}">
+             <div style="display: flex; gap: 12px; align-items: flex-start;">
+               <div style="flex-shrink: 0;">
+                 ${profileImageHtml}
+               </div>
+               <div style="flex: 1;">
+                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; color: #6b7280;">
+                   <span style="font-weight: bold; color: #374151;">${reply.user.nickname}</span>
+                   <span>${formatSimpleDate(reply.created_at)}</span>
+                 </div>
+                 <div style="line-height: 1.6; word-wrap: break-word; margin-bottom: 8px;">${reply.content}
+</div>
+                 <div style="display: flex; align-items: center;">
+                   ${replyButtonHtml}
+                 </div>
+               </div>
+             </div>
+           </div>
+         `;
+        replyHtml = simpleReplyHtml;
       }
 
       repliesHtml += replyHtml;
@@ -423,25 +599,523 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   result = result.replace(/\[##_article_rep_rp_cnt_##\]/g, String(data.replies.length));
   result = result.replace(/\[##_rp_count_##\]/g, String(data.replies.length));
 
-  // 댓글 관련 기본 치환자
-  result = result.replace(
-    /\[##_rp_input_form_##\]/g,
-    `
+  // 전체 글 개수 치환
+  result = result.replace(/\[##_count_total_##\]/g, String(data.totalContentsCount ?? data.contents.length));
+
+  // 댓글 관련 기본 치환자 - PAGE나 NOTICE 타입에서는 댓글 입력 폼 제거
+  const commentFormHtml =
+    data.currentArticle?.type === 'PAGE' || data.currentArticle?.type === 'NOTICE'
+      ? ''
+      : `
     <div class="comment-form">
-      <form>
-        <div class="form-group">
-          <label for="comment-name">이름:</label>
-          <input type="text" id="comment-name" name="name" required>
+      <div id="login-required-message" style="display: none; padding: 15px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 15px; text-align: center;">
+        <p style="margin: 0; color: #6c757d;">댓글을 작성하려면 로그인이 필요합니다.</p>
+        <a href="/auth" style="color: #007bff; text-decoration: none; font-weight: bold;">로그인하기</a>
+      </div>
+      
+      <form id="comment-form" onsubmit="return submitComment(event)" style="display: none;">
+        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px;">
+          <!-- 사용자 프로필 영역 -->
+          <div id="user-profile-section" style="display: flex; flex-direction: column; align-items: center; min-width: 60px;">
+            <div id="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+              <!-- 프로필 이미지 또는 이니셜이 여기에 들어감 -->
+            </div>
+            <div id="user-nickname" style="font-size: 12px; color: #6b7280; text-align: center; font-weight: 500;">
+              <!-- 닉네임이 여기에 들어감 -->
+            </div>
+          </div>
+          
+          <!-- 댓글 입력 영역 -->
+          <div style="flex: 1;">
+            <textarea 
+              id="comment-content" 
+              name="content" 
+              rows="4" 
+              required 
+              placeholder="댓글을 입력하세요..."
+              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 14px; line-height: 1.5; color: #333333 !important; background-color: #ffffff !important;"
+            ></textarea>
+            <div style="text-align: right; margin-top: 8px;">
+              <button 
+                type="submit" 
+                id="submit-comment-btn"
+                style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;"
+              >
+                댓글 작성
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="comment-content">댓글:</label>
-          <textarea id="comment-content" name="content" rows="4" required></textarea>
-        </div>
-        <button type="submit">댓글 작성</button>
       </form>
+
+      <style>
+        .comment-form {
+          margin-top: 20px;
+          border-top: 1px solid #e5e7eb;
+          padding-top: 20px;
+        }
+        
+        .comment-form textarea:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        .comment-form button:hover {
+          background: #0056b3;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .reply-depth-1 {
+          background-color: #f8f9fa;
+        }
+        
+        .reply-depth-2 {
+          background-color: #f1f3f4;
+        }
+        
+        .reply-depth-3 {
+          background-color: #e8eaed;
+        }
+        
+        .comment-item {
+          padding: 15px;
+          margin-bottom: 10px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        
+        .comment-item.reply {
+          margin-top: 10px;
+        }
+        
+        .comment-profile {
+          flex-shrink: 0;
+        }
+        
+        .comment-body {
+          flex: 1;
+        }
+        
+        .comment-meta {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+          font-size: 14px;
+          color: #6b7280;
+        }
+        
+        .comment-author {
+          font-weight: bold;
+          color: #374151;
+          margin-right: 10px;
+        }
+        
+        .comment-date {
+          margin-right: 10px;
+        }
+        
+        .comment-content {
+          line-height: 1.6;
+          word-wrap: break-word;
+          margin-bottom: 8px;
+        }
+        
+        .comment-actions {
+          display: flex;
+          align-items: center;
+        }
+        
+        /* 답글 폼 스타일 */
+        .reply-form-container {
+          animation: slideDown 0.2s ease-out;
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .reply-form-container textarea:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        .reply-form-container button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 모바일 반응형 스타일 */
+        @media (max-width: 640px) {
+          .comment-form > div {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          
+          #user-profile-section {
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px !important;
+            min-width: auto !important;
+          }
+          
+          #user-avatar {
+            width: 32px !important;
+            height: 32px !important;
+            margin-bottom: 0 !important;
+          }
+          
+          #user-nickname {
+            font-size: 14px !important;
+            text-align: left !important;
+          }
+        }
+      </style>
+
+      <script>
+        // 사용자 프로필 정보 업데이트 함수
+        function updateUserProfile(user) {
+          const userAvatar = document.getElementById('user-avatar');
+          const userNickname = document.getElementById('user-nickname');
+          
+          if (userAvatar && userNickname) {
+            // 닉네임 업데이트
+            userNickname.textContent = user.nickname || '사용자';
+            
+            // 프로필 이미지 업데이트
+            if (user.profile_image) {
+              // 프로필 이미지가 있는 경우
+              userAvatar.innerHTML = '<img src="' + user.profile_image + '" alt="프로필" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">';
+            } else {
+              // 프로필 이미지가 없는 경우 이니셜 표시
+              const initial = user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U';
+              userAvatar.innerHTML = '<span style="color: white; font-weight: bold; font-size: 16px;">' + initial + '</span>';
+              userAvatar.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            console.log('사용자 프로필 업데이트됨:', user.nickname);
+          }
+        }
+
+        // 로그인 상태 확인 및 댓글 폼 표시/숨김
+        function checkLoginStatus() {
+          // 여러 가능한 localStorage 키 확인
+          const possibleKeys = ['user-storage', 'user-store', 'userStore'];
+          let user = null;
+          let isAuthenticated = false;
+          
+          console.log('댓글 로그인 체크 시작 - 모든 localStorage 확인'); // 디버깅용
+          
+          for (const key of possibleKeys) {
+            const storageData = window.localStorage.getItem(key);
+            console.log('키 확인:', key, '데이터:', storageData); // 디버깅용
+            
+            if (storageData) {
+              try {
+                const storage = JSON.parse(storageData);
+                console.log('파싱된 스토리지 (' + key + '):', storage); // 디버깅용
+                
+                // 다양한 구조 패턴 확인
+                if (storage.state) {
+                  // Zustand persist 구조
+                  if (storage.state.userInfo && storage.state.userInfo.id) {
+                    user = storage.state.userInfo;
+                    isAuthenticated = storage.state.isAuthenticated || false;
+                    console.log('찾음 (persist 구조):', user, isAuthenticated);
+                    break;
+                  }
+                } else if (storage.userInfo && storage.userInfo.id) {
+                  // 직접 저장된 구조
+                  user = storage.userInfo;
+                  isAuthenticated = storage.isAuthenticated || false;
+                  console.log('찾음 (직접 구조):', user, isAuthenticated);
+                  break;
+                }
+              } catch (error) {
+                console.error(key + ' 파싱 오류:', error);
+              }
+            }
+          }
+          
+          console.log('최종 결과 - 사용자:', user, '인증됨:', isAuthenticated); // 디버깅용
+          
+          if (user && user.id && isAuthenticated) {
+            // 로그인된 상태 - 댓글 폼 표시 및 사용자 프로필 업데이트
+            const commentForm = document.getElementById('comment-form');
+            const loginMessage = document.getElementById('login-required-message');
+            
+            if (commentForm) {
+              commentForm.style.display = 'block';
+              console.log('댓글 폼 표시');
+            }
+            if (loginMessage) {
+              loginMessage.style.display = 'none';
+              console.log('로그인 메시지 숨김');
+            }
+            
+            // 사용자 프로필 정보 업데이트
+            updateUserProfile(user);
+            
+            return user;
+          }
+          
+          // 로그인되지 않은 상태 - 로그인 안내 메시지 표시
+          const commentForm = document.getElementById('comment-form');
+          const loginMessage = document.getElementById('login-required-message');
+          
+          if (commentForm) {
+            commentForm.style.display = 'none';
+            console.log('댓글 폼 숨김');
+          }
+          if (loginMessage) {
+            loginMessage.style.display = 'block';
+            console.log('로그인 메시지 표시');
+          }
+          
+          return null;
+        }
+
+        // 댓글 제출 함수
+        async function submitComment(event) {
+          event.preventDefault();
+          
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return false;
+          }
+
+          const content = document.getElementById('comment-content').value.trim();
+          if (!content) {
+            alert('댓글 내용을 입력해주세요.');
+            return false;
+          }
+
+          const submitBtn = document.getElementById('submit-comment-btn');
+          submitBtn.disabled = true;
+          submitBtn.textContent = '작성 중...';
+
+          try {
+            const response = await fetch('/api/replies', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                contentId: ${data.currentArticle?.id || 0},
+                contentText: content
+              })
+            });
+
+                         if (response.ok) {
+               // 댓글 작성 성공 - 입력 필드 초기화 후 페이지 새로고침
+               document.getElementById('comment-content').value = '';
+               alert('댓글이 작성되었습니다.');
+               location.reload();
+             } else {
+               const errorData = await response.json();
+               alert('댓글 작성에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
+             }
+          } catch (error) {
+            console.error('댓글 작성 오류:', error);
+            alert('댓글 작성 중 오류가 발생했습니다.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '댓글 작성';
+          }
+
+          return false;
+        }
+
+        // 답글 입력창 생성 함수
+        function createReplyForm(parentReplyId, user) {
+          return \`
+            <div id="reply-form-\${parentReplyId}" class="reply-form-container" style="margin-top: 12px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #007bff;">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <!-- 사용자 프로필 -->
+                <div style="flex-shrink: 0;">
+                  \${user.profile_image 
+                    ? \`<img src="\${user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">\`
+                    : \`<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-weight: bold; font-size: 14px;">\${user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}</span>
+                       </div>\`
+                  }
+                </div>
+                
+                <!-- 답글 입력 영역 -->
+                <div style="flex: 1;">
+                  <div style="margin-bottom: 8px;">
+                    <span style="font-size: 12px; color: #6b7280;">답글 작성 중...</span>
+                  </div>
+                  <textarea 
+                    id="reply-content-\${parentReplyId}" 
+                    placeholder="답글을 입력하세요..." 
+                    rows="3"
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-family: inherit; font-size: 14px; color: #333333 !important; background-color: #ffffff !important;"
+                  ></textarea>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    <button 
+                      onclick="cancelReply(\${parentReplyId})"
+                      style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                    >
+                      취소
+                    </button>
+                    <button 
+                      onclick="submitReply(\${parentReplyId})"
+                      style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                    >
+                      답글 작성
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          \`;
+        }
+
+        // 대댓글 작성 함수 (새로운 방식)
+        async function replyToComment(parentReplyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            window.location.href = '/auth';
+            return;
+          }
+
+          // 이미 열린 답글 폼이 있으면 닫기
+          const existingForm = document.querySelector('.reply-form-container');
+          if (existingForm) {
+            existingForm.remove();
+          }
+
+          // 부모 댓글 요소 찾기
+          const parentElement = document.querySelector(\`[data-reply-id="\${parentReplyId}"], #reply-\${parentReplyId}\`);
+          if (!parentElement) {
+            // 대체 방법: 답글 버튼의 부모 요소에서 댓글 컨테이너 찾기
+            const replyButton = event.target;
+            const commentItem = replyButton.closest('.comment-item') || replyButton.closest('div[style*="flex"]');
+            if (commentItem) {
+              const replyFormHtml = createReplyForm(parentReplyId, user);
+              commentItem.insertAdjacentHTML('afterend', replyFormHtml);
+              
+              // 답글 입력창에 포커스
+              const textarea = document.getElementById(\`reply-content-\${parentReplyId}\`);
+              if (textarea) {
+                textarea.focus();
+              }
+            } else {
+              alert('댓글을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+            }
+            return;
+          }
+
+          // 답글 폼 HTML 생성 및 삽입
+          const replyFormHtml = createReplyForm(parentReplyId, user);
+          parentElement.insertAdjacentHTML('afterend', replyFormHtml);
+
+          // 답글 입력창에 포커스
+          const textarea = document.getElementById(\`reply-content-\${parentReplyId}\`);
+          if (textarea) {
+            textarea.focus();
+          }
+        }
+
+        // 답글 취소 함수
+        function cancelReply(parentReplyId) {
+          const replyForm = document.getElementById(\`reply-form-\${parentReplyId}\`);
+          if (replyForm) {
+            replyForm.remove();
+          }
+        }
+
+        // 답글 제출 함수
+        async function submitReply(parentReplyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
+
+          const textarea = document.getElementById(\`reply-content-\${parentReplyId}\`);
+          const content = textarea ? textarea.value.trim() : '';
+          
+          if (!content) {
+            alert('답글 내용을 입력해주세요.');
+            return;
+          }
+
+          const submitBtn = event.target;
+          submitBtn.disabled = true;
+          submitBtn.textContent = '작성 중...';
+
+          try {
+            const response = await fetch('/api/replies', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                contentId: ${data.currentArticle?.id || 0},
+                parentReplyId: parentReplyId,
+                contentText: content
+              })
+            });
+
+            if (response.ok) {
+              alert('답글이 작성되었습니다.');
+              location.reload();
+            } else {
+              const errorData = await response.json();
+              alert('답글 작성에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
+            }
+          } catch (error) {
+            console.error('답글 작성 오류:', error);
+            alert('답글 작성 중 오류가 발생했습니다.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '답글 작성';
+          }
+        }
+
+        // 전역 함수로 등록 (템플릿에서 사용할 수 있도록)
+        window.replyToComment = replyToComment;
+        window.cancelReply = cancelReply;
+        window.submitReply = submitReply;
+
+        // 페이지 로드 시 로그인 상태 확인
+        document.addEventListener('DOMContentLoaded', function() {
+          // 즉시 확인
+          checkLoginStatus();
+          
+          // 약간의 지연 후 재확인 (localStorage 완전 로드 대기)
+          setTimeout(function() {
+            checkLoginStatus();
+          }, 100);
+          
+          // 주기적으로 로그인 상태 재확인 (다른 탭에서 로그인/로그아웃한 경우)
+          setInterval(function() {
+            checkLoginStatus();
+          }, 3000);
+        });
+      </script>
     </div>
-  `,
-  );
+  `;
+
+  result = result.replace(/\[##_rp_input_form_##\]/g, commentFormHtml);
 
   // 개별 글 페이지 관련 치환자 처리
   if (data.currentArticle) {
@@ -475,24 +1149,34 @@ function replacePlaceholders(template: string, data: TemplateData): string {
     // 5. 글 작성자
     result = result.replace(/\[##_article_author_##\]/g, article.author || data.blog.author || '익명');
 
-    // 6. 글 카테고리
+    // 6. 글 카테고리 (타입에 따라 다르게 표시)
     if (article.category) {
       result = result.replace(/\[##_article_category_##\]/g, article.category.name);
     } else {
-      result = result.replace(/\[##_article_category_##\]/g, '미분류');
+      // 타입에 따라 기본 카테고리명 설정
+      let defaultCategory = '미분류';
+      if (article.type === 'PAGE') {
+        defaultCategory = '페이지';
+      } else if (article.type === 'NOTICE') {
+        defaultCategory = '공지';
+      }
+      result = result.replace(/\[##_article_category_##\]/g, defaultCategory);
     }
 
     // 7. 글 태그 (미구현이므로 빈 문자열)
     result = result.replace(/\[##_article_tags_##\]/g, '');
 
-    // 8. 이전 글
+    // 8. 조회수 처리 (total_views 필드 추가 필요)
+    result = result.replace(/\[##_article_total_views_##\]/g, String(article.total_views || 0));
+
+    // 9. 이전 글
     if (article.prev_article) {
       result = result.replace(/\[##_article_prev_##\]/g, `<a href="/posts/${article.prev_article.sequence}" title="${article.prev_article.title}">이전 글</a>`);
     } else {
       result = result.replace(/\[##_article_prev_##\]/g, '');
     }
 
-    // 9. 다음 글
+    // 10. 다음 글
     if (article.next_article) {
       result = result.replace(/\[##_article_next_##\]/g, `<a href="/posts/${article.next_article.sequence}" title="${article.next_article.title}">다음 글</a>`);
     } else {
@@ -515,8 +1199,98 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       .replace(/\[##_article_author_##\]/g, '')
       .replace(/\[##_article_category_##\]/g, '')
       .replace(/\[##_article_tags_##\]/g, '')
+      .replace(/\[##_article_total_views_##\]/g, '')
       .replace(/\[##_article_prev_##\]/g, '')
       .replace(/\[##_article_next_##\]/g, '');
+  }
+
+  // 페이지네이션 처리
+  if (data.pagination) {
+    const pagination = data.pagination;
+
+    // 페이지네이션 블록 표시/숨김
+    if (pagination.totalPages > 1) {
+      result = result.replace(/<s_pagination>([\s\S]*?)<\/s_pagination>/g, '$1');
+
+      // 페이지네이션 치환자들
+      result = result.replace(/\[##_pagination_first_##\]/g, pagination.currentPage > 1 ? '?page=1' : '#');
+      result = result.replace(/\[##_pagination_first_disabled_##\]/g, pagination.currentPage <= 1 ? 'disabled' : '');
+
+      result = result.replace(/\[##_pagination_last_##\]/g, pagination.currentPage < pagination.totalPages ? `?page=${pagination.totalPages}` : '#');
+      result = result.replace(/\[##_pagination_last_disabled_##\]/g, pagination.currentPage >= pagination.totalPages ? 'disabled' : '');
+
+      // 10페이지 블록 계산
+      const currentBlock = Math.floor((pagination.currentPage - 1) / 10);
+      const prevBlockPage = currentBlock > 0 ? (currentBlock - 1) * 10 + 1 : 1;
+      const nextBlockPage = (currentBlock + 1) * 10 + 1;
+
+      result = result.replace(/\[##_pagination_prev_block_##\]/g, currentBlock > 0 ? `?page=${prevBlockPage}` : '#');
+      result = result.replace(/\[##_pagination_prev_block_disabled_##\]/g, currentBlock <= 0 ? 'disabled' : '');
+
+      result = result.replace(/\[##_pagination_next_block_##\]/g, nextBlockPage <= pagination.totalPages ? `?page=${nextBlockPage}` : '#');
+      result = result.replace(/\[##_pagination_next_block_disabled_##\]/g, nextBlockPage > pagination.totalPages ? 'disabled' : '');
+
+      // 페이지 번호 반복 처리
+      const paginationRepPattern = /\[##_pagination_rep_##\]([\s\S]*?)\[\/##_pagination_rep_##\]/g;
+      let paginationRepHtml = '';
+
+      const startPage = currentBlock * 10 + 1;
+      const endPage = Math.min(startPage + 9, pagination.totalPages);
+
+      for (let i = startPage; i <= endPage; i++) {
+        const pageTemplate = result.match(paginationRepPattern)?.[0]?.replace(/\[##_pagination_rep_##\]|\[\/##_pagination_rep_##\]/g, '') || '';
+        if (pageTemplate) {
+          let pageHtml = pageTemplate
+            .replace(/\[##_pagination_rep_link_##\]/g, `?page=${i}`)
+            .replace(/\[##_pagination_rep_number_##\]/g, String(i))
+            .replace(/\[##_pagination_rep_class_##\]/g, i === pagination.currentPage ? 'current' : '');
+
+          paginationRepHtml += pageHtml;
+        }
+      }
+
+      result = result.replace(paginationRepPattern, paginationRepHtml);
+    } else {
+      // 페이지가 1개뿐이면 페이지네이션 숨김
+      result = result.replace(/<s_pagination>[\s\S]*?<\/s_pagination>/g, '');
+    }
+  } else {
+    // 페이지네이션 정보가 없으면 숨김
+    result = result.replace(/<s_pagination>[\s\S]*?<\/s_pagination>/g, '');
+  }
+
+  // s_rp_count 블록 처리 (댓글 개수가 0이 아닐 때만 표시)
+  if (data.currentArticle && data.currentArticle.reply_count > 0) {
+    result = result.replace(/<s_rp_count>([\s\S]*?)<\/s_rp_count>/g, '$1');
+  } else {
+    result = result.replace(/<s_rp_count>[\s\S]*?<\/s_rp_count>/g, '');
+  }
+
+  // s_article_comments 블록 처리 - POSTS 타입에서만 댓글 표시
+  if (data.currentArticle) {
+    const article = data.currentArticle;
+    if (article.type === 'POSTS' || !article.type) {
+      // POSTS 타입이거나 타입이 없는 경우 (기본값) 댓글 섹션 표시
+      result = result.replace(/<s_article_comments>([\s\S]*?)<\/s_article_comments>/g, '$1');
+      // 댓글 입력 폼도 표시
+      result = result.replace(/<s_comment_form>([\s\S]*?)<\/s_comment_form>/g, '$1');
+    } else {
+      // PAGE나 NOTICE 타입인 경우 댓글 섹션 완전 제거
+      result = result.replace(/<s_article_comments>[\s\S]*?<\/s_article_comments>/g, '');
+      // 댓글 입력 폼도 제거
+      result = result.replace(/<s_comment_form>[\s\S]*?<\/s_comment_form>/g, '');
+    }
+  } else {
+    // 개별 글 페이지가 아닌 경우 댓글 섹션 제거
+    result = result.replace(/<s_article_comments>[\s\S]*?<\/s_article_comments>/g, '');
+    result = result.replace(/<s_comment_form>[\s\S]*?<\/s_comment_form>/g, '');
+  }
+
+  // s_index_article_rep 블록 처리 (전체 글 목록 페이지에서만 표시)
+  if (data.isAllPostsPage && data.currentArticle === undefined) {
+    result = result.replace(/<s_index_article_rep>([\s\S]*?)<\/s_index_article_rep>/g, '$1');
+  } else {
+    result = result.replace(/<s_index_article_rep>[\s\S]*?<\/s_index_article_rep>/g, '');
   }
 
   // 사이드바 블록 처리
