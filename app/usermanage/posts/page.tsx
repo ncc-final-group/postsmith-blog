@@ -164,7 +164,7 @@ export default function BoardSitePage() {
   }
 
   function handleCreatePost() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/post');
   }
 
   function handlePostClick(post: Post) {
@@ -194,7 +194,7 @@ export default function BoardSitePage() {
   }
 
   function handleEditPost(post: Post) {
-    alert(`수정: ${post.title}`);
+    router.push(`/edit/post/${post.sequence}`);
   }
 
   function handleViewStats(post: Post) {

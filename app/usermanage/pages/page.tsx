@@ -13,6 +13,7 @@ interface Page {
   title: string;
   isPublic: boolean;
   likes: number;
+  sequence: number;
   createdAt: string;
   categoryid?: string;
   categoryName?: string;
@@ -20,7 +21,6 @@ interface Page {
   totalViewCount: number;
   totalRepliesCount: number;
   address: string;
-  sequence: number;
 }
 
 interface BoardData {
@@ -165,7 +165,7 @@ export default function BoardSitePage() {
   }
 
   function handleCreatePage() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/page');
   }
 
   function handlePageClick(page: Page) {
@@ -195,7 +195,7 @@ export default function BoardSitePage() {
   }
 
   function handleEditPage(page: Page) {
-    router.push(`/edit/post/${page.sequence}`);
+    alert(`수정: ${page.title}`);
   }
 
   function handleViewStats(page: Page) {

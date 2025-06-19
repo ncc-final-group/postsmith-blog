@@ -13,6 +13,7 @@ interface NOTICE {
   title: string;
   isPublic: boolean;
   likes: number;
+  sequence: number;
   createdAt: string;
   categoryid?: string;
   categoryName?: string;
@@ -164,7 +165,7 @@ export default function BoardSitePage() {
   }
 
   function handleCreateNotice() {
-    alert('글쓰기 기능은 아직 구현되지 않았습니다.');
+    router.push('/edit/notice');
   }
 
   function handleNoticeClick(notice: NOTICE) {
@@ -193,7 +194,7 @@ export default function BoardSitePage() {
   }
 
   function handleEditNotice(notice: NOTICE) {
-    alert(`수정: ${notice.title}`);
+    router.push(`/edit/post/${notice.sequence}`);
   }
 
   function handleViewStats(notice: NOTICE) {
