@@ -1,9 +1,21 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import type { NextRequest } from 'next/server';
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
+  const url = req.nextUrl;
+  const requestHeaders = new Headers(req.headers);
+
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get('CLIENT_SESSION_ID');
+
+  if (url.pathname.startsWith('/usermanage')) {
+    if (!sessionId) {
+      return NextResponse.redirect(new URL(`http://${process.env.NEXT_PUBLIC_BASE_URL}/login`, req.url));
+    }
+  }
 
   // 서브도메인 추출 로직
   let subdomain = '';
@@ -24,12 +36,10 @@ export function middleware(req: NextRequest) {
 
   // 서브도메인이 있는 경우 헤더에 정보 추가
   if (subdomain) {
-    const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-subdomain', subdomain);
-    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] };

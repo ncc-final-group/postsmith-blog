@@ -1,18 +1,5 @@
 @Library('my-shared-library') _
 
-void setBuildStatus(String message, String context, String state) {
-    step([
-        $class: "GitHubCommitStatusSetter",
-        reposSource: [$class: "ManuallyEnteredRepositorySource", url: env.GIT_URL],
-        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
-        errorHandlers: [[$class: "ChangingBuildStatusErrorHandler", result: "UNSTABLE"]],
-        statusResultSource: [
-            $class: "ConditionalStatusResultSource",
-            results: [[$class: "AnyBuildResult", message: message, state: state]]
-        ]
-    ]);
-}
-
 pipeline {
     agent {
         kubernetes {
@@ -46,7 +33,7 @@ spec:
     }
 
     options {
-        timeout(5)
+        timeout(10)
     }
 
     stages {
@@ -56,7 +43,7 @@ spec:
                     env.STAGE_SEQUENCE = 0
                     env.IMAGE_NAME = 'postsmith-hub.kr.ncr.ntruss.com/postsmith-blog'
                     env.IMAGE_TAG = build.getProjectVersion('nodejs')
-                    withCredentials([file(credentialsId: 'postsmith_env', variable: 'APPLICATION_ENV')]) {
+                    withCredentials([file(credentialsId: 'postsmith_blog_env', variable: 'APPLICATION_ENV')]) {
                         sh 'cp -f ${APPLICATION_ENV} ./.env'
                     }
                     sh 'npm install'
@@ -66,30 +53,30 @@ spec:
         stage('CodeStyle Check') {
             steps {
                 script {
-                    setBuildStatus("Running Code Style Check", "CI / StyleCheck ", "PENDING")
+                    github.setCommitStatus("Running Code Style Check", "CI / StyleCheck ", "PENDING")
                     env.STAGE_SEQUENCE = 1
                     sh 'npm run check'
-                    setBuildStatus("Code Style Check completed successfully", "CI / StyleCheck", "SUCCESS")
+                    github.setCommitStatus("Code Style Check completed successfully", "CI / StyleCheck", "SUCCESS")
                 }
             }
         }
         stage('Eslint Check') {
             steps {
                 script {
-                    setBuildStatus("Running ESLint Check", "CI / ESLint", "PENDING")
+                    github.setCommitStatus("Running ESLint Check", "CI / ESLint", "PENDING")
                     env.STAGE_SEQUENCE = 2
                     sh 'npm run lint'
-                    setBuildStatus("ESLint Check completed successfully", "CI / ESLint", "SUCCESS")
+                    github.setCommitStatus("ESLint Check completed successfully", "CI / ESLint", "SUCCESS")
                 }
             }
         }
         stage('Build npm') {
             steps {
                 script {
-                    setBuildStatus("Building Next.JS application", "CI / npm build", "PENDING")
+                    github.setCommitStatus("Building Next.JS application", "CI / npm build", "PENDING")
                     env.STAGE_SEQUENCE = 3
                     build.npm()
-                    setBuildStatus("Next.JS application built successfully", "CI / npm build", "SUCCESS")
+                    github.setCommitStatus("Next.JS application built successfully", "CI / npm build", "SUCCESS")
                 }
             }
         }
@@ -99,10 +86,10 @@ spec:
             }
             steps {
                 script {
-                    setBuildStatus("Building Container image", "CI / Image Build", "PENDING")
+                    github.setCommitStatus("Building Container image", "CI / Image Build", "PENDING")
                     env.STAGE_SEQUENCE = 4
                     build.image(env.IMAGE_NAME, env.IMAGE_TAG, true)
-                    setBuildStatus("Container image built successfully", "CI / Image Build", "SUCCESS")
+                    github.setCommitStatus("Container image built successfully", "CI / Image Build", "SUCCESS")
                 }
             }
         }
@@ -112,10 +99,10 @@ spec:
             }
             steps {
                 script {
-                    setBuildStatus("Deploy to Kubernetes cluster", "CD / Kubernetes rollout", "PENDING")
+                    github.setCommitStatus("Deploy to Kubernetes cluster", "CD / Kubernetes rollout", "PENDING")
                     env.STAGE_SEQUENCE = 5
                     k8s.deploy("postsmith-blog-app-deploy", "postsmith-blog-app", "postsmith-deploy", env.IMAGE_NAME, env.IMAGE_TAG)
-                    setBuildStatus("Kubernetes cluster Deployed successfully", "CD / Kubernetes rollout", "SUCCESS")
+                    github.setCommitStatus("Kubernetes cluster Deployed successfully", "CD / Kubernetes rollout", "SUCCESS")
                 }
             }
         }
@@ -126,22 +113,22 @@ spec:
             script {
                 switch (env.STAGE_SEQUENCE) {
                     case '0':
-                        setBuildStatus("Failed to initialize the build process.", "Jenkins", "FAILURE")
+                        github.setCommitStatus("Failed to initialize the build process.", "Jenkins", "FAILURE")
                         break
                     case '1':
-                        setBuildStatus("Failed to run Code Style Check.", "CI / StyleCheck", "FAILURE")
+                        github.setCommitStatus("Failed to run Code Style Check.", "CI / StyleCheck", "FAILURE")
                         break
                     case '2':
-                        setBuildStatus("Failed to run ESLint Check.", "CI / ESLint", "FAILURE")
+                        github.setCommitStatus("Failed to run ESLint Check.", "CI / ESLint", "FAILURE")
                         break
                     case '3':
-                        setBuildStatus("Failed to build the Next.JS application.", "CI / npm build", "FAILURE")
+                        github.setCommitStatus("Failed to build the Next.JS application.", "CI / npm build", "FAILURE")
                         break
                     case '4':
-                        setBuildStatus("Failed to build the Container image.", "CI / Image Build", "FAILURE")
+                        github.setCommitStatus("Failed to build the Container image.", "CI / Image Build", "FAILURE")
                         break
                     case '5':
-                        setBuildStatus("Failed to deploy to Kubernetes cluster.", "CD / Kubernetes rollout", "FAILURE")
+                        github.setCommitStatus("Failed to deploy to Kubernetes cluster.", "CD / Kubernetes rollout", "FAILURE")
                         break
                 }
             }
