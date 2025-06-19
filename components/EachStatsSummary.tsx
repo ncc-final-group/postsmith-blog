@@ -17,9 +17,9 @@ interface StatsData {
   };
 }
 
-type Props ={
+type Props = {
   contentId: number;
-}
+};
 
 export default function EachStatsSummary({ contentId }: Props) {
   const [statsData, setStatsData] = useState<StatsData>({
@@ -133,7 +133,6 @@ export default function EachStatsSummary({ contentId }: Props) {
         <div className="mb-2 text-sm text-gray-500">누적 방문자</div>
         <div className="text-2xl font-medium text-black">{formatNumber(statsData.total.visitors)}</div>
       </div>
-    
     </div>
   );
 }

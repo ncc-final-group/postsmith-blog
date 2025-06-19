@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
 import { useParams } from 'next/navigation';
+import React from 'react';
 
-import EachStatsSummary from '@components/EachStatsSummary';
 import EachStatsChart from '@components/EachStatsChart';
+import EachStatsSummary from '@components/EachStatsSummary';
 
 export default function StatsPage() {
   const params = useParams();
@@ -22,7 +22,7 @@ export default function StatsPage() {
           <EachStatsSummary contentId={contentId} />
         </div>
         <div className="my-6" />
-        <div className="mx-auto  border border-gray-400 p-6">
+        <div className="mx-auto border border-gray-400 p-6">
           <EachStatsChart contentId={contentId} />
         </div>
       </div>

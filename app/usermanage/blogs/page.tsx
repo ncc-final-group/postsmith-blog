@@ -4,71 +4,78 @@ import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
 const PostSmiths: React.FC = () => {
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [selectedBlog, setSelectedBlog] = useState<any | null>(null);
+  const blogId = 9;
+  const [blog, setBlog] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     nickname: '',
     description: '',
+    address: '',
+    logoImage: '',
   });
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [confirmDeleteChecked, setConfirmDeleteChecked] = useState(false);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogs/userId/1`)
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogmanage/${blogId}`)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
       })
       .then((data) => {
-        setBlogs(data);
-        setSelectedBlog(data[0]);
+        setBlog(data);
+        setFormData({
+          name: data.name ?? '',
+          nickname: data.nickname ?? '',
+          description: data.description ?? '',
+          address: data.address ?? '',
+          logoImage: data.logoImage ?? '',
+        });
+      })
+      .catch(() => {
+        alert('블로그 정보를 불러오는 데 실패했습니다.');
       });
-  }, []);
-
-  useEffect(() => {
-    if (selectedBlog) {
-      setFormData({
-        name: selectedBlog.name ?? '',
-        nickname: selectedBlog.nickname ?? '',
-        description: selectedBlog.description ?? '',
-      });
-    }
-  }, [selectedBlog]);
-
-  const handleSelectBlog = (blog: any) => setSelectedBlog(blog);
+  }, [blogId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData((prev) => ({
+        ...prev,
+        logoImage: URL.createObjectURL(file),
+      }));
+    }
+  };
+
   const handleSaveChanges = () => {
-    if (!selectedBlog) return;
+    if (!blog) return;
 
     const updatedBlog = {
-      ...selectedBlog,
+      ...blog,
       name: formData.name,
       nickname: formData.nickname,
       description: formData.description,
+      address: formData.address,
+      logoImage: formData.logoImage ?? '',
     };
 
-    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogs/update/${selectedBlog.id}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogmanage/update/${blog.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedBlog),
     })
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to save blog changes');
-
         const text = await res.text();
-        if (text) {
-          return JSON.parse(text);
-        } else {
-          return {};
-        }
+        return text ? JSON.parse(text) : {};
       })
       .then(() => {
-        setBlogs((prevBlogs) => prevBlogs.map((blog) => (blog.id === updatedBlog.id ? updatedBlog : blog)));
-        setSelectedBlog(updatedBlog);
+        setBlog(updatedBlog);
         alert('변경사항이 저장되었습니다.');
       })
       .catch(() => {
@@ -76,74 +83,69 @@ const PostSmiths: React.FC = () => {
       });
   };
 
+  const handleDeleteClick = () => {
+    if (!showDeleteWarning) {
+      setShowDeleteWarning(true);
+    } else if (confirmDeleteChecked && blog) {
+      fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogmanage/delete/blogId/${blog.id}`, { method: 'DELETE' })
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to delete blog');
+          setBlog(null);
+          alert('블로그가 삭제되었습니다.');
+        })
+        .catch(() => {
+          alert('블로그 삭제에 실패했습니다.');
+        });
+    }
+  };
+
+  if (!blog) return <div>블로그 정보를 불러오는 중입니다...</div>;
+
   return (
-    <div className="flex min-h-screen flex-col gap-4">
-      <div className="max-w-6xl">
-        <div className="mt-auto flex flex-col items-start gap-4 border border-gray-300 bg-white p-4">
-          <h1 className="text-xl text-gray-800">운영 중인 블로그</h1>
-          <div className="flex w-full flex-col items-center">
-            {blogs.map((blog, index) => {
-              const isSelected = blog === selectedBlog;
-              return (
-                <div
-                  key={index}
-                  onClick={() => handleSelectBlog(blog)}
-                  className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-md p-2 transition ${isSelected ? 'bg-gray-100' : ''}`}
-                >
-                  <figure className="relative h-20 w-20 rounded-full bg-gray-200">
-                    <Image fill style={{ objectFit: 'contain' }} priority src="/defaultProfile.png" alt="profile" />
-                  </figure>
-                  <div className="flex gap-4">
-                    <div className="flex w-[40rem] flex-col justify-center">
-                      <div className="text-base font-medium">{blog.nickname ?? '블로그 닉네임'}</div>
-                      <div className="text-base font-medium">{blog.address ?? 'www.blogsmith.com'}</div>
-                    </div>
-                  </div>
-                  <div className={`flex h-8 w-24 items-center justify-center text-white ${index === 0 ? 'bg-black' : 'bg-gray-400'}`}>{index === 0 ? '대표' : '대표로 설정'}</div>
+    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4">
+      <div className="flex min-h-screen flex-col gap-4">
+        <div className="max-w-6xl">
+          <div className="mt-auto flex flex-col items-start gap-4 border border-gray-300 bg-white p-4">
+            <h1 className="text-xl text-gray-800">블로그 관리</h1>
+
+            <label className="relative h-64 w-64 cursor-pointer self-center rounded-full bg-gray-200">
+              <Image fill style={{ objectFit: 'contain' }} priority src={formData.logoImage || '/defaultimage.png'} alt="logo" />
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            </label>
+
+            <div className="flex w-full flex-col gap-4">
+              {(['name', 'nickname', 'description'] as const).map((field) => (
+                <div key={field} className="flex w-full flex-col gap-2 px-8">
+                  <label className="text-base">{`블로그 ${field === 'name' ? '이름' : field === 'nickname' ? '닉네임' : field === 'description' ? '설명' : '주소'}`}</label>
+                  <input name={field} value={formData[field]} onChange={handleChange} className="w-full rounded-md border border-gray-500 p-2 focus:ring-0 focus:outline-none" />
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-6xl pt-1">
-        <div className="flex flex-col items-start gap-8 border border-gray-300 bg-white p-4">
-          <h1 className="text-xl text-gray-800">블로그 관리</h1>
-          <figure className="relative h-64 w-64 self-center rounded-full bg-gray-200">
-            <Image fill style={{ objectFit: 'contain' }} priority src="/defaultProfile.png" alt="profile" />
-          </figure>
-          <div className="flex w-full flex-col gap-4">
-            {['name', 'nickname', 'description'].map((field) => (
-              <div key={field} className="flex w-full flex-col gap-2 px-8">
-                <label className="text-base">{`블로그 ${field === 'name' ? '이름' : field === 'nickname' ? '닉네임' : '설명'}`}</label>
-                <input
-                  name={field}
-                  value={formData[field as keyof typeof formData]}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-500 p-2 focus:ring-0 focus:outline-none"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end border border-gray-300 bg-gray-200 px-8 py-4">
-          <button onClick={handleSaveChanges} className="rounded-md border border-gray-500 px-8 py-1">
-            변경사항 저장
-          </button>
-        </div>
-      </div>
-
-      <div className="flex w-full flex-col items-start gap-4 border border-gray-300 bg-white p-4">
-        <h1 className="text-xl text-gray-800">운영 · 개설 현황</h1>
-        <div className="flex w-full flex-col gap-2">
-          <div className="flex w-full justify-between">
-            <div className="w-[40rem] text-base">{5 - blogs.length}개의 블로그를 더 운영할 수 있습니다.</div>
-            <div className="w-36 text-right text-gray-500">운영 중인 블로그 {blogs.length}개</div>
-          </div>
-          <div className="flex w-full justify-between">
-            <div className="w-[40rem] text-base">블로그 개설 가능 횟수가 {10 - blogs.length}회 남았습니다.</div>
-            <div className="w-36 text-right text-gray-500">과거 개설 횟수 {blogs.length}회</div>
+          <div className="flex justify-end gap-4 border border-gray-300 bg-gray-200 px-12 py-4">
+            <div className="flex items-center gap-4 self-end">
+              {showDeleteWarning && (
+                <div className="mt-2 text-sm text-red-600">
+                  <label className="mt-1 inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={confirmDeleteChecked} onChange={(e) => setConfirmDeleteChecked(e.target.checked)} />
+                    블로그 삭제 후 데이터 복구가 불가합니다. 정말 삭제하시겠습니까?
+                  </label>
+                </div>
+              )}
+              <button
+                onClick={handleDeleteClick}
+                className={`rounded-md border px-6 py-1 ${
+                  !showDeleteWarning ? 'border-red-500 text-red-600' : confirmDeleteChecked ? 'border-red-500 text-red-600' : 'cursor-not-allowed border-gray-400 text-gray-400'
+                }`}
+                disabled={showDeleteWarning && !confirmDeleteChecked}
+              >
+                블로그 삭제
+              </button>
+            </div>
+            <button onClick={handleSaveChanges} className="rounded-md border border-gray-500 px-8 py-1">
+              변경사항 저장
+            </button>
           </div>
         </div>
       </div>

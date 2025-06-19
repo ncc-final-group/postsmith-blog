@@ -103,8 +103,7 @@ export default function BoardSitePage() {
         });
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('게시글을 불러오는 중 오류 발생:', err);
+        // console.error('게시글을 불러오는 중 오류 발생:', err);
       })
       .finally(() => {
         setIsLoading(false);
@@ -197,8 +196,7 @@ export default function BoardSitePage() {
         posts: prev.posts.map((p) => (p.contentId === post.contentId ? { ...p, isPublic: newPrivacy } : p)),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('공개 여부 변경 실패:', error);
+      // console.error('공개 여부 변경 실패:', error);
       alert('공개 여부 변경에 실패했습니다.');
     }
   }
@@ -220,8 +218,7 @@ export default function BoardSitePage() {
         posts: prev.posts.filter((p) => p.contentId !== post.contentId),
       }));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('삭제 요청 실패:', error);
+      // console.error('삭제 요청 실패:', error);
       alert('삭제에 실패했습니다.');
     }
   }
@@ -254,8 +251,7 @@ export default function BoardSitePage() {
         }));
         setSelectedPosts(new Set());
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('삭제 요청 실패:', error);
+        // console.error('삭제 요청 실패:', error);
         alert('삭제에 실패했습니다.');
       }
     } else if (action === 'makePublic' || action === 'makePrivate') {
@@ -279,8 +275,7 @@ export default function BoardSitePage() {
           posts: prev.posts.map((post) => (selectedPosts.has(post.contentId) ? { ...post, isPublic: newPrivacy } : post)),
         }));
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('공개/비공개 변경 실패:', error);
+        // console.error('공개/비공개 변경 실패:', error);
         alert('공개/비공개 변경에 실패했습니다.');
       }
     }
