@@ -169,7 +169,7 @@ export default function BoardSitePage() {
   }
 
   function handlePageClick(page: Page) {
-    router.push(`/blog/${page.sequence}`);
+    router.push(`/pages/${page.title}`);
   }
 
   function handleSelectOne(pageId: number) {

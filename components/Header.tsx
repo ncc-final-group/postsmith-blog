@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
 export default function Header() {
   return (
     <header className="sticky top-0 z-10 min-h-[74px] w-full min-w-[1230px] border-b border-gray-200 bg-white px-4 py-1 shadow-sm">
@@ -13,9 +15,9 @@ export default function Header() {
           </Link>
 
           <nav className="hidden gap-6 text-gray-700 md:flex">
-            <Link href="/">홈</Link>
-            <Link href="/">피드</Link>
-            <Link href="/">스킨</Link>
+            <Link href={`${baseUrl}/`}>홈</Link>
+            <Link href={`${baseUrl}/feed`}>피드</Link>
+            <Link href={`${baseUrl}/theme`}>테마</Link>
           </nav>
         </div>
 
