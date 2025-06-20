@@ -168,7 +168,7 @@ export default function BoardSitePage() {
   }
 
   function handlePostClick(post: Post) {
-    router.push(`/blog/${post.sequence}`);
+    router.push(`/posts/${post.sequence}`);
   }
 
   function handleSelectOne(postId: number) {

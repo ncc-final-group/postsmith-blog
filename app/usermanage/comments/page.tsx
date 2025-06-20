@@ -254,7 +254,7 @@ export default function CommentsData() {
   };
 
   function handleReplyClick(comment: Comments) {
-    router.push(`/blog/${comment.sequence}`);
+    router.push(`/posts/${comment.sequence}`);
   }
 
   async function handleBulkAction(action: string) {

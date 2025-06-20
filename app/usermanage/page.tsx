@@ -149,7 +149,7 @@ export default async function UserManagePage() {
       title: '블로그 관리',
       description: '블로그 설정을 관리하세요',
       icon: Users,
-      href: '/usermanage/admin/blog',
+      href: '/usermanage/blogs',
       color: 'bg-indigo-500',
     },
   ];
