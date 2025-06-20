@@ -137,7 +137,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     };
 
     return (
-      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+      <BlogProvider blogInfo={blogInfo} sidebarData={sidebarData}>
         <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
       </BlogProvider>
     );

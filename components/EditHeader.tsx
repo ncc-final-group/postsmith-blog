@@ -21,6 +21,7 @@ import { $getRoot } from 'lexical';
 
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_IMAGE_ALIGNMENT_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
 import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './nodes';
+import { useBlogStore } from '../app/store/blogStore';
 import { getMediaFiles, type MediaFile } from '../lib/mediaService';
 import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
 
@@ -859,10 +860,16 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
 
   useEffect(() => {
     const loadMediaFiles = async () => {
+      if (!blogId) {
+        setError('블로그 ID를 찾을 수 없습니다.');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const response = await getMediaFiles({
-          blogId: blogId ?? 1, // undefined일 때 기본값 0 사용
+          blogId: blogId,
           page: 0,
           size: 100, // 모달이므로 더 많은 파일 로드
           fileType: fileType,
@@ -879,7 +886,7 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
       loadMediaFiles();
       setSelectedFiles(new Set()); // 모달 열릴 때 선택 초기화
     }
-  }, [isOpen, fileType]);
+  }, [isOpen, fileType, blogId]);
 
   const handleFileToggle = (fileId: number) => {
     const newSelected = new Set(selectedFiles);
@@ -1374,8 +1381,12 @@ interface EditHeaderProps {
   blogId?: number;
 }
 
-export default function EditHeader({ blogId }: EditHeaderProps) {
+export default function EditHeader({ blogId: propBlogId }: EditHeaderProps) {
   const [editor] = useLexicalComposerContext();
+
+  // blogStore에서 실제 blogId 가져오기
+  const storeBlogId = useBlogStore((state) => state.blogId);
+  const blogId = storeBlogId || propBlogId || 0; // store > props > fallback
   const [activeStyles, setActiveStyles] = useState<Set<string>>(new Set());
   const [blockType, setBlockType] = useState<string>('paragraph');
   const [currentTextSize, setCurrentTextSize] = useState<string>('p3');

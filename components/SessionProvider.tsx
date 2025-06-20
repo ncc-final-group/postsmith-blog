@@ -1,31 +1,48 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import { IUserSession, useSessionStore } from '../app/store/sessionStore';
 import { useUserStore } from '../app/store/userStore';
 
 interface SessionProviderProps {
   children: React.ReactNode;
-  sessionData: any; // 서버에서 전달받은 세션 데이터
+  sessionData: IUserSession | null; // 서버에서 전달받은 세션 데이터
 }
 
 export default function SessionProvider({ children, sessionData }: SessionProviderProps) {
+  const [isClient, setIsClient] = useState(false);
+  const { setSession, clearSession } = useSessionStore();
   const { setUserInfo, clearUser } = useUserStore();
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return; // 클라이언트에서만 실행
+
     if (sessionData && sessionData.userId) {
-      // 세션에서 사용자 정보가 있으면 store에 저장
-      setUserInfo({
-        id: parseInt(sessionData.userId),
-        email: sessionData.email || '',
-        nickname: sessionData.userNickname || '',
-        profile_image: sessionData.profileImage || null,
-      });
+      // 1. sessionStore에 저장
+      setSession(sessionData);
+
+      // 2. userStore에도 직접 저장 (더 확실한 동기화)
+      if (sessionData.email && sessionData.userNickname) {
+        setUserInfo({
+          id: parseInt(sessionData.userId),
+          email: sessionData.email,
+          nickname: sessionData.userNickname,
+          profile_image: sessionData.profileImage || null,
+        });
+      }
     } else {
-      // 세션이 없으면 사용자 정보 초기화
+      // 1. sessionStore 초기화
+      clearSession();
+
+      // 2. userStore도 초기화
       clearUser();
     }
-  }, [sessionData, setUserInfo, clearUser]);
+  }, [isClient, sessionData, setSession, clearSession, setUserInfo, clearUser]);
 
   return <>{children}</>;
 }

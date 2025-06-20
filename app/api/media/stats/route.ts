@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SPRING_API_URL = 'http://localhost:8080';
+const SPRING_API_URL = process.env.NEXT_PUBLIC_API_SERVER || '';
 
 export async function GET(request: NextRequest) {
   try {

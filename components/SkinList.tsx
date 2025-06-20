@@ -59,9 +59,6 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId }: SkinList
             <div className="flex items-center gap-4">
               <div className="group relative">
                 <Image src={activeSkin.thumbnail} alt={activeSkin.name} width={120} height={80} className="rounded-md border" />
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/70 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button className="z-20 rounded bg-gray-800 px-3 py-1 text-sm font-semibold text-white shadow">미리보기</button>
-                </div>
               </div>
               <div>
                 <div className="text-base font-bold text-black">{activeSkin.name}</div>
@@ -101,24 +98,19 @@ function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId }: SkinList
                 <div className="group relative flex w-full flex-col items-center">
                   <Image src={skin.thumbnail} alt={skin.name} width={180} height={120} className="mb-2 rounded-md border" />
                   {/* Hover Layer */}
-                  {hoveredSkinId === skin.id && (
+                  {hoveredSkinId === skin.id && !isActive && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-md bg-white/70">
-                      <div className="flex gap-2">
-                        <button className="z-20 rounded bg-gray-800 px-3 py-1 text-sm font-semibold text-white shadow">미리보기</button>
-                        {!isActive && (
-                          <button
-                            className="z-20 rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white shadow focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApplyTheme(skin.id);
-                            }}
-                            disabled={isUpdating === skin.id}
-                            tabIndex={0}
-                          >
-                            {isUpdating === skin.id ? '적용 중...' : '적용'}
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        className="z-20 rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white shadow focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApplyTheme(skin.id);
+                        }}
+                        disabled={isUpdating === skin.id}
+                        tabIndex={0}
+                      >
+                        {isUpdating === skin.id ? '적용 중...' : '적용'}
+                      </button>
                     </div>
                   )}
                 </div>
