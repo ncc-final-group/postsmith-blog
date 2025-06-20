@@ -168,7 +168,7 @@ export default function BoardSitePage() {
   }
 
   function handleNoticeClick(notice: NOTICE) {
-    router.push(`/blog/${notice.sequence}`);
+    router.push(`/notices/${notice.title}`);
   }
   function handleSelectOne(noticeId: number) {
     setSelectedNotices((prev) => {

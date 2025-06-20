@@ -15,6 +15,9 @@ const PostSmiths: React.FC = () => {
   });
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [confirmDeleteChecked, setConfirmDeleteChecked] = useState(false);
+  const [fileData, setFileData] = useState<{
+    logoImage: File | null;
+  }>({ logoImage: null });
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogmanage/${blogId}`)
@@ -42,18 +45,49 @@ const PostSmiths: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({
-        ...prev,
-        logoImage: URL.createObjectURL(file),
-      }));
+  const uploadImage = async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('altText', '블로그 로고 이미지');
+    form.append('userId', String(5));
+    form.append('blogId', String(blog?.id ?? 0));
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/upload/image`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) throw new Error('이미지 업로드 실패');
+      const data = await res.json();
+      return data.url;
+    } catch (error) {
+      alert('이미지 업로드에 실패했습니다.');
+      return null;
     }
   };
 
-  const handleSaveChanges = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileData({ logoImage: file });
+    }
+  };
+
+  const handleSaveChanges = async () => {
     if (!blog) return;
+
+    let finalLogoImage = formData.logoImage;
+
+    if (fileData.logoImage) {
+      const uploadedUrl = await uploadImage(fileData.logoImage);
+      if (uploadedUrl) {
+        finalLogoImage = uploadedUrl;
+      } else {
+        return;
+      }
+    }
+
+    const logoImageToSave = finalLogoImage || '/defaultimage.png';
 
     const updatedBlog = {
       ...blog,
@@ -61,7 +95,7 @@ const PostSmiths: React.FC = () => {
       nickname: formData.nickname,
       description: formData.description,
       address: formData.address,
-      logoImage: formData.logoImage ?? '',
+      logoImage: logoImageToSave ?? '',
     };
 
     fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/blogmanage/update/${blog.id}`, {
@@ -109,7 +143,13 @@ const PostSmiths: React.FC = () => {
             <h1 className="text-xl text-gray-800">블로그 관리</h1>
 
             <label className="relative h-64 w-64 cursor-pointer self-center rounded-full bg-gray-200">
-              <Image fill style={{ objectFit: 'contain' }} priority src={formData.logoImage || '/defaultimage.png'} alt="logo" />
+              <Image
+                fill
+                style={{ objectFit: 'contain' }}
+                priority
+                src={fileData.logoImage ? URL.createObjectURL(fileData.logoImage) : formData.logoImage || '/defaultimage.png'}
+                alt="logo"
+              />
               <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             </label>
 
