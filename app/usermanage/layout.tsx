@@ -9,7 +9,6 @@ import BlogProvider from '@components/BlogProvider';
 import Header from '@components/Header';
 import Sidebar from '@components/Sidebar';
 
-
 export const metadata: Metadata = {
   title: '관리자 페이지',
   description: 'PostSmith 관리자 영역',
