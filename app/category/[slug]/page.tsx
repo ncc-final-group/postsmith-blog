@@ -136,7 +136,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
 
   return (
     <SafeBlogProvider blogId={blog.id} blogInfo={blogInfo}>
-      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} session={session} />
+      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} />
     </SafeBlogProvider>
   );
 }

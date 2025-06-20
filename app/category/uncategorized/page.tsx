@@ -169,7 +169,7 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
 
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} session={session} />
+      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );
 }

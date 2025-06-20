@@ -315,7 +315,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
       <ContentStats contentId={content.id} />
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} session={session} />
+      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
     </SafeBlogProvider>
   );
 }

@@ -13,13 +13,13 @@ export default function SessionProvider({ children, sessionData }: SessionProvid
   const { setUserInfo, clearUser } = useUserStore();
 
   useEffect(() => {
-    if (sessionData && sessionData.user) {
+    if (sessionData && sessionData.userId) {
       // 세션에서 사용자 정보가 있으면 store에 저장
       setUserInfo({
-        id: sessionData.user.id,
-        email: sessionData.user.email,
-        nickname: sessionData.user.nickname,
-        profile_image: sessionData.user.profile_image,
+        id: parseInt(sessionData.userId),
+        email: sessionData.email || '',
+        nickname: sessionData.userNickname || '',
+        profile_image: sessionData.profileImage || null,
       });
     } else {
       // 세션이 없으면 사용자 정보 초기화
@@ -28,4 +28,4 @@ export default function SessionProvider({ children, sessionData }: SessionProvid
   }, [sessionData, setUserInfo, clearUser]);
 
   return <>{children}</>;
-} 
+}
