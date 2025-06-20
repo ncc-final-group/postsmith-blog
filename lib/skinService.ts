@@ -30,7 +30,7 @@ export async function getSkins(): Promise<Skin[]> {
 }
 
 // 활성화된 스킨 정보 조회
-export async function getActiveSkin(blogId: number = 1): Promise<Skin> {
+export async function getActiveSkin(blogId: number): Promise<Skin> {
   try {
     const response = await fetch(`/api/skins/active?blogId=${blogId}`, {
       method: 'GET',
@@ -56,7 +56,7 @@ export async function getActiveSkin(blogId: number = 1): Promise<Skin> {
 }
 
 // 활성화된 스킨 ID 조회 (이전 버전과의 호환성)
-export async function getActiveSkinId(blogId: number = 1): Promise<string> {
+export async function getActiveSkinId(blogId: number): Promise<string> {
   try {
     const activeSkin = await getActiveSkin(blogId);
     return activeSkin.id;

@@ -19,10 +19,10 @@ export interface Skin {
 type SkinListProps = {
   skins: Skin[];
   activeSkinId: string;
-  blogId?: number; // 블로그 ID 추가
+  blogId: number; // 블로그 ID (필수)
 };
 
-function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId = 1 }: SkinListProps) {
+function SkinList({ skins, activeSkinId: initialActiveSkinId, blogId }: SkinListProps) {
   const [hoveredSkinId, setHoveredSkinId] = useState<string | null>(null);
   const [activeSkinId, setActiveSkinId] = useState(initialActiveSkinId);
   const [isUpdating, setIsUpdating] = useState<string | null>(null); // 업데이트 중인 스킨 ID

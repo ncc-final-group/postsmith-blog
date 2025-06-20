@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../../../../lib/constants';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const blogId = searchParams.get('blogId') || '1'; // 기본값 1
+    const blogId = searchParams.get('blogId') || '1'; // 기본값 1 (필요시 동적으로 변경)
 
     // Spring API에서 블로그별 활성 테마 가져오기
     const response = await fetch(`${API_BASE_URL}/api/manage/themes/my-themes/${blogId}`, {

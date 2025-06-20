@@ -136,7 +136,7 @@ export default async function SkinPage() {
       <main className="min-h-screen bg-gray-100 py-8">
         <div className="mx-auto max-w-6xl px-4">
           <h1 className="mb-6 text-2xl font-bold text-gray-900">스킨 관리</h1>
-          <SkinList skins={skins} activeSkinId={activeSkin.id} blogId={blogId} />
+          <SkinList skins={skins} activeSkinId={activeSkin.id} blogId={blogId || 1} />
         </div>
       </main>
     );

@@ -435,7 +435,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
 
       const flatCategories = flattenCategories(sortedCategories).map((c) => ({
         ...c,
-        blogId: 1, // 또는 dynamicBlogId
+        blogId: blogId, // 동적 blogId 사용
       }));
 
       const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/categories', {
@@ -451,7 +451,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
       };
 
       const newPostCounts = async (): Promise<Record<number, number>> => {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/categories/posts/counts?blogId=1`);
+        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/categories/posts/counts?blogId=${blogId}`);
         return await res.json();
       };
 
