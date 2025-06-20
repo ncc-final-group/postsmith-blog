@@ -135,13 +135,12 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
   try {
     const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/content-stats/views/${noticeContent.id}`, {
       method: 'GET',
-      cache: 'no-store'
+      cache: 'no-store',
     });
     if (viewsResponse.ok) {
       totalViews = await viewsResponse.json();
     }
   } catch (error) {
-    console.warn('조회수 조회 실패:', error);
     totalViews = 0;
   }
 

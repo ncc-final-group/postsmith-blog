@@ -179,15 +179,15 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   try {
     // Spring API를 직접 호출
     const springApiUrl = `${process.env.NEXT_PUBLIC_API_SERVER}/api/content_stats/views/${content.id}`;
-    
+
     const viewsResponse = await fetch(springApiUrl, {
       method: 'GET',
-      cache: 'no-store'
+      cache: 'no-store',
     });
-    
+
     if (viewsResponse.ok) {
       const result = await viewsResponse.json();
-      
+
       // Spring API 응답 형식에 따라 처리
       if (typeof result === 'number') {
         totalViews = result;
