@@ -1,3 +1,5 @@
+import { useBlogStore } from '../app/store/blogStore';
+
 interface MediaFile {
   id: number;
   fileName: string;
@@ -154,7 +156,7 @@ export async function getMediaFiles(params: { blogId: number; page?: number; siz
 }
 
 // 미디어 파일 상세 조회
-export async function getMediaFile(id: number, blogId: number = 1): Promise<MediaFile> {
+export async function getMediaFile(id: number, blogId: number): Promise<MediaFile> {
   const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
@@ -191,7 +193,7 @@ export async function updateMediaFile(
     description?: string;
     blogId?: number;
   },
-  blogId: number = 1,
+  blogId: number,
 ): Promise<MediaFile> {
   const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'PUT',
@@ -207,7 +209,9 @@ export async function updateMediaFile(
 }
 
 // 미디어 파일 삭제
-export async function deleteMediaFile(id: number, blogId: number = 1): Promise<void> {
+export async function deleteMediaFile(id: number): Promise<void> {
+  const blogId = useBlogStore.getState().blogId || 1;
+
   const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -219,7 +223,9 @@ export async function deleteMediaFile(id: number, blogId: number = 1): Promise<v
 }
 
 // 여러 미디어 파일 삭제
-export async function deleteMediaFiles(ids: number[], blogId: number = 1): Promise<void> {
+export async function deleteMediaFiles(ids: number[]): Promise<void> {
+  const blogId = useBlogStore.getState().blogId || 1;
+
   const response = await fetch(`${API_BASE_URL}/api/media/batch?blogId=${blogId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },

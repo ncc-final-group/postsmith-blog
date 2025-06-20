@@ -16,6 +16,7 @@ import {
   type MediaStats,
   updateMediaFile,
 } from '../../../lib/mediaService';
+import { useBlogStore } from '../../store/blogStore';
 
 export default function MediaManagePage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -36,8 +37,8 @@ export default function MediaManagePage() {
   const [isComposing, setIsComposing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 임시 블로그 ID (실제로는 블로그 정보에서 가져올 것)
-  const blogId = 1;
+  // 블로그 ID를 store에서 가져오기
+  const blogId = useBlogStore((state) => state.blogId) || 1;
 
   const loadMediaFiles = useCallback(async () => {
     try {
@@ -133,7 +134,7 @@ export default function MediaManagePage() {
     if (!editingFile) return;
 
     try {
-      await updateMediaFile(editingFile.id, updateData);
+      await updateMediaFile(editingFile.id, updateData, blogId);
       setEditingFile(null);
       await loadMediaFiles();
     } catch (err) {
