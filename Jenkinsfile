@@ -42,7 +42,7 @@ spec:
                 script {
                     env.STAGE_SEQUENCE = 0
                     env.IMAGE_NAME = 'postsmith-hub.kr.ncr.ntruss.com/postsmith-blog'
-                    env.IMAGE_TAG = build.getProjectVersion('nodejs')
+                    env.IMAGE_TAG = build.getProjectVersion('nodejs') + "-${env.BUILD_NUMBER}"
                     withCredentials([file(credentialsId: 'postsmith_blog_env', variable: 'APPLICATION_ENV')]) {
                         sh 'cp -f ${APPLICATION_ENV} ./.env'
                     }

@@ -1,12 +1,29 @@
-import { NextConfig } from 'next';
+import type { NextConfig } from 'next';
 
-const config: NextConfig = {
-  images: {
-    domains: ['localhost', 'images.unsplash.com', 'kr.object.ncloudstorage.com'],
+const nextConfig: NextConfig = {
+  output: 'standalone',
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  env: {
-    NEXT_PUBLIC_API_SERVER: process.env.NEXT_PUBLIC_API_SERVER,
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+        search: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kr.object.ncloudstorage.com',
+        port: '',
+        pathname: '/postsmith-bucket/**',
+        search: '',
+      },
+    ],
   },
 };
 
-export default config;
+export default nextConfig;

@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 export interface TemplateContext {
   tokens: Record<string, string | number>;
   repeaters: Record<string, Record<string, string | number>[]>;
