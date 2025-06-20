@@ -34,13 +34,13 @@ const menuItems: MenuItem[] = [
   {
     key: 'comments',
     label: '댓글',
-    subItems: [{ label: '댓글 관리', route: '/comments' }],
+    subItems: [{ label: '댓글 관리', route: '/usermanage/comments' }],
   },
   {
     key: 'customize',
     label: '꾸미기',
     subItems: [
-      { label: '스킨', route: '/usermanage/customize/skin' },
+      { label: '테마', route: '/usermanage/customize/skin' },
       { label: '메뉴 관리', route: '/usermanage/customize/menu' },
     ],
   },
@@ -50,15 +50,9 @@ const menuItems: MenuItem[] = [
     subItems: [{ label: '통계 관리', route: '/usermanage/stats/visits' }],
   },
   {
-    key: 'plugins',
-    label: '플러그인',
-    subItems: [{ label: '플러그인 관리', route: '/plugins' }],
-    route: 'usermanage/plugins',
-  },
-  {
     key: 'admin',
     label: '관리',
-    subItems: [{ label: '블로그', route: '/admin/blog' }],
+    subItems: [{ label: '블로그', route: '/usermanage/blogs' }],
   },
 ];
 
@@ -77,20 +71,20 @@ export default function Sidebar() {
           </figure>
         </div>
         <div className="flex h-18 flex-col border border-t-0 border-gray-300 bg-white px-5 py-3">
-          <span className="text-base">그냥 뉴비</span>
+          <span className="text-base">성현의 블로그</span>
           <span className="text-sm text-gray-400">sunghyeon@gmail.com</span>
         </div>
       </div>
 
       <div className="mb-1 border border-neutral-700 bg-neutral-700 py-3">
-        <Link href="/" className="ml-5 block text-sm font-medium text-white">
+        <Link href="/edit" className="ml-5 block text-sm font-medium text-white">
           글쓰기
         </Link>
       </div>
 
       <div className="flex flex-col border border-gray-300">
         <div className="border-b border-gray-200 bg-gray-50 px-4 py-5 hover:bg-gray-100">
-          <Link href="/usermanage/stats/visits" className="flex items-center space-x-1 text-sm font-medium">
+          <Link href="/usermanage" className="flex items-center space-x-1 text-sm font-medium">
             <House className="y-5 w-5 text-gray-400" />
             <span>블로그 관리홈</span>
           </Link>
