@@ -16,12 +16,17 @@ export default function ContentStats({ contentId, userId }: ContentStatsProps) {
       try {
         const clientIP = getClientIP();
 
+        console.log('📊 조회수 기록 시작:', { contentId, userId, clientIP });
+
         // 조회수 기록
-        await recordContentView(contentId);
+        const viewResult = await recordContentView(contentId);
+        console.log('✅ 조회수 기록 성공:', viewResult);
 
         // 방문자 수 기록
-        await recordContentVisit(contentId, userId, clientIP);
+        const visitResult = await recordContentVisit(contentId, userId, clientIP);
+        console.log('✅ 방문자 수 기록 성공:', visitResult);
       } catch (error) {
+        console.error('❌ 통계 기록 실패:', error);
         // 통계 기록 실패는 사용자 경험에 영향을 주지 않도록 조용히 처리
       }
     };

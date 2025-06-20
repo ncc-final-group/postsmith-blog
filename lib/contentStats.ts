@@ -29,10 +29,12 @@ export async function recordContentView(contentId: number): Promise<ContentViews
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to record content view: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to record content view: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    return result;
   } catch (error) {
     throw error;
   }
@@ -55,10 +57,12 @@ export async function recordContentVisit(contentId: number, userId?: number, ipA
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to record content visit: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to record content visit: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    return result;
   } catch (error) {
     throw error;
   }

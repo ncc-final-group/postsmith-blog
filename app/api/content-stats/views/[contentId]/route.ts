@@ -1,5 +1,3 @@
-import { assert } from 'console';
-
 import { NextRequest, NextResponse } from 'next/server';
 
 import { selectSQL } from '../../../../_lib/mysql/db';
@@ -26,6 +24,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(totalViews);
   } catch (error) {
-    assert(false, 'error');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -174,8 +174,34 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   // 12. 분류 없음 글 개수 조회
   const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
 
-  // 13. 총 조회수는 클라이언트에서 처리 (서버에서는 0으로 초기화)
-  const totalViews = 0;
+  // 13. 실제 조회수 조회 (서버 사이드)
+  let totalViews = 0;
+  try {
+    // Spring API를 직접 호출
+    const springApiUrl = `${process.env.NEXT_PUBLIC_API_SERVER}/api/content_stats/views/${content.id}`;
+    
+    const viewsResponse = await fetch(springApiUrl, {
+      method: 'GET',
+      cache: 'no-store'
+    });
+    
+    if (viewsResponse.ok) {
+      const result = await viewsResponse.json();
+      
+      // Spring API 응답 형식에 따라 처리
+      if (typeof result === 'number') {
+        totalViews = result;
+      } else if (result && typeof result.totalViews !== 'undefined') {
+        totalViews = result.totalViews;
+      } else if (result && typeof result.total_views !== 'undefined') {
+        totalViews = result.total_views;
+      } else {
+        totalViews = 0;
+      }
+    }
+  } catch (error) {
+    totalViews = 0;
+  }
 
   // 14. 템플릿 데이터 구성
   const templateData = {
