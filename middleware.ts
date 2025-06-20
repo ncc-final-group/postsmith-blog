@@ -13,7 +13,7 @@ export async function middleware(req: NextRequest) {
 
   if (url.pathname.startsWith('/usermanage')) {
     if (!sessionId) {
-      return NextResponse.redirect(new URL(`http://${process.env.NEXT_PUBLIC_BASE_URL}/login`, req.url));
+      return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_BASE_URL}/login`, req.url));
     }
   }
 

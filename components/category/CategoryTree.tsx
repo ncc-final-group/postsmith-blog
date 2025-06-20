@@ -438,20 +438,20 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
         blogId: 1, // 또는 dynamicBlogId
       }));
 
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/categories', {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/categories', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(flatCategories),
       });
 
       const fetchNewTree = async (): Promise<Category[]> => {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/categories/tree');
+        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/categories/tree');
         if (!res.ok) throw new Error('Failed to fetch categories');
         return await res.json();
       };
 
       const newPostCounts = async (): Promise<Record<number, number>> => {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + `/api/categories/posts/counts?blogId=1`);
+        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/categories/posts/counts?blogId=1`);
         return await res.json();
       };
 
@@ -542,7 +542,7 @@ export function CategoryTree({ categories, onMoveItem, blogId }: CategoryTreePro
 
   useEffect(() => {
     const fetchPostCounts = async () => {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + `/api/categories/posts/counts?blogId=${blogId}`);
+      const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/categories/posts/counts?blogId=${blogId}`);
       const counts: Record<number, number> = await res.json();
 
       const mergeCounts = (categories: Category[]): Category[] => {

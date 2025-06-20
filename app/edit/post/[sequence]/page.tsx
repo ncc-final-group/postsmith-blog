@@ -20,6 +20,7 @@ import { BLOG_API_URL } from '../../../../lib/constants';
 import { getSubdomain } from '../../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
+import DraftContentsList from '@components/DraftContentsList';
 import EditHeader from '@components/EditHeader';
 import Editor from '@components/Editor';
 import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
@@ -331,22 +332,25 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
 
       {/* 버튼 영역 */}
       <div className="flex justify-between gap-4">
-        <button
-          type="button"
-          onClick={handleTempSave}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-gray-500 text-white hover:bg-gray-600'
-          }`}
-        >
-          {isLoading ? '저장 중...' : '임시 저장'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleTempSave}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+          >
+            {isLoading ? '저장 중...' : '임시 저장'}
+          </button>
+          <DraftContentsList contentType="POSTS" />
+        </div>
 
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isLoading}
-          className={`rounded-md px-6 py-2 font-medium transition-colors ${
+          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
             isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
@@ -425,6 +429,7 @@ export default function PostEditPage({ params }: { params: Promise<{ sequence: s
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sequence, setSequence] = useState<number>(0);
+  const router = useRouter();
 
   // 기존 글 데이터 불러오기
   useEffect(() => {
@@ -456,6 +461,21 @@ export default function PostEditPage({ params }: { params: Promise<{ sequence: s
 
         if (result.success && result.data) {
           const contentData = result.data as Content;
+
+          // POSTS 타입인지 확인하고, 다른 타입이면 해당 편집 페이지로 리다이렉트
+          if (contentData.type !== 'POSTS') {
+            if (contentData.type === 'PAGE') {
+              router.push(`/edit/page/${sequenceNum}`);
+              return;
+            } else if (contentData.type === 'NOTICE') {
+              router.push(`/edit/notice/${sequenceNum}`);
+              return;
+            } else {
+              setError('알 수 없는 콘텐츠 타입입니다.');
+              return;
+            }
+          }
+
           setContent(contentData);
           setTitle(contentData.title || '');
           setCategory(contentData.category_id?.toString() || '');
