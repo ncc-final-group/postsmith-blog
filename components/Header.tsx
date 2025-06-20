@@ -20,13 +20,6 @@ export default function Header() {
             <Link href={`${baseUrl}/theme`}>테마</Link>
           </nav>
         </div>
-
-        {/* 오른쪽: 로그인 버튼 */}
-        <div className="hidden md:block">
-          <Link href="/" className="rounded-full bg-black px-4 py-2 text-white">
-            로그인
-          </Link>
-        </div>
       </div>
     </header>
   );
