@@ -53,7 +53,7 @@ export default function CommentsData() {
   const fetchComments = async (blogId: number) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies?blogId=${blogId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies/${blogId}`)
       if (!res.ok) throw new Error('댓글을 불러오는 데 실패했습니다.');
       const data = await res.json();
       setCommentData({
