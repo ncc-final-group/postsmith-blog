@@ -21,11 +21,11 @@ export default function SessionProvider({ children, sessionData }: SessionProvid
 
   useEffect(() => {
     if (!isClient) return; // 클라이언트에서만 실행
-    
+
     if (sessionData && sessionData.userId) {
       // 1. sessionStore에 저장
       setSession(sessionData);
-      
+
       // 2. userStore에도 직접 저장 (더 확실한 동기화)
       if (sessionData.email && sessionData.userNickname) {
         setUserInfo({
@@ -38,7 +38,7 @@ export default function SessionProvider({ children, sessionData }: SessionProvid
     } else {
       // 1. sessionStore 초기화
       clearSession();
-      
+
       // 2. userStore도 초기화
       clearUser();
     }
@@ -46,4 +46,3 @@ export default function SessionProvider({ children, sessionData }: SessionProvid
 
   return <>{children}</>;
 }
- 

@@ -141,7 +141,7 @@ export default function MediaUploadPage() {
 
   // 임시 사용자 ID
   const userId = 1;
-  
+
   // blogStore에서 blogId 가져오기
   const blogId = useBlogStore((state) => state.blogId);
 

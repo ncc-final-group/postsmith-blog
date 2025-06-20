@@ -17,4 +17,4 @@ const DynamicSessionProvider = dynamic(() => import('./SessionProvider'), {
 
 export default function ClientSessionProvider(props: ClientSessionProviderProps) {
   return <DynamicSessionProvider {...props} />;
-} 
+}

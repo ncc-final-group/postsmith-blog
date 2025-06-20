@@ -21,9 +21,9 @@ import { $getRoot } from 'lexical';
 
 import { SET_BG_COLOR_COMMAND, SET_FONT_FAMILY_COMMAND, SET_IMAGE_ALIGNMENT_COMMAND, SET_TEXT_COLOR_COMMAND } from './Editor';
 import { $createCustomFileNode, $createCustomImageNode, $createCustomVideoNode } from './nodes';
+import { useBlogStore } from '../app/store/blogStore';
 import { getMediaFiles, type MediaFile } from '../lib/mediaService';
 import { uploadFileToServer, uploadImageToServer, uploadVideoToServer } from '../lib/uploadService';
-import { useBlogStore } from '../app/store/blogStore';
 
 // 파일 크기 포맷팅
 const formatFileSize = (bytes: number): string => {
@@ -1383,7 +1383,7 @@ interface EditHeaderProps {
 
 export default function EditHeader({ blogId: propBlogId }: EditHeaderProps) {
   const [editor] = useLexicalComposerContext();
-  
+
   // blogStore에서 실제 blogId 가져오기
   const storeBlogId = useBlogStore((state) => state.blogId);
   const blogId = storeBlogId || propBlogId || 0; // store > props > fallback

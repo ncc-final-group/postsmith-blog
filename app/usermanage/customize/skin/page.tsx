@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { useBlogStore } from '../../../store/blogStore';
+
 import SkinList, { Skin } from '@components/SkinList';
 
 // Spring API의 ThemesDto 타입 정의
@@ -18,14 +20,7 @@ interface ThemesDto {
 }
 
 export default function SkinPage() {
-  const {
-    blogId,
-    blogInfo,
-    currentTheme,
-    isLoading,
-    error,
-    fetchCurrentTheme,
-  } = useBlogStore();
+  const { blogId, blogInfo, currentTheme, isLoading, error, fetchCurrentTheme } = useBlogStore();
 
   const [availableThemes, setAvailableThemes] = useState<Skin[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
@@ -69,10 +64,7 @@ export default function SkinPage() {
         setLocalError(null);
 
         // 현재 테마와 사용 가능한 테마 목록을 병렬로 로드
-        const [, themes] = await Promise.all([
-          fetchCurrentTheme(blogId),
-          fetchAvailableThemes(),
-        ]);
+        const [, themes] = await Promise.all([fetchCurrentTheme(blogId), fetchAvailableThemes()]);
 
         setAvailableThemes(themes);
       } catch (err) {
@@ -104,17 +96,14 @@ export default function SkinPage() {
       <main className="min-h-screen bg-gray-100 py-8">
         <div className="mx-auto max-w-6xl px-4">
           <h1 className="mb-6 text-2xl font-bold text-gray-900">스킨 관리</h1>
-          <div className="rounded bg-red-100 p-4 mb-4">
+          <div className="mb-4 rounded bg-red-100 p-4">
             <p className="text-red-800">오류 발생:</p>
             <p className="text-red-600">{localError || error}</p>
           </div>
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
               <p className="mb-4 text-red-600">스킨 데이터를 불러오는 중 오류가 발생했습니다.</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-              >
+              <button onClick={() => window.location.reload()} className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
                 다시 시도
               </button>
             </div>
@@ -142,11 +131,7 @@ export default function SkinPage() {
       <div className="mx-auto max-w-6xl px-4">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">스킨 관리</h1>
 
-        <SkinList 
-          skins={availableThemes} 
-          activeSkinId={currentTheme?.themeId?.toString() || '1'} 
-          blogId={blogId} 
-        />
+        <SkinList skins={availableThemes} activeSkinId={currentTheme?.themeId?.toString() || '1'} blogId={blogId} />
       </div>
     </main>
   );

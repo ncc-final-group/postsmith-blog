@@ -13,7 +13,7 @@ export default function AuthStatus() {
   const userId = getCurrentUserId();
   const user = getCurrentUser();
   const authenticated = isUserAuthenticated();
-  
+
   // 세션 편의 함수들
   const session = getCurrentSession();
   const sessionUserId = getSessionUserId();
@@ -32,14 +32,12 @@ export default function AuthStatus() {
   return (
     <div className="space-y-4">
       {/* 동기화 상태 표시 */}
-      <div className={`rounded-lg border p-4 ${isSynced ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+      <div className={`rounded-lg border p-4 ${isSynced ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
         <h3 className="mb-2 font-semibold">스토어 동기화 상태</h3>
         <div className="space-y-1 text-sm">
           <p>
-            <strong>상태:</strong> 
-            <span className={isSynced ? 'text-green-700' : 'text-yellow-700'}>
-              {isSynced ? ' ✅ 동기화됨' : ' ⚠️ 동기화 필요'}
-            </span>
+            <strong>상태:</strong>
+            <span className={isSynced ? 'text-green-700' : 'text-yellow-700'}>{isSynced ? ' ✅ 동기화됨' : ' ⚠️ 동기화 필요'}</span>
           </p>
           <p>
             <strong>Session ID:</strong> {sessionData?.userId || '없음'}

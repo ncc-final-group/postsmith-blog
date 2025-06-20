@@ -45,7 +45,7 @@ export default function MediaManagePage() {
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       const response = await getMediaFiles({
@@ -66,7 +66,7 @@ export default function MediaManagePage() {
 
   const loadMediaStats = useCallback(async () => {
     if (!blogId) return;
-    
+
     try {
       const stats = await getMediaStats(blogId);
       setMediaStats(stats);

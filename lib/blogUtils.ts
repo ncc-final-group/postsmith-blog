@@ -26,4 +26,4 @@ export async function getBlogAddress(): Promise<string> {
     // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
     return 'testblog';
   }
-} 
+}

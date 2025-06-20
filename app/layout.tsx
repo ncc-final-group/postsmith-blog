@@ -1,13 +1,14 @@
 import { Geist, Geist_Mono } from 'next/font/google';
 
 import type { Metadata } from 'next';
+
 import { headers } from 'next/headers';
 
 import './globals.css';
 import '../styles/editor-content.css';
 import BlogProvider from '../components/BlogProvider';
-import ConditionalUserDropdown from '../components/ConditionalUserDropdown';
 import ClientSessionProvider from '../components/ClientSessionProvider';
+import ConditionalUserDropdown from '../components/ConditionalUserDropdown';
 import { getSessionFromRedis } from '../lib/sessionUtils';
 import { getBlogByAddress } from './api/tbBlogs';
 
@@ -33,10 +34,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // 현재 호스트에서 subdomain 추출
   const headersList = await headers();
   const hostname = headersList.get('host') || '';
-  
+
   let subdomain = '';
   let blog = null;
-  
+
   if (hostname.includes('.postsmith.kro.kr')) {
     subdomain = hostname.split('.postsmith.kro.kr')[0];
   } else if (hostname.includes('.')) {
@@ -61,7 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body id="tt-body-index">
         <ClientSessionProvider sessionData={sessionData || null}>
           {blog ? (
-            <BlogProvider 
+            <BlogProvider
               blogInfo={{
                 id: blog.id,
                 nickname: blog.nickname,

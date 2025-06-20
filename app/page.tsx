@@ -8,12 +8,13 @@ import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import BlogLayout from '@components/BlogLayout';
 import SafeBlogProvider from '../components/SafeBlogProvider';
 import { getCurrentUser } from '../lib/auth';
+import { getBlogAddress } from '../lib/blogUtils';
 import { renderTemplate } from '../lib/template/TemplateEngine';
 import { getThemeByBlogId } from '../lib/themeService';
-import { getBlogAddress } from '../lib/blogUtils';
+
+import BlogLayout from '@components/BlogLayout';
 
 export async function generateMetadata(): Promise<Metadata> {
   // 요청 호스트에서 블로그 주소 추출
@@ -46,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
-  
+
   // 서버에서 블로그 주소 추출하여 블로그 정보 조회
   const subdomain = await getBlogAddress();
   const blog = await getBlogByAddress(subdomain);

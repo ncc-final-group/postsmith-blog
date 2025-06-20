@@ -14,7 +14,7 @@ export interface IUserSession {
 
 interface SessionState {
   sessionData: IUserSession | null;
-  
+
   // 세션 설정 (서버에서 받은 데이터 저장용)
   setSession: (session: IUserSession) => void;
   // 세션 초기화
@@ -23,7 +23,7 @@ interface SessionState {
 
 export const useSessionStore = create<SessionState>()((set) => ({
   sessionData: null,
-  
+
   setSession: (session: IUserSession) => set({ sessionData: session }),
 
   clearSession: () => set({ sessionData: null }),
@@ -53,4 +53,4 @@ export const getCurrentUserNickname = (): string | null => {
 export const getAccessToken = (): string | null => {
   const { sessionData } = useSessionStore.getState();
   return sessionData?.accessToken || null;
-}; 
+};
