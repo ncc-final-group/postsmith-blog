@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 
-import { IUserSession } from '@app/store/userStore';
+import { IUserSession } from '@app/store/sessionStore';
 import redisClient from '@lib/redis';
 
 /**

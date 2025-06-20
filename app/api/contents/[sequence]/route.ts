@@ -105,7 +105,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ seq
     }
 
     // Spring API로 업데이트 요청
-    const springResponse = await fetch(`http://localhost:8080/api/contents/${existingContent.id}`, {
+    const springResponse = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/contents/${existingContent.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

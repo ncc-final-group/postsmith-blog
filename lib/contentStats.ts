@@ -1,6 +1,6 @@
 // 조회수 및 방문자 수 관리 API
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || '';
 
 // 조회수 DTO 인터페이스
 export interface ContentViewsDto {

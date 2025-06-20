@@ -1,42 +1,14 @@
 import { BarChart3, Edit, FileImage, MessageSquare, Settings, Users } from 'lucide-react';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 
 import { getCurrentUser } from '../../lib/auth';
 import { getAdminSidebarData, getSidebarData } from '../api/sidebarData';
 import { getBlogByAddress } from '../api/tbBlogs';
+import { getBlogAddress } from '../../lib/blogUtils';
 
 import HotPosts from '@components/HotPosts';
 import RecentComments from '@components/RecentComments';
 import RecentPosts from '@components/RecentPosts';
-
-// 블로그 주소 추출 함수
-async function getBlogAddress(): Promise<string> {
-  try {
-    const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3000';
-
-    // address.localhost:3000 형태에서 address 추출
-    if (host.includes('.localhost')) {
-      const subdomain = host.split('.localhost')[0];
-      return subdomain;
-    }
-
-    // address.domain.com 형태에서 address 추출
-    if (host.includes('.')) {
-      const parts = host.split('.');
-      if (parts.length >= 2) {
-        return parts[0];
-      }
-    }
-
-    // 기본값 (개발 환경)
-    return 'testblog';
-  } catch (error) {
-    // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
-    return 'testblog';
-  }
-}
 
 // HTML 컨텐츠에서 첫 번째 이미지 URL 추출하는 함수
 function extractFirstImageFromHtml(htmlContent: string): string | undefined {

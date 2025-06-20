@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState } from 'react';
+
+import { useBlogStore } from '../../../store/blogStore';
 // 업로드 서비스 함수들 (임시로 여기에 정의)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_SERVER || '';
 
 interface UploadResponse {
   success: boolean;
@@ -139,6 +141,9 @@ export default function MediaUploadPage() {
 
   // 임시 사용자 ID
   const userId = 1;
+  
+  // blogStore에서 blogId 가져오기
+  const blogId = useBlogStore((state) => state.blogId);
 
   const getFileType = (file: File): 'image' | 'video' | 'file' => {
     if (file.type.startsWith('image/')) return 'image';
@@ -236,13 +241,13 @@ export default function MediaUploadPage() {
 
       switch (item.type) {
         case 'image':
-          result = await uploadImageToServer(item.file, item.altText, userId);
+          result = await uploadImageToServer(item.file, item.altText, userId, blogId || undefined);
           break;
         case 'video':
-          result = await uploadVideoToServer(item.file, item.altText, userId);
+          result = await uploadVideoToServer(item.file, item.altText, userId, blogId || undefined);
           break;
         case 'file':
-          result = await uploadFileToServer(item.file, item.displayName, userId);
+          result = await uploadFileToServer(item.file, item.displayName, userId, blogId || undefined);
           break;
         default:
           throw new Error('지원하지 않는 파일 타입입니다.');

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 
 import BlogLayout from '../../../components/BlogLayout';
+import ContentStats from '../../../components/ContentStats';
 import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
@@ -211,6 +212,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
 
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+      <ContentStats contentId={pageContent.id} userId={currentUser?.id} />
       <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );
