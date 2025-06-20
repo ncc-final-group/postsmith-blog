@@ -5,6 +5,8 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { v4 as uuidv4 } from 'uuid'; // 만약 uuid 라이브러리 써도 좋음
 
+import { useBlogStore } from '../../../store/blogStore';
+
 import AddMenuForm from '@components/menu/AddMenuForm';
 import MenuList from '@components/menu/MenuList';
 import { MenuType } from '@components/menu/Types';
@@ -43,6 +45,9 @@ const MenuManagerPage = () => {
 
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [pages, setPages] = useState<{ id: number; title: string }[]>([]);
+
+  // 블로그 ID를 store에서 가져오기
+  const blogId = useBlogStore((state) => state.blogId) || 1;
 
   // 메뉴 상태 갱신 함수 (변경사항 체크 포함)
   const updateMenus = (newMenus: MenuType[]) => {
@@ -96,15 +101,15 @@ const MenuManagerPage = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/menus?blogId=${blogId}`).then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus/categories?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/menus/categories?blogId=${blogId}`).then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus/pages?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/menus/pages?blogId=${blogId}`).then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
@@ -136,7 +141,7 @@ const MenuManagerPage = () => {
     // 음수 id 제거
     const menusToSave = menus.map(({ id, ...rest }) => (id < 0 ? rest : { id, ...rest }));
 
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus?blogId=1', {
+    fetch(process.env.NEXT_PUBLIC_API_SERVER + `/api/menus?blogId=${blogId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(menusToSave),

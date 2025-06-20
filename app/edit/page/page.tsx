@@ -17,10 +17,10 @@ import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { BLOG_API_URL } from '../../../lib/constants';
-import { getSubdomain } from '../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import { SpanNode as CCSpanNode } from '@components/CustomSpanNode';
+import DraftContentsList from '@components/DraftContentsList';
 import EditHeader from '@components/EditHeader';
 import Editor from '@components/Editor';
 import { CustomFileNode, CustomImageNode, CustomVideoNode } from '@components/nodes';
@@ -162,7 +162,9 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
 
     try {
       // 서브도메인 가져오기
-      const subdomain = getSubdomain();
+      const hostname = window.location.hostname;
+      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
+
       if (!subdomain) {
         alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
         return;
@@ -254,9 +256,27 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
 
     try {
       // 서브도메인 가져오기
-      const subdomain = getSubdomain();
+      const hostname = window.location.hostname;
+      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
+
       if (!subdomain) {
         alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
+        return;
+      }
+
+      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
+      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
+      if (!blogResponse.ok) {
+        alert('블로그 정보를 가져올 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      const blogData = await blogResponse.json();
+      const blogId = blogData?.id || blogData?.data?.id;
+
+      if (!blogId) {
+        alert('블로그 ID를 찾을 수 없습니다.');
+        setIsLoading(false);
         return;
       }
 
@@ -267,25 +287,43 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         html = $generateHtmlFromNodes(editor, null);
       });
 
+      // 에디터 내용이 비어있는지 확인
+      if (!html || html === '<p class="mb-2"></p>') {
+        alert('내용을 입력해주세요.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 슬러그 유효성 검사
+      if (!slug || slug.trim() === '') {
+        alert('페이지 URL을 입력해주세요.');
+        setIsLoading(false);
+        return;
+      }
+
       const requestBody = {
+        blogId: blogId,
+        category: null,
         title: title || '제목 없음',
         content: html,
-        slug: slug || 'untitled',
-        type: 'page',
-        showInMenu,
-        isDraft: true, // 임시 저장 플래그
+        postType: 'PAGE',
+        isTemp: true, // 임시 저장 플래그
+        isPublic: false,
       };
 
       // 임시 저장 요청
-      const response = await fetch(`${BLOG_API_URL}/${subdomain}/temp`, {
+      const response = await fetch('/api/contents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
+      }
 
       alert('임시 저장 완료!');
     } catch (err) {
@@ -302,22 +340,25 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
 
       {/* 버튼 영역 */}
       <div className="flex justify-between gap-4">
-        <button
-          type="button"
-          onClick={handleTempSave}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-gray-500 text-white hover:bg-gray-600'
-          }`}
-        >
-          {isLoading ? '저장 중...' : '임시 저장'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleTempSave}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+          >
+            {isLoading ? '저장 중...' : '임시 저장'}
+          </button>
+          <DraftContentsList contentType="PAGE" />
+        </div>
 
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isLoading}
-          className={`rounded-md px-6 py-2 font-medium transition-colors ${
+          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
             isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
           }`}
         >

@@ -16,6 +16,7 @@ import {
   type MediaStats,
   updateMediaFile,
 } from '../../../lib/mediaService';
+import { useBlogStore } from '../../store/blogStore';
 
 export default function MediaManagePage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -36,14 +37,14 @@ export default function MediaManagePage() {
   const [isComposing, setIsComposing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 임시 사용자 ID (실제로는 인증된 사용자 정보에서 가져올 것)
-  const userId = 1;
+  // 블로그 ID를 store에서 가져오기
+  const blogId = useBlogStore((state) => state.blogId) || 1;
 
   const loadMediaFiles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getMediaFiles({
-        userId,
+        blogId,
         page: currentPage,
         size: 20,
         fileType: filterType || undefined,
@@ -56,17 +57,17 @@ export default function MediaManagePage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, filterType, searchKeyword, userId]);
+  }, [currentPage, filterType, searchKeyword, blogId]);
 
   const loadMediaStats = useCallback(async () => {
     try {
-      const stats = await getMediaStats(userId);
+      const stats = await getMediaStats(blogId);
       setMediaStats(stats);
     } catch (err) {
       // 미디어 통계 로드 실패 시 처리
       setError(err instanceof Error ? err.message : '통계 로드에 실패했습니다.');
     }
-  }, [userId]);
+  }, [blogId]);
 
   useEffect(() => {
     loadMediaFiles();
@@ -133,7 +134,7 @@ export default function MediaManagePage() {
     if (!editingFile) return;
 
     try {
-      await updateMediaFile(editingFile.id, updateData);
+      await updateMediaFile(editingFile.id, updateData, blogId);
       setEditingFile(null);
       await loadMediaFiles();
     } catch (err) {

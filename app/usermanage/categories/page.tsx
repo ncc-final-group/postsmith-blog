@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
+import { useBlogStore } from '../../store/blogStore';
+
 import { Category, CategoryTree } from '@components/category/CategoryTree';
 
 // depth 값을 설정하는 함수
@@ -21,6 +23,9 @@ export default function CategoriesPage() {
   const [nextTempId, setNextTempId] = useState(-1); // 신규 생성 시 음수 ID 관리용
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 블로그 ID를 store에서 가져오기
+  const blogId = useBlogStore((state) => state.blogId) || 1;
 
   function updateSequence(categories: Category[]): Category[] {
     return categories.map((cat, index) => ({
@@ -42,7 +47,7 @@ export default function CategoriesPage() {
     async function fetchCategories() {
       try {
         setLoading(true);
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/categories/tree'); // 백엔드 카테고리 API 경로
+        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/categories/tree'); // 백엔드 카테고리 API 경로
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
         const data = await res.json();
         // depth 값을 설정하여 저장
@@ -64,7 +69,7 @@ export default function CategoriesPage() {
     <DndProvider backend={HTML5Backend}>
       <div className="max-w-6xl p-6">
         <h1 className="mb-4 text-xl font-bold text-gray-800">카테고리 관리</h1>
-        <CategoryTree categories={treeData} onMoveItem={handleMoveItem} blogId={1} />
+        <CategoryTree categories={treeData} onMoveItem={handleMoveItem} blogId={blogId} />
       </div>
     </DndProvider>
   );

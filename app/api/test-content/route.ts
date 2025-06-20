@@ -4,7 +4,7 @@ import { getContentByBlogIdAndSequence, getContentsByBlogId } from '../tbContent
 
 export async function GET(request: NextRequest) {
   try {
-    const blogId = 1; // '주소' 블로그의 ID
+    const blogId = 1; // 테스트용 블로그 ID (실제로는 동적으로 설정)
 
     // 해당 블로그의 모든 컨텐츠 조회
     const allContents = await getContentsByBlogId(blogId);

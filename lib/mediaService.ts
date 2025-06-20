@@ -1,3 +1,5 @@
+import { useBlogStore } from '../app/store/blogStore';
+
 interface MediaFile {
   id: number;
   fileName: string;
@@ -90,9 +92,9 @@ function determineMimeType(filename: string, fileType: string): string {
 }
 
 // 미디어 파일 목록 조회
-export async function getMediaFiles(params: { userId: number; page?: number; size?: number; fileType?: string; search?: string }): Promise<MediaListResponse> {
+export async function getMediaFiles(params: { blogId: number; page?: number; size?: number; fileType?: string; search?: string }): Promise<MediaListResponse> {
   const searchParams = new URLSearchParams({
-    userId: params.userId.toString(),
+    blogId: params.blogId.toString(),
     page: (params.page || 0).toString(),
     size: (params.size || 20).toString(),
   });
@@ -154,8 +156,8 @@ export async function getMediaFiles(params: { userId: number; page?: number; siz
 }
 
 // 미디어 파일 상세 조회
-export async function getMediaFile(id: number, userId: number = 1): Promise<MediaFile> {
-  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
+export async function getMediaFile(id: number, blogId: number): Promise<MediaFile> {
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -191,9 +193,9 @@ export async function updateMediaFile(
     description?: string;
     blogId?: number;
   },
-  userId: number = 1,
+  blogId: number,
 ): Promise<MediaFile> {
-  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updateData),
@@ -207,8 +209,10 @@ export async function updateMediaFile(
 }
 
 // 미디어 파일 삭제
-export async function deleteMediaFile(id: number, userId: number = 1): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/media/${id}?userId=${userId}`, {
+export async function deleteMediaFile(id: number): Promise<void> {
+  const blogId = useBlogStore.getState().blogId || 1;
+
+  const response = await fetch(`${API_BASE_URL}/api/media/${id}?blogId=${blogId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -219,8 +223,10 @@ export async function deleteMediaFile(id: number, userId: number = 1): Promise<v
 }
 
 // 여러 미디어 파일 삭제
-export async function deleteMediaFiles(ids: number[], userId: number = 1): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/media/batch?userId=${userId}`, {
+export async function deleteMediaFiles(ids: number[]): Promise<void> {
+  const blogId = useBlogStore.getState().blogId || 1;
+
+  const response = await fetch(`${API_BASE_URL}/api/media/batch?blogId=${blogId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(ids),
@@ -232,8 +238,8 @@ export async function deleteMediaFiles(ids: number[], userId: number = 1): Promi
 }
 
 // 미디어 통계 조회
-export async function getMediaStats(userId: number): Promise<MediaStats> {
-  const response = await fetch(`${API_BASE_URL}/api/media/stats?userId=${userId}`, {
+export async function getMediaStats(blogId: number): Promise<MediaStats> {
+  const response = await fetch(`${API_BASE_URL}/api/media/stats?blogId=${blogId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });

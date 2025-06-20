@@ -48,9 +48,11 @@ export async function POST(request: Request) {
     // blogId가 전달되고 서브도메인이 없는 경우 Spring에서 주소 조회
     if (!blogAddress && body.blogId) {
       try {
-        const blogRes = await fetch(`http://localhost:8080/api/blog/${body.blogId}`);
+        const SPRING_API_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
+        const blogRes = await fetch(`${SPRING_API_URL}/api/blog/${body.blogId}`);
         if (blogRes.ok) {
           const blogJson = await blogRes.json();
+          // Spring API가 BlogsEntity를 직접 반환하므로 address 필드 직접 접근
           if (blogJson && blogJson.address) {
             blogAddress = blogJson.address as string;
           }
@@ -65,7 +67,8 @@ export async function POST(request: Request) {
     }
 
     // Spring ContentsController 엔드포인트로 전달
-    const springResponse = await fetch(`http://localhost:8080/api/contents/blog/${blogAddress}/create`, {
+    const SPRING_API_URL = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
+    const springResponse = await fetch(`${SPRING_API_URL}/api/contents/blog/${blogAddress}/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
