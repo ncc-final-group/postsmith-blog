@@ -36,14 +36,14 @@ export default function MediaManagePage() {
   const [isComposing, setIsComposing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 임시 사용자 ID (실제로는 인증된 사용자 정보에서 가져올 것)
-  const userId = 1;
+  // 임시 블로그 ID (실제로는 블로그 정보에서 가져올 것)
+  const blogId = 1;
 
   const loadMediaFiles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getMediaFiles({
-        userId,
+        blogId,
         page: currentPage,
         size: 20,
         fileType: filterType || undefined,
@@ -56,17 +56,17 @@ export default function MediaManagePage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, filterType, searchKeyword, userId]);
+  }, [currentPage, filterType, searchKeyword, blogId]);
 
   const loadMediaStats = useCallback(async () => {
     try {
-      const stats = await getMediaStats(userId);
+      const stats = await getMediaStats(blogId);
       setMediaStats(stats);
     } catch (err) {
       // 미디어 통계 로드 실패 시 처리
       setError(err instanceof Error ? err.message : '통계 로드에 실패했습니다.');
     }
-  }, [userId]);
+  }, [blogId]);
 
   useEffect(() => {
     loadMediaFiles();

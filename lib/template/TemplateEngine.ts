@@ -315,6 +315,60 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   const categoriesHtml = `<ul>${buildCategoryList(null)}</ul>`;
   result = result.replace(/\[##_category_##\]/g, categoriesHtml);
 
+  // 카테고리 반복 블록 처리 (계층형 구조 지원)
+  const categoryRepPattern = /<s_category_rep>([\s\S]*?)<\/s_category_rep>/g;
+  let categoryRepHtml = '';
+
+  // 계층형 카테고리 순회 함수
+  const buildCategoryRepList = (parentId: number | null, depth = 0): string => {
+    let html = '';
+    data.categories
+      .filter((cat) => (cat.category_id ?? null) === parentId)
+      .forEach((category) => {
+        const categoryTemplate = result.match(categoryRepPattern)?.[0]?.replace(/<\/?s_category_rep>/g, '') || '';
+        if (categoryTemplate) {
+          // 깊이에 따른 들여쓰기 표시
+          const indentPrefix = depth > 0 ? '&nbsp;&nbsp;'.repeat(depth) + '- ' : '';
+          const depthClass = depth > 0 ? ' sub-cat' : '';
+
+          let catHtml = categoryTemplate
+            .replace(/\[##_category_name_##\]/g, indentPrefix + category.name)
+            .replace(/\[##_category_count_##\]/g, String(category.post_count))
+            .replace(/\[##_category_link_##\]/g, `/category/${encodeURIComponent(category.name)}`)
+            .replace(/class="block py-1"/g, `class="block py-1${depthClass}"`);
+
+          html += catHtml;
+
+          // 하위 카테고리 재귀 처리
+          html += buildCategoryRepList(category.id, depth + 1);
+        }
+      });
+    return html;
+  };
+
+  categoryRepHtml = buildCategoryRepList(null);
+  result = result.replace(categoryRepPattern, categoryRepHtml);
+
+  // 모바일 메뉴용 분류 없음 링크
+  const mobileUncategorizedHtml =
+    data.uncategorizedCount && data.uncategorizedCount > 0
+      ? `<li><a href="/category/uncategorized" class="uncategorized-link block py-1">분류 없음 (${data.uncategorizedCount})</a></li>`
+      : '';
+  result = result.replace(/\[##_mobile_uncategorized_##\]/g, mobileUncategorizedHtml);
+
+  // 모바일 메뉴용 사용자 정의 메뉴
+  const mobileMenuHtml = data.menus
+    .map((menu) => {
+      const target = menu.is_blank ? ' target="_blank"' : '';
+      return `<li><a href="${menu.uri}"${target}>${menu.name}</a></li>`;
+    })
+    .join('');
+  result = result.replace(/\[##_mobile_menu_##\]/g, mobileMenuHtml);
+
+  // 전체 글 개수 치환자 추가
+  const totalCount = data.totalContentsCount || data.contents.length;
+  result = result.replace(/\[##_count_total_##\]/g, String(totalCount));
+
   // 글 목록 반복 블록 처리 - 개별 글 페이지가 아닐 때만 처리
   if (!data.currentArticle) {
     const articleRepPattern = /<s_article_rep>([\s\S]*?)<\/s_article_rep>/g;

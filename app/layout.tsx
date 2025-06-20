@@ -5,7 +5,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import '../styles/editor-content.css';
 import UserProvider from '../components/UserProvider';
+import SessionProvider from '../components/SessionProvider';
 import ConditionalUserDropdown from '../components/ConditionalUserDropdown';
+import { getSessionFromRedis } from '../lib/sessionUtils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -22,14 +24,19 @@ export const metadata: Metadata = {
   description: '블로그 포스팅해주는 서비스인데, 뭐라고 써야 하나. 아무튼 포스팅해주는 서비스임',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Redis에서 세션 정보 읽기
+  const sessionData = await getSessionFromRedis();
+
   return (
     <html lang="ko">
       <body id="tt-body-index">
-        <UserProvider>
-          {children}
-          <ConditionalUserDropdown />
-        </UserProvider>
+        <SessionProvider sessionData={sessionData}>
+          <UserProvider>
+            {children}
+            <ConditionalUserDropdown />
+          </UserProvider>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -7,8 +7,10 @@ export async function POST() {
       message: '로그아웃되었습니다.',
     });
 
-    // 쿠키 삭제
+    // 모든 관련 쿠키 삭제
     response.cookies.delete('userId');
+    response.cookies.delete('CLIENT_SESSION_ID');
+    response.cookies.delete('sessionId');
 
     return response;
   } catch (error) {

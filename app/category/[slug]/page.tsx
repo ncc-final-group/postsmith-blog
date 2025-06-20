@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import BlogLayout from '../../../components/BlogLayout';
-import BlogProvider from '../../../components/BlogProvider';
+import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
 import { getThemeByBlogId } from '../../../lib/themeService';
@@ -122,9 +122,21 @@ export default async function CategoryPage({ params, searchParams }: { params: P
     address: blog.address,
   };
 
+  // 사용자 정보를 IUserSession 형태로 변환
+  const session = currentUser
+    ? {
+        accessToken: undefined,
+        userId: String(currentUser.id),
+        email: currentUser.email,
+        role: currentUser.role,
+        userNickname: currentUser.nickname,
+        profileImage: undefined,
+      }
+    : undefined;
+
   return (
-    <BlogProvider blogId={blog.id} blogInfo={blogInfo}>
-      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} />
-    </BlogProvider>
+    <SafeBlogProvider blogId={blog.id} blogInfo={blogInfo}>
+      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} session={session} />
+    </SafeBlogProvider>
   );
 }

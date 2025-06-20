@@ -1,6 +1,7 @@
 import { assert } from 'console';
 
 import { API_BASE_URL } from '../../../../lib/constants';
+import { getBaseUrl } from '../../../../lib/utils';
 import { getBlogByAddress } from '../../../api/tbBlogs';
 
 import SkinList, { Skin } from '@components/SkinList';
@@ -54,8 +55,10 @@ async function getSkinsServer(): Promise<Skin[]> {
 // 서버 컴포넌트용 활성 스킨 데이터 가져오기 함수
 async function getActiveSkinServer(blogId: number = 1): Promise<Skin> {
   try {
+    // 서버 사이드에서는 내부 API 호출을 위해 localhost:3001 사용
+    const baseUrl = typeof window === 'undefined' ? 'http://localhost:3001' : window.location.origin;
     // 새로운 blog-themes API 사용
-    const response = await fetch(`http://localhost:3000/api/manage/blog-themes/${blogId}`, {
+    const response = await fetch(`${baseUrl}/api/manage/blog-themes/${blogId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',

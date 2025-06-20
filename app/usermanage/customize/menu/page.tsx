@@ -96,15 +96,15 @@ const MenuManagerPage = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/menus?blogId=1').then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus/categories?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/menus/categories?blogId=1').then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus/pages?blogId=1').then((res) => {
+      fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/menus/pages?blogId=1').then((res) => {
         if (!res.ok) throw new Error('네트워크 응답 에러');
         return res.json();
       }),
@@ -136,7 +136,7 @@ const MenuManagerPage = () => {
     // 음수 id 제거
     const menusToSave = menus.map(({ id, ...rest }) => (id < 0 ? rest : { id, ...rest }));
 
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/menus?blogId=1', {
+    fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/menus?blogId=1', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(menusToSave),

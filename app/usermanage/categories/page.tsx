@@ -42,7 +42,7 @@ export default function CategoriesPage() {
     async function fetchCategories() {
       try {
         setLoading(true);
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/categories/tree'); // 백엔드 카테고리 API 경로
+        const res = await fetch(process.env.NEXT_PUBLIC_API_SERVER + '/api/categories/tree'); // 백엔드 카테고리 API 경로
         if (!res.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
         const data = await res.json();
         // depth 값을 설정하여 저장
