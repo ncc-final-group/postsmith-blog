@@ -4,9 +4,9 @@ import type { Metadata } from 'next';
 
 import './globals.css';
 import '../styles/editor-content.css';
-import UserProvider from '../components/UserProvider';
-import SessionProvider from '../components/SessionProvider';
 import ConditionalUserDropdown from '../components/ConditionalUserDropdown';
+import SessionProvider from '../components/SessionProvider';
+import UserProvider from '../components/UserProvider';
 import { getSessionFromRedis } from '../lib/sessionUtils';
 
 const geistSans = Geist({

@@ -211,7 +211,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
 
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} session={session} />
+      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );
 }

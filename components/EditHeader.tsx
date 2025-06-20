@@ -862,7 +862,7 @@ const ExistingMediaModal = ({ onSubmit, onClose, isOpen, fileType, blogId }: Exi
       try {
         setLoading(true);
         const response = await getMediaFiles({
-          userId: 1, // 고정값
+          blogId: blogId ?? 1, // undefined일 때 기본값 0 사용
           page: 0,
           size: 100, // 모달이므로 더 많은 파일 로드
           fileType: fileType,

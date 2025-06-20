@@ -212,7 +212,7 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
 
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} session={session} />
+      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );
 }

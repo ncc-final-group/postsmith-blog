@@ -10,6 +10,15 @@ interface UserInfo {
   profile_image: string | null;
 }
 
+export interface IUserSession {
+  accessToken?: string;
+  userId?: string;
+  email?: string;
+  role?: string;
+  userNickname?: string;
+  profileImage?: string;
+}
+
 interface UserState {
   userId: number | null;
   userInfo: UserInfo | null;
@@ -87,13 +96,13 @@ export const useUserStore = create<UserState>()(
 
         try {
           // TODO: 실제 세션 API 호출로 교체
-          // const response = await fetch('/api/auth/session');
-          // if (!response.ok) {
-          //   throw new Error('세션 정보를 가져올 수 없습니다');
-          // }
-          // const sessionData = await response.json();
+          const response = await fetch('/api/auth/session');
+          if (!response.ok) {
+            throw new Error('세션 정보를 가져올 수 없습니다');
+          }
+          const sessionData = await response.json();
 
-          // 자동 로그인 제거 - 세션이 없으면 로그아웃 상태 유지
+          //자동 로그인 제거 - 세션이 없으면 로그아웃 상태 유지
           set({ isLoading: false });
         } catch (error) {
           // 세션에서 사용자 정보를 가져오는데 실패했습니다
