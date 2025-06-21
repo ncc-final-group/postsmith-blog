@@ -1,20 +1,3 @@
-export function getSubdomain(hostname?: string): string {
-  if (typeof window === 'undefined' && !hostname) return '';
-
-  const host = hostname || window.location.hostname;
-
-  if (host.includes('.localhost')) {
-    return host.split('.localhost')[0];
-  }
-
-  const parts = host.split('.');
-  if (parts.length >= 3) {
-    return parts[0];
-  }
-
-  return '';
-}
-
 export function formatDateToISO(date: Date): string {
   return date.toISOString().split('T')[0];
 }

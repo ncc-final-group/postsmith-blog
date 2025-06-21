@@ -17,7 +17,6 @@ import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { BLOG_API_URL } from '../../../../lib/constants';
-import { getSubdomain } from '../../../../lib/utils';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import DraftContentsList from '@components/DraftContentsList';
