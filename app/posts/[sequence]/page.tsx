@@ -6,12 +6,13 @@ import ContentStats from '../../../components/ContentStats';
 import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
-import { getThemeByBlogId } from '../../../lib/themeService';
+import { getSidebarData } from '../../api/sidebarData';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
+import { getActiveThemeByBlogId } from '../../api/tbThemes';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {
@@ -121,8 +122,8 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   }
 
   // 4. 테마 정보 조회
-  const themeData = await getThemeByBlogId(blog.id);
-  if (!themeData) {
+  const theme = await getActiveThemeByBlogId(blog.id);
+  if (!theme) {
     notFound();
   }
 
@@ -173,6 +174,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
 
   // 12. 분류 없음 글 개수 조회
   const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id, ownerUserId);
+
+  // 12.5. 사이드바 데이터 불러오기
+  const sidebarData = await getSidebarData(blog.id);
 
   // 13. 실제 조회수 조회 (서버 사이드)
   let totalViews = 0;
@@ -315,7 +319,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   };
 
   // 15. 템플릿 렌더링
-  const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
+  const html = renderTemplate(theme.html, theme.css, templateData);
 
   // 16. 블로그 정보 구성
   const blogInfo = {
@@ -339,9 +343,9 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     : undefined;
 
   return (
-    <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo}>
+    <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
       <ContentStats contentId={content.id} userId={currentUser?.id} />
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
+      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );
 }

@@ -23,11 +23,12 @@ export default function BlogInitializer() {
         const blogInfo = JSON.parse(decodeURIComponent(blogInfoCookie));
         setBlogInfo(blogInfo);
       } catch (error) {
+        // JSON 파싱 에러 시에만 클리어
         clearBlog();
       }
-    } else {
-      clearBlog();
     }
+    // ❌ 쿠키가 없다고 해서 스토어를 클리어하지 않음
+    // localStorage의 persist 데이터가 우선되도록 함
   }, [setBlogInfo, clearBlog]);
 
   return null; // 이 컴포넌트는 UI를 렌더링하지 않음
