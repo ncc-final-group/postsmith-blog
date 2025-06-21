@@ -33,8 +33,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   // 현재 호스트에서 subdomain 추출
   const headersList = await headers();
-  const hostname = headersList.get('host') || '';
-
+  const hostname = headersList.get('host')  || headersList.get('authority') || '';
+  console.log('hostname', hostname);
+  
   let subdomain = '';
   let blog = null;
 
@@ -47,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       subdomain = parts[0];
     }
   }
-
+  console.log('subdomain', subdomain);
   // subdomain이 있으면 블로그 정보 조회
   if (subdomain) {
     try {
