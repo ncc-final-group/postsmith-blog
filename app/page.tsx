@@ -8,7 +8,6 @@ import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import SafeBlogProvider from '../components/SafeBlogProvider';
 import { getCurrentUser } from '../lib/auth';
 import { getBlogAddress } from '../lib/blogUtils';
 import { renderTemplate } from '../lib/template/TemplateEngine';
@@ -50,12 +49,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // 서버에서 블로그 주소 추출하여 블로그 정보 조회
   const subdomain = await getBlogAddress();
+
   const blog = await getBlogByAddress(subdomain);
+
   if (!blog) {
     notFound();
   }
 
   const themeData = await getThemeByBlogId(blog.id);
+
   if (!themeData) {
     notFound();
   }
@@ -130,18 +132,5 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   };
 
   const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
-
-  const blogInfo = {
-    id: blog.id,
-    nickname: blog.nickname,
-    description: blog.description,
-    logo_image: blog.logo_image,
-    address: blog.address,
-  };
-
-  return (
-    <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />
-    </SafeBlogProvider>
-  );
+  return <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />;
 }

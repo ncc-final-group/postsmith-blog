@@ -19,7 +19,7 @@ export default function BlogLayout({ blogId, html, css }: BlogLayoutProps) {
   useEffect(() => {
     setMounted(true);
     setBlogId(blogId);
-  }, [blogId, setBlogId]);
+  }, [blogId, setBlogId, html, css]);
 
   useEffect(() => {
     if (!mounted) return;
