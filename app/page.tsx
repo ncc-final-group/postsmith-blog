@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
@@ -10,28 +9,15 @@ import { getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api
 import { getMenusByBlogId } from './api/tbMenu';
 import { getCurrentUser } from '../lib/auth';
 import { getBlogAddress } from '../lib/blogUtils';
-import { renderTemplate } from '../lib/template/TemplateEngine';
-import { getThemeByBlogId } from '../lib/themeService';
+// renderTemplate과 getThemeByBlogId는 이제 BlogThemeLoader에서 사용
 
 import BlogLayout from '@components/BlogLayout';
+import BlogProvider from '@components/BlogProvider';
+import BlogThemeLoader from '@components/BlogThemeLoader';
 
 export async function generateMetadata(): Promise<Metadata> {
-  // 요청 호스트에서 블로그 주소 추출
-  const headerList = await headers();
-  const host = headerList.get('host') || '';
-  const hostNoPort = host.split(':')[0];
-  let address = '';
-  if (hostNoPort.includes('localhost')) {
-    const parts = hostNoPort.split('.');
-    if (parts.length > 1 && parts[0] !== 'localhost') {
-      address = parts[0];
-    }
-  } else {
-    const parts = hostNoPort.split('.');
-    if (parts.length > 0) {
-      address = parts[0];
-    }
-  }
+  // getBlogAddress 함수 사용으로 통일 (중복 제거)
+  const address = await getBlogAddress();
 
   // 블로그 정보 조회
   const blog = await getBlogByAddress(address);
@@ -47,26 +33,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
 
-  // 서버에서 블로그 주소 추출하여 블로그 정보 조회
+  // 현재 블로그와 사용자 정보 가져오기 (usermanage와 동일한 방식)
   const subdomain = await getBlogAddress();
   // eslint-disable-next-line no-console
   console.log('🔍 [DEBUG] subdomain:', subdomain);
   const blog = await getBlogByAddress(subdomain);
+  // eslint-disable-next-line no-console
+  console.log('🔍 [DEBUG] blog:', blog);
+
   if (!blog) {
+    // eslint-disable-next-line no-console
+    console.log('🚨 [DEBUG] Blog not found for subdomain:', subdomain);
     notFound();
   }
 
-  const themeData = await getThemeByBlogId(blog.id);
-
-  if (!themeData) {
-    notFound();
-  }
+  // 테마는 클라이언트에서 BlogStore를 통해 로드
 
   // 현재 로그인한 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
 
-  // 블로그 소유자인지 확인
-  const isOwner = currentUser && currentUser.id === currentUser.id;
+  // 블로그 소유자인지 확인 (usermanage와 동일한 방식)
+  const isOwner = currentUser && currentUser.id === blog.user_id;
   const ownerUserId = isOwner ? currentUser.id : undefined;
 
   const categories = await getCategoriesByBlogId(blog.id);
@@ -131,6 +118,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     })),
   };
 
-  const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
-  return <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(themeData.themeCss)} />;
+  // BlogProvider로 감싸서 blogStore에 blog 정보 저장
+  // BlogThemeLoader가 BlogStore에서 테마를 불러와서 렌더링
+  return (
+    <BlogProvider
+      blogInfo={{
+        id: blog.id,
+        nickname: blog.nickname,
+        description: blog.description,
+        logo_image: blog.logo_image,
+        address: blog.address,
+      }}
+      sidebarData={sidebarData}
+    >
+      <BlogThemeLoader blogId={blog.id} templateData={templateData} />
+    </BlogProvider>
+  );
 }
