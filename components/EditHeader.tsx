@@ -261,31 +261,31 @@ const hrStyles = [
   {
     id: 'solid',
     name: '실선',
-    style: 'border-t border-black my-4',
+    style: 'w-full border-t-2 border-solid border-black my-4 block',
     previewStyle: 'border-t-2 border-black',
   },
   {
     id: 'dashed',
     name: '점선',
-    style: 'border-t border-dashed border-black my-4',
+    style: 'w-full border-t-2 border-dashed border-black my-4 block',
     previewStyle: 'border-t-2 border-dashed border-black',
   },
   {
     id: 'dotted',
     name: '점선 (둥근점)',
-    style: 'border-t border-dotted border-black my-4',
+    style: 'w-full border-t-2 border-dotted border-black my-4 block',
     previewStyle: 'border-t-2 border-dotted border-black',
   },
   {
     id: 'double',
     name: '이중선',
-    style: 'border-t-4 border-double border-black my-4 h-3',
+    style: 'w-full border-t-4 border-double border-black my-4 block',
     previewStyle: 'border-t-4 border-double border-black',
   },
   {
     id: 'thick',
     name: '두꺼운 실선',
-    style: 'border-t-2 border-black my-4',
+    style: 'w-full border-t-4 border-solid border-black my-4 block',
     previewStyle: 'border-t-4 border-black',
   },
 ];
@@ -1466,13 +1466,10 @@ export default function EditHeader({ blogId: propBlogId }: EditHeaderProps) {
   };
 
   const handleAlignment = (alignment: ElementFormatType) => {
-    // 먼저 이미지 정렬을 시도
+    // 항상 텍스트 정렬을 먼저 시도
+    const textAlignmentResult = editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, alignment);
+    // 그 다음 이미지 정렬도 시도 (이미지가 선택된 경우를 위해)
     const imageAlignmentHandled = editor.dispatchCommand(SET_IMAGE_ALIGNMENT_COMMAND, alignment);
-
-    // 이미지 정렬이 처리되지 않았다면 일반 텍스트 정렬 적용
-    if (!imageAlignmentHandled) {
-      editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, alignment);
-    }
   };
 
   const handleTextSize = (size: string) => {
@@ -1784,9 +1781,33 @@ export default function EditHeader({ blogId: propBlogId }: EditHeaderProps) {
   const handleHrSubmit = (style: string) => {
     editor.update(() => {
       const selection = $getSelection();
-      if (!$isRangeSelection(selection)) return;
+      if (!$isRangeSelection(selection)) {
+        return;
+      }
+      // 현재 선택된 텍스트의 색상 가져오기
+      let currentColor = '#000000'; // 기본값
 
-      const hrNode = $createCustomHRNode(style);
+      const nodes = selection.getNodes();
+      if (nodes.length > 0) {
+        const firstNode = nodes[0];
+        if ($isTextNode(firstNode)) {
+          const nodeStyle = firstNode.getStyle();
+          const colorMatch = nodeStyle.match(/color:\s*([^;]+)/);
+          if (colorMatch) {
+            currentColor = colorMatch[1].trim();
+          }
+        }
+      }
+
+      // 선택 영역의 스타일에서 색상 확인
+      if (selection.style) {
+        const styleColorMatch = selection.style.match(/color:\s*([^;]+)/);
+        if (styleColorMatch) {
+          currentColor = styleColorMatch[1].trim();
+        }
+      }
+
+      const hrNode = $createCustomHRNode(style, currentColor);
       selection.insertNodes([hrNode]);
     });
     setHrFormPosition(null);

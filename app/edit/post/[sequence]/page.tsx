@@ -209,7 +209,27 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+
+  // 컴포넌트 마운트 시 기존 글의 공개/비공개 상태를 가져오기
+  useEffect(() => {
+    const fetchContentStatus = async () => {
+      try {
+        const response = await fetch(`/api/contents/${sequence}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setIsPrivate(!result.data.is_public); // is_public의 반대값을 isPrivate로 설정
+          }
+        }
+      } catch (err) {
+        // 에러 발생 시 기본값 유지
+      }
+    };
+
+    fetchContentStatus();
+  }, [sequence]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,7 +266,7 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
         content: html,
         postType: 'POSTS',
         isTemp: false,
-        isPublic: true,
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
       // 디버깅을 위한 로그 추가
@@ -346,16 +366,24 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
           <DraftContentsList contentType="POSTS" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          {isLoading ? '수정 중...' : '수정'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            비공개 글
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isLoading ? '수정 중...' : '수정'}
+          </button>
+        </div>
       </div>
     </div>
   );

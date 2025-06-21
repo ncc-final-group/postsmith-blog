@@ -178,32 +178,40 @@ function PageForm({
   );
 }
 
-function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: string; slug: string; showInMenu: boolean; sequence: number; isUpdate: boolean }) {
+function SaveButtons({
+  title,
+  slug,
+  showInMenu,
+  sequence,
+  isUpdate,
+  content,
+}: {
+  title: string;
+  slug: string;
+  showInMenu: boolean;
+  sequence: number;
+  isUpdate: boolean;
+  content: Content | null;
+}) {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+
+  // 기존 content의 is_public 상태를 기반으로 초기값 설정
+  useEffect(() => {
+    if (content) {
+      setIsPrivate(!content.is_public);
+    }
+  }, [content]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !slug.trim()) {
-      alert('제목과 페이지 URL을 모두 입력해주세요.');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -227,37 +235,27 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
+      // 슬러그 유효성 검사
+      if (!slug || slug.trim() === '') {
+        alert('페이지 URL을 입력해주세요.');
         setIsLoading(false);
         return;
       }
 
       const requestBody = {
-        blogId,
+        category: null,
         title,
         content: html,
         slug: slug.trim(),
         showInMenu,
-        sequence: isUpdate ? sequence : undefined,
+        postType: 'PAGE',
+        isTemp: false,
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
-      // 수정 또는 새 페이지 저장
-      const endpoint = isUpdate ? `/api/contents/${sequence}` : '/api/pages';
-      const method = isUpdate ? 'PUT' : 'POST';
-
-      const response = await fetch(endpoint, {
-        method,
+      // 수정 요청
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -269,19 +267,13 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
         throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
 
-      const responseData = await response.json();
+      alert('페이지가 성공적으로 수정되었습니다.');
 
-      alert(isUpdate ? '페이지가 성공적으로 수정되었습니다.' : '페이지가 성공적으로 저장되었습니다.');
-
-      // 저장 완료 후 페이지로 이동
-      if (responseData.data?.sequence) {
-        router.push(`/posts/${responseData.data.sequence}`);
-      } else {
-        router.push(`/pages/${slug}`);
-      }
+      // 수정 완료 후 해당 페이지로 이동
+      router.push(`/posts/${sequence}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
-      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+      alert('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -292,31 +284,6 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -324,33 +291,20 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
         html = $generateHtmlFromNodes(editor, null);
       });
 
-      // 에디터 내용이 비어있는지 확인
-      if (!html || html === '<p class="mb-2"></p>') {
-        alert('내용을 입력해주세요.');
-        setIsLoading(false);
-        return;
-      }
-
-      // 슬러그 유효성 검사
-      if (!slug || slug.trim() === '') {
-        alert('페이지 URL을 입력해주세요.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
-        blogId: blogId,
         category: null,
         title: title || '제목 없음',
         content: html,
+        slug: slug.trim() || 'untitled',
+        showInMenu,
         postType: 'PAGE',
         isTemp: true, // 임시 저장 플래그
         isPublic: false,
       };
 
-      // 임시 저장 요청
-      const response = await fetch('/api/contents', {
-        method: 'POST',
+      // 임시 저장 요청 (수정 모드에서도 PUT 사용)
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -358,8 +312,7 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       alert('임시 저장 완료!');
@@ -391,16 +344,24 @@ function SaveButtons({ title, slug, showInMenu, sequence, isUpdate }: { title: s
           <DraftContentsList contentType="PAGE" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-        >
-          {isLoading ? (isUpdate ? '수정 중...' : '저장 중...') : isUpdate ? '페이지 수정' : '페이지 저장'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
+            비공개 페이지
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            {isLoading ? '수정 중...' : '페이지 수정'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -589,7 +550,7 @@ export default function PageEditPage({ params }: { params: Promise<{ sequence: s
           <div className="overflow-hidden rounded-lg bg-white shadow-lg">
             <PageForm title={title} setTitle={setTitle} slug={slug} setSlug={setSlug} showInMenu={showInMenu} setShowInMenu={setShowInMenu} content={content} />
             <Editor />
-            <SaveButtons title={title} slug={slug} showInMenu={showInMenu} sequence={sequence} isUpdate={true} />
+            <SaveButtons title={title} slug={slug} showInMenu={showInMenu} sequence={sequence} isUpdate={true} content={content} />
           </div>
         </div>
       </LexicalComposer>

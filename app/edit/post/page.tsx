@@ -153,6 +153,7 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -214,6 +215,7 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
         category: parseInt(category) || 0,
         title,
         content: html,
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
       // 디버깅을 위한 로그 추가
@@ -347,16 +349,24 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
           <DraftContentsList contentType="POSTS" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          {isLoading ? '저장 중...' : '저장'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            비공개 글
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isLoading ? '저장 중...' : '저장'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -153,6 +153,7 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,9 +171,18 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         return;
       }
 
-      // 슬러그 유효성 검사
-      if (!slug || slug.trim() === '') {
-        alert('페이지 URL을 입력해주세요.');
+      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
+      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
+      if (!blogResponse.ok) {
+        alert('블로그 정보를 가져올 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      const blogData = await blogResponse.json();
+      const blogId = blogData?.id || blogData?.data?.id;
+
+      if (!blogId) {
+        alert('블로그 ID를 찾을 수 없습니다.');
         setIsLoading(false);
         return;
       }
@@ -200,51 +210,45 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
+      // 슬러그 유효성 검사
+      if (!slug || slug.trim() === '') {
+        alert('페이지 URL을 입력해주세요.');
         setIsLoading(false);
         return;
       }
 
       const requestBody = {
         blogId,
+        category: null,
         title,
         content: html,
-        slug: slug.trim(),
-        showInMenu, // 메뉴 표시 여부
+        slug,
+        showInMenu,
+        postType: 'PAGE',
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
-      // 서버로 POST 요청 (페이지 전용 API 엔드포인트)
-      const response = await fetch(`/api/pages`, {
+      // 서버로 POST 요청
+      const response = await fetch(`/api/contents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
       });
-      const responseData = await response.json();
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
+      }
 
       alert('페이지가 성공적으로 저장되었습니다.');
 
-      // 저장 완료 후 생성된 페이지로 이동 (sequence 사용)
-      if (responseData.data?.sequence) {
-        router.push(`/posts/${responseData.data.sequence}`);
-      } else {
-        router.push(`/page/${slug}`);
-      }
+      // 저장 완료 후 페이지 목록으로 이동
+      router.push(`/`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
-      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+      alert('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -354,16 +358,24 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
           <DraftContentsList contentType="PAGE" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-        >
-          {isLoading ? '저장 중...' : '페이지 저장'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
+            비공개 페이지
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
+              isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            {isLoading ? '저장 중...' : '페이지 저장'}
+          </button>
+        </div>
       </div>
     </div>
   );

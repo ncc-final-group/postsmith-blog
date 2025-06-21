@@ -25,6 +25,9 @@ import {
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
   createCommand,
+  ElementFormatType,
+  ElementNode,
+  FORMAT_ELEMENT_COMMAND,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_TAB_COMMAND,
@@ -562,6 +565,40 @@ function ImageAlignmentPlugin() {
   return null;
 }
 
+// 정렬 기능을 처리하는 플러그인
+function ElementAlignmentPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      FORMAT_ELEMENT_COMMAND,
+      (alignment: ElementFormatType) => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+          const nodes = selection.getNodes();
+
+          // 선택된 모든 노드에 정렬 적용
+          for (const node of nodes) {
+            const element = node.getTopLevelElementOrThrow();
+            // ElementNode인지 확인
+            if (element instanceof ElementNode) {
+              element.setFormat(alignment);
+            }
+          }
+          return true;
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor]);
+
+  return null;
+}
+
 // 이미지 컴포넌트 - 크기 조절 기능 포함 (사용하지 않음)
 function ImageComponent({ src, alt, width, height, node }: { src: string; alt: string; width: string; height: string; node: any }) {
   const [editor] = useLexicalComposerContext();
@@ -879,6 +916,7 @@ export default function Editor() {
         <ListTabIndentationPlugin />
         <ColorPlugin />
         <ImageAlignmentPlugin />
+        <ElementAlignmentPlugin />
         <HtmlExtractPlugin />
       </div>
     </div>

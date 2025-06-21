@@ -130,7 +130,21 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
   // 10. 현재 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
 
-  // 10. 템플릿 데이터 구성 (공지사항 상세 페이지)
+  // 10.5. 실제 조회수 조회 (서버 사이드)
+  let totalViews = 0;
+  try {
+    const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/content-stats/views/${noticeContent.id}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    if (viewsResponse.ok) {
+      totalViews = await viewsResponse.json();
+    }
+  } catch (error) {
+    totalViews = 0;
+  }
+
+  // 11. 템플릿 데이터 구성 (공지사항 상세 페이지)
   const templateData = {
     blog: {
       nickname: String(blog.nickname),
@@ -171,6 +185,7 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
           }
         : undefined,
       reply_count: Number(noticeContent.reply_count ?? 0),
+      total_views: totalViews, // 조회수 추가
     },
     // 사이드바 데이터 추가
     recentContents: sidebarData.recentContents,

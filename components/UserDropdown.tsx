@@ -77,87 +77,10 @@ export default function UserDropdown() {
     );
   }
 
-  // 서버 API 기반 로그인 (AuthActionButtons와 동일한 방식)
-  const handleSimpleLogin = async () => {
-    const userId = prompt('사용자 ID를 입력하세요 (숫자):');
-
-    if (!userId) {
-      return;
-    }
-
-    if (!/^\d+$/.test(userId)) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // 클라이언트 상태도 업데이트
-        const { setUserInfo } = useUserStore.getState();
-        setUserInfo({
-          id: data.user.id,
-          email: data.user.email,
-          nickname: data.user.nickname,
-          profile_image: data.user.profile_image,
-        });
-
-        setIsOpen(false);
-        window.location.reload(); // 페이지 새로고침으로 서버 상태 반영
-      }
-    } catch (error) {
-      // 로그인 실패 시 조용히 처리
-    }
-  };
-
-  // Redis 세션 기반 로그인 (나중에 사용)
-  const handleRedisLogin = async () => {
-    const sessionKey = prompt('Redis 세션 키를 입력하세요:');
-
-    if (sessionKey === null || sessionKey.trim() === '') {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionKey: sessionKey.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const { setUserInfo } = useUserStore.getState();
-        setUserInfo({
-          id: data.user.id,
-          email: data.user.email,
-          nickname: data.user.nickname,
-          profile_image: data.user.profile_image,
-        });
-
-        setIsOpen(false);
-        alert(`${data.user.nickname}님으로 로그인되었습니다!`);
-      } else {
-        alert(data.error || '로그인에 실패했습니다.');
-      }
-    } catch (error) {
-      alert('로그인 처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  // 개발용 간단 로그인 (나중에 Redis 로그인으로 전환 가능)
-  const handleLogin = async () => {
-    // TODO: Redis 세션 기반 로그인으로 전환할 때 주석 해제
-    // return handleRedisLogin();
-
-    return handleSimpleLogin();
+  // 로그인 페이지로 리다이렉트
+  const handleLogin = () => {
+    const homeUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    window.location.href = `${homeUrl}/login`;
   };
 
   const handleLogout = async () => {
@@ -206,10 +129,21 @@ export default function UserDropdown() {
                   <p className="text-sm text-gray-500">{user.email}</p>
                 </div>
               </div>
-
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    const homeUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+                    window.location.href = homeUrl;
+                  }}
+                  className="w-full rounded-lg px-6 text-left text-sm transition-colors hover:bg-gray-50"
+                  style={{ paddingTop: '16px', paddingBottom: '16px' }}
+                >
+                  <span className="text-black">🌐 PostSmith 홈페이지</span>
+                </button>
+              </div>
               {/* 운영중인 블로그 리스트 */}
               <div className="mb-4">
-                <h4 className="mb-2 text-sm font-medium text-gray-700">운영중인 블로그</h4>
+                <h4 className="mb-2 text-sm font-medium text-black">운영중인 블로그</h4>
                 {blogsLoading ? (
                   <div className="rounded-lg bg-gray-50 p-3">
                     <div className="text-sm text-gray-500">로딩 중...</div>
@@ -231,7 +165,7 @@ export default function UserDropdown() {
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-gray-900">{blog.nickname}</p>
+                            <p className="truncate text-sm font-medium text-black">{blog.nickname}</p>
                             <p className="truncate text-xs text-gray-500">/{blog.address}</p>
                           </div>
                         </div>
@@ -251,7 +185,7 @@ export default function UserDropdown() {
                   className="w-full rounded-lg px-6 text-left text-sm transition-colors hover:bg-gray-50"
                   style={{ paddingTop: '16px', paddingBottom: '16px' }}
                 >
-                  <span className="text-gray-700">🏠 관리 페이지</span>
+                  <span className="text-black">🏠 관리 페이지</span>
                 </button>
                 <hr className="my-4 border-gray-200" />
                 <button
@@ -266,7 +200,13 @@ export default function UserDropdown() {
           ) : (
             <div className="p-6">
               <div className="space-y-10">
-                <button onClick={() => (window.location.href = '/')} className="h-10 w-full rounded-lg bg-gray-500 px-6 font-medium text-white transition-colors hover:bg-gray-600">
+                <button
+                  onClick={() => {
+                    const homeUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+                    window.location.href = homeUrl;
+                  }}
+                  className="h-10 w-full rounded-lg bg-gray-500 px-6 font-medium text-white transition-colors hover:bg-gray-600"
+                >
                   🏠 PostSmith 홈페이지
                 </button>
                 <button onClick={handleLogin} className="h-10 w-full rounded-lg bg-blue-500 px-6 font-medium text-white transition-colors hover:bg-blue-600">
