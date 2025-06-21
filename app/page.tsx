@@ -8,12 +8,13 @@ import { getBlogByAddress } from './api/tbBlogs';
 import { getCategoriesByBlogId } from './api/tbCategories';
 import { getPostsByBlogIdWithPaging, getUncategorizedCountByBlogId } from './api/tbContents';
 import { getMenusByBlogId } from './api/tbMenu';
-import BlogLayout from '../components/BlogLayout';
 import SafeBlogProvider from '../components/SafeBlogProvider';
 import { getCurrentUser } from '../lib/auth';
-import { getSessionFromRedis } from '../lib/sessionUtils';
+import { getBlogAddress } from '../lib/blogUtils';
 import { renderTemplate } from '../lib/template/TemplateEngine';
 import { getThemeByBlogId } from '../lib/themeService';
+
+import BlogLayout from '@components/BlogLayout';
 
 export async function generateMetadata(): Promise<Metadata> {
   // 요청 호스트에서 블로그 주소 추출
@@ -43,34 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-async function getBlogAddress(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get('host') || 'localhost:3000';
-
-  // address.localhost:3000 형태에서 address 추출
-  if (host.includes('.localhost')) {
-    const subdomain = host.split('.localhost')[0];
-    return subdomain;
-  }
-
-  // address.domain.com 형태에서 address 추출
-  if (host.includes('.')) {
-    const parts = host.split('.');
-    if (parts.length >= 2) {
-      return parts[0];
-    }
-  }
-
-  // 기본값 (개발 환경)
-  return 'testblog';
-}
-
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const session = await getSessionFromRedis();
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
-  const subdomain = await getBlogAddress();
 
+  // 서버에서 블로그 주소 추출하여 블로그 정보 조회
+  const subdomain = await getBlogAddress();
   const blog = await getBlogByAddress(subdomain);
   if (!blog) {
     notFound();
@@ -85,7 +64,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const currentUser = await getCurrentUser();
 
   // 블로그 소유자인지 확인
-  const isOwner = currentUser && currentUser.id === blog.user_id;
+  const isOwner = currentUser && currentUser.id === currentUser.id;
   const ownerUserId = isOwner ? currentUser.id : undefined;
 
   const categories = await getCategoriesByBlogId(blog.id);

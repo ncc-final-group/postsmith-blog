@@ -7,7 +7,6 @@ import { SidebarData } from '../app/api/sidebarData';
 import { useBlogStore } from '../app/store/blogStore';
 
 interface BlogProviderProps {
-  blogId: number;
   blogInfo: {
     id: number;
     nickname: string;
@@ -19,7 +18,7 @@ interface BlogProviderProps {
   children: React.ReactNode;
 }
 
-export default function BlogProvider({ blogId, blogInfo, sidebarData, children }: BlogProviderProps) {
+export default function BlogProvider({ blogInfo, sidebarData, children }: BlogProviderProps) {
   const setBlogInfo = useBlogStore((state) => state.setBlogInfo);
 
   useEffect(() => {

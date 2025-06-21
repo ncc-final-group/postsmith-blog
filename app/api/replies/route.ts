@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'contentId가 필요합니다.' }, { status: 400 });
     }
     // Spring Boot API 호출 시도
-    const springApiUrl = process.env.NEXT_PUBLIC_API_SERVER || 'http://localhost:8080';
+    const springApiUrl = process.env.NEXT_PUBLIC_API_SERVER;
 
     try {
       const response = await fetch(`${springApiUrl}/api/replies/content/${contentId}`, {

@@ -866,41 +866,29 @@ function replacePlaceholders(template: string, data: TemplateData): string {
 
         // 로그인 상태 확인 및 댓글 폼 표시/숨김
         function checkLoginStatus() {
-          // 여러 가능한 localStorage 키 확인
-          const possibleKeys = ['user-storage', 'user-store', 'userStore'];
+          // localStorage에서 userStore 데이터 확인
+          const storageKey = 'user-storage';
           let user = null;
           let isAuthenticated = false;
           
-          console.log('댓글 로그인 체크 시작 - 모든 localStorage 확인'); // 디버깅용
+          console.log('댓글 로그인 체크 시작 - localStorage 확인'); // 디버깅용
           
-          for (const key of possibleKeys) {
-            const storageData = window.localStorage.getItem(key);
-            console.log('키 확인:', key, '데이터:', storageData); // 디버깅용
-            
-            if (storageData) {
-              try {
-                const storage = JSON.parse(storageData);
-                console.log('파싱된 스토리지 (' + key + '):', storage); // 디버깅용
-                
-                // 다양한 구조 패턴 확인
-                if (storage.state) {
-                  // Zustand persist 구조
-                  if (storage.state.userInfo && storage.state.userInfo.id) {
-                    user = storage.state.userInfo;
-                    isAuthenticated = storage.state.isAuthenticated || false;
-                    console.log('찾음 (persist 구조):', user, isAuthenticated);
-                    break;
-                  }
-                } else if (storage.userInfo && storage.userInfo.id) {
-                  // 직접 저장된 구조
-                  user = storage.userInfo;
-                  isAuthenticated = storage.isAuthenticated || false;
-                  console.log('찾음 (직접 구조):', user, isAuthenticated);
-                  break;
-                }
-              } catch (error) {
-                console.error(key + ' 파싱 오류:', error);
+          const storageData = window.localStorage.getItem(storageKey);
+          console.log('키 확인:', storageKey, '데이터:', storageData); // 디버깅용
+          
+          if (storageData) {
+            try {
+              const storage = JSON.parse(storageData);
+              console.log('파싱된 스토리지:', storage); // 디버깅용
+              
+              // Zustand persist 구조 확인
+              if (storage.state && storage.state.userInfo && storage.state.userInfo.id) {
+                user = storage.state.userInfo;
+                isAuthenticated = storage.state.isAuthenticated || false;
+                console.log('찾음 (persist 구조):', user, isAuthenticated);
               }
+            } catch (error) {
+              console.error('localStorage 파싱 오류:', error);
             }
           }
           

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 
 import BlogLayout from '../../../components/BlogLayout';
+import ContentStats from '../../../components/ContentStats';
 import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
 import { renderTemplate } from '../../../lib/template/TemplateEngine';
@@ -128,7 +129,21 @@ export default async function PagesByTitlePage({ params }: PageProps) {
   // 10. 현재 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
 
-  // 10. 템플릿 데이터 구성 (글 상세 페이지와 동일)
+  // 10.5. 실제 조회수 조회 (서버 사이드)
+  let totalViews = 0;
+  try {
+    const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/content-stats/views/${pageContent.id}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    if (viewsResponse.ok) {
+      totalViews = await viewsResponse.json();
+    }
+  } catch (error) {
+    totalViews = 0;
+  }
+
+  // 11. 템플릿 데이터 구성 (글 상세 페이지와 동일)
   const templateData = {
     blog: {
       nickname: String(blog.nickname),
@@ -169,6 +184,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
           }
         : undefined,
       reply_count: Number(pageContent.reply_count ?? 0),
+      total_views: totalViews, // 조회수 추가
     },
     // 사이드바 데이터 추가
     recentContents: sidebarData.recentContents,
@@ -211,6 +227,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
 
   return (
     <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+      <ContentStats contentId={pageContent.id} userId={currentUser?.id} />
       <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
     </SafeBlogProvider>
   );

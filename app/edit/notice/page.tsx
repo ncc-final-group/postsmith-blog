@@ -108,6 +108,7 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +123,22 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
 
       if (!subdomain) {
         alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
+        return;
+      }
+
+      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
+      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
+      if (!blogResponse.ok) {
+        alert('블로그 정보를 가져올 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      const blogData = await blogResponse.json();
+      const blogId = blogData?.id || blogData?.data?.id;
+
+      if (!blogId) {
+        alert('블로그 ID를 찾을 수 없습니다.');
+        setIsLoading(false);
         return;
       }
 
@@ -148,31 +165,18 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
         blogId,
+        category: null,
         title,
         content: html,
-        isImportant, // 중요 공지사항 여부
+        isImportant,
+        postType: 'NOTICE',
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
-      // 서버로 POST 요청 (공지사항 전용 API 엔드포인트)
-      const response = await fetch(`/api/notices`, {
+      // 서버로 POST 요청
+      const response = await fetch(`/api/contents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,19 +189,13 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
         throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
 
-      const responseData = await response.json();
-
       alert('공지사항이 성공적으로 저장되었습니다.');
 
-      // 저장 완료 후 생성된 공지사항으로 이동 (sequence 사용)
-      if (responseData.data?.sequence) {
-        router.push(`/posts/${responseData.data.sequence}`);
-      } else {
-        router.push(`/`); // 메인 페이지로 이동
-      }
+      // 저장 완료 후 공지사항 목록으로 이동
+      router.push(`/notices`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
-      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+      alert('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -300,14 +298,22 @@ function SaveButtons({ title, isImportant }: { title: string; isImportant: boole
           <DraftContentsList contentType="NOTICE" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-red-600 text-white hover:bg-red-700'}`}
-        >
-          {isLoading ? '저장 중...' : '공지사항 저장'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+            비공개 공지사항
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-red-600 text-white hover:bg-red-700'}`}
+          >
+            {isLoading ? '저장 중...' : '공지사항 저장'}
+          </button>
+        </div>
       </div>
     </div>
   );

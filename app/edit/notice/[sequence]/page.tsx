@@ -140,32 +140,26 @@ function NoticeForm({
   );
 }
 
-function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string; isImportant: boolean; sequence: number; isUpdate: boolean }) {
+function SaveButtons({ title, isImportant, sequence, isUpdate, content }: { title: string; isImportant: boolean; sequence: number; isUpdate: boolean; content: Content | null }) {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+
+  // 기존 content의 is_public 상태를 기반으로 초기값 설정
+  useEffect(() => {
+    if (content) {
+      setIsPrivate(!content.is_public);
+    }
+  }, [content]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      alert('제목을 입력해주세요.');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -189,36 +183,19 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
-        blogId,
+        category: null,
         title,
         content: html,
         isImportant,
-        sequence: isUpdate ? sequence : undefined,
+        postType: 'NOTICE',
+        isTemp: false,
+        isPublic: !isPrivate, // 비공개 설정 반영
       };
 
-      // 수정 또는 새 공지사항 저장
-      const endpoint = isUpdate ? `/api/contents/${sequence}` : '/api/notices';
-      const method = isUpdate ? 'PUT' : 'POST';
-
-      const response = await fetch(endpoint, {
-        method,
+      // 수정 요청
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -230,19 +207,13 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
         throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
 
-      const responseData = await response.json();
+      alert('공지사항이 성공적으로 수정되었습니다.');
 
-      alert(isUpdate ? '공지사항이 성공적으로 수정되었습니다.' : '공지사항이 성공적으로 저장되었습니다.');
-
-      // 저장 완료 후 공지사항으로 이동
-      if (responseData.data?.sequence) {
-        router.push(`/posts/${responseData.data.sequence}`);
-      } else {
-        router.push(`/`);
-      }
+      // 수정 완료 후 해당 공지사항으로 이동
+      router.push(`/posts/${sequence}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
-      alert('저장 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+      alert('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -253,31 +224,6 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       // Lexical editorState에서 HTML 추출
       const editorState = editor.getEditorState();
       let html = '';
@@ -285,26 +231,19 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
         html = $generateHtmlFromNodes(editor, null);
       });
 
-      // 에디터 내용이 비어있는지 확인
-      if (!html || html === '<p class="mb-2"></p>') {
-        alert('내용을 입력해주세요.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
-        blogId: blogId,
         category: null,
         title: title || '제목 없음',
         content: html,
+        isImportant,
         postType: 'NOTICE',
         isTemp: true, // 임시 저장 플래그
         isPublic: false,
       };
 
-      // 임시 저장 요청
-      const response = await fetch('/api/contents', {
-        method: 'POST',
+      // 임시 저장 요청 (수정 모드에서도 PUT 사용)
+      const response = await fetch(`/api/contents/${sequence}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -312,8 +251,7 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       alert('임시 저장 완료!');
@@ -345,16 +283,22 @@ function SaveButtons({ title, isImportant, sequence, isUpdate }: { title: string
           <DraftContentsList contentType="NOTICE" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-            isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-red-600 text-white hover:bg-red-700'
-          }`}
-        >
-          {isLoading ? (isUpdate ? '수정 중...' : '저장 중...') : isUpdate ? '공지사항 수정' : '공지사항 저장'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* 비공개 글 체크박스 */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+            비공개 공지사항
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`rounded-md px-6 py-2 text-sm font-medium transition-colors ${isLoading ? 'cursor-not-allowed bg-gray-400 text-gray-600' : 'bg-red-600 text-white hover:bg-red-700'}`}
+          >
+            {isLoading ? '수정 중...' : '공지사항 수정'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -541,7 +485,7 @@ export default function NoticeEditPage({ params }: { params: Promise<{ sequence:
           <div className="overflow-hidden rounded-lg bg-white shadow-lg">
             <NoticeForm title={title} setTitle={setTitle} isImportant={isImportant} setIsImportant={setIsImportant} content={content} />
             <Editor />
-            <SaveButtons title={title} isImportant={isImportant} sequence={sequence} isUpdate={true} />
+            <SaveButtons title={title} isImportant={isImportant} sequence={sequence} isUpdate={true} content={content} />
           </div>
         </div>
       </LexicalComposer>

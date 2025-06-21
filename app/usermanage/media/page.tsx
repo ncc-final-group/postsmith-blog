@@ -38,13 +38,18 @@ export default function MediaManagePage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 블로그 ID를 store에서 가져오기
-  const blogId = useBlogStore((state) => state.blogId) || 1;
+  const blogId = useBlogStore((state) => state.blogId);
 
   const loadMediaFiles = useCallback(async () => {
+    if (!blogId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await getMediaFiles({
-        blogId,
+        blogId: blogId,
         page: currentPage,
         size: 20,
         fileType: filterType || undefined,
@@ -60,6 +65,8 @@ export default function MediaManagePage() {
   }, [currentPage, filterType, searchKeyword, blogId]);
 
   const loadMediaStats = useCallback(async () => {
+    if (!blogId) return;
+
     try {
       const stats = await getMediaStats(blogId);
       setMediaStats(stats);
@@ -131,7 +138,7 @@ export default function MediaManagePage() {
   };
 
   const handleUpdateFile = async (updateData: { altText?: string; description?: string }) => {
-    if (!editingFile) return;
+    if (!editingFile || !blogId) return;
 
     try {
       await updateMediaFile(editingFile.id, updateData, blogId);

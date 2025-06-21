@@ -139,7 +139,7 @@ export default async function NoticesPage({ searchParams }: { searchParams: Prom
     };
 
     return (
-      <BlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+      <BlogProvider blogInfo={blogInfo} sidebarData={sidebarData}>
         <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
       </BlogProvider>
     );
