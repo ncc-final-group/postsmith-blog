@@ -49,9 +49,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // 서버에서 블로그 주소 추출하여 블로그 정보 조회
   const subdomain = await getBlogAddress();
-
+  // eslint-disable-next-line no-console
+  console.log('🔍 [DEBUG] subdomain:', subdomain);
   const blog = await getBlogByAddress(subdomain);
-
   if (!blog) {
     notFound();
   }
