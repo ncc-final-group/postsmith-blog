@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   // 현재 호스트에서 subdomain 추출
   const headersList = await headers();
-  const hostname = headersList.get('host') || headersList.get('authority') || '';
+  const hostname = headersList.get('host') || headersList.get(':authority') || '';
 
   let subdomain = '';
   let blog = null;
