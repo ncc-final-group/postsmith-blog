@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const hostname = req.headers.get('host') || '';
+  const hostname = req.headers.get('host') || req.headers.get(':authority') || '';
   const url = req.nextUrl;
   const requestHeaders = new Headers(req.headers);
 
