@@ -12,19 +12,13 @@ import { getContentsByBlogId, getContentsByCategoryNameWithPaging } from '../../
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies } from '../../api/tbReplies';
 
-async function getSubdomain(): Promise<string> {
-  const h = await headers();
-  const host = h.get('host') || 'localhost:3000';
-  if (host.includes('.localhost')) return host.split('.localhost')[0];
-  if (host.includes('.')) return host.split('.')[0];
-  return 'testblog';
-}
+import { getBlogAddress } from '@lib/blogUtils';
 
 export default async function CategoryPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
-  const sub = await getSubdomain();
+  const sub = await getBlogAddress();
   const blog = await getBlogByAddress(sub);
   if (!blog) notFound();
   const themeData = await getThemeByBlogId(blog.id);

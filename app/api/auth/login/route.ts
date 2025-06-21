@@ -23,14 +23,6 @@ export async function POST(request: NextRequest) {
       user: userInfo,
     });
 
-    // 쿠키 설정
-    response.cookies.set('userId', userId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7일
-    });
-
     return response;
   } catch (error) {
     return NextResponse.json({ error: '로그인 처리 중 오류가 발생했습니다.' }, { status: 500 });
