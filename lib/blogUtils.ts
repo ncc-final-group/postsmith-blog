@@ -4,7 +4,20 @@ import { headers } from 'next/headers';
 export async function getBlogAddress(): Promise<string> {
   try {
     const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3000';
+
+    // 먼저 middleware에서 설정한 x-subdomain 헤더 확인
+    const subdomain = headersList.get('x-subdomain');
+    if (subdomain) {
+      return subdomain;
+    }
+
+    // x-subdomain 헤더가 없으면 host 헤더에서 추출
+    const host = headersList.get('host') || headersList.get('authority') || 'localhost:3000';
+
+    // address.postsmith.kro.kr 형태에서 address 추출
+    if (host.includes('.postsmith.kro.kr')) {
+      return host.split('.postsmith.kro.kr')[0];
+    }
 
     // address.localhost:3000 형태에서 address 추출
     if (host.includes('.localhost')) {
@@ -15,7 +28,7 @@ export async function getBlogAddress(): Promise<string> {
     // address.domain.com 형태에서 address 추출
     if (host.includes('.')) {
       const parts = host.split('.');
-      if (parts.length >= 2) {
+      if (parts.length >= 2 && parts[0] !== 'localhost') {
         return parts[0];
       }
     }
