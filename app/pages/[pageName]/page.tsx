@@ -132,7 +132,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
   // 10.5. 실제 조회수 조회 (서버 사이드)
   let totalViews = 0;
   try {
-    const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/content-stats/views/${pageContent.id}`, {
+    const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/content-stats/views/${pageContent.id}`, {
       method: 'GET',
       cache: 'no-store',
     });

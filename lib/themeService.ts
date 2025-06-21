@@ -1,5 +1,3 @@
-import { getBaseUrl } from './utils';
-
 export interface ThemeData {
   blogId: number;
   blogName: string;
@@ -15,8 +13,7 @@ export interface ThemeData {
  */
 export async function getThemeByBlogId(blogId: number): Promise<ThemeData | null> {
   try {
-    const baseUrl = getBaseUrl();
-    const response = await fetch(`${baseUrl}/api/blog/theme-content?blogId=${blogId}`, {
+    const response = await fetch(`/api/blog/theme-content?blogId=${blogId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store', // 항상 최신 데이터 가져오기
@@ -43,9 +40,8 @@ export async function getThemeByBlogId(blogId: number): Promise<ThemeData | null
  */
 export async function getThemeByBlogAddress(address: string): Promise<ThemeData | null> {
   try {
-    const baseUrl = getBaseUrl();
     // 먼저 블로그 정보로 블로그 ID를 가져와야 함
-    const blogResponse = await fetch(`${baseUrl}/api/blog/address/${address}`, {
+    const blogResponse = await fetch(`/api/blog/address/${address}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });

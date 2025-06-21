@@ -65,10 +65,27 @@ export const useBlogStore = create<BlogState>()(
       fetchCurrentTheme: async (blogId: number) => {
         try {
           set({ isLoading: true, error: null });
-          const response = await fetch(`/api/manage/blog-themes/${blogId}`);
+          const response = await fetch(`/api/blog/theme-content?blogId=${blogId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            cache: 'no-store',
+          });
           if (response.ok) {
-            const theme = await response.json();
-            set({ currentTheme: theme });
+            const result = await response.json();
+            if (result.success && result.data) {
+              // ThemeData에서 BlogTheme으로 변환
+              const themeData = result.data;
+              const blogTheme = {
+                id: themeData.blogId,
+                themeId: themeData.themeId || 0,
+                themeName: themeData.themeName,
+                themeHtml: themeData.themeHtml,
+                themeCss: themeData.themeCss,
+                themeSetting: null,
+                isActive: true,
+              };
+              set({ currentTheme: blogTheme });
+            }
           }
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '테마 조회 실패' });
