@@ -1,7 +1,6 @@
 'use client';
 
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
 
 export interface IUserSession {
   accessToken?: string;

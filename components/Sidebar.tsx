@@ -5,6 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { useBlogStore } from '../app/store/blogStore';
+import { useUserStore } from '../app/store/userStore';
+
 interface MenuItem {
   key: string;
   label: string;
@@ -61,18 +64,27 @@ export default function Sidebar() {
   const segments = pathname?.split('/') || [];
   const name = segments[1] || '';
 
+  // 스토어에서 데이터 가져오기
+  const { blogInfo } = useBlogStore();
+  const { userInfo } = useUserStore();
+
+  // fallback 값들
+  const blogNickname = blogInfo?.nickname || '블로그';
+  const userEmail = userInfo?.email || '';
+  const profileImage = userInfo?.profile_image || '/defaultProfile.png';
+
   return (
     <aside className="w-53 flex-shrink-0 text-gray-800">
       {/* 상단 사용자 정보 */}
       <div className="mb-1 w-53 flex-col justify-center">
         <div className="flex h-54 items-center justify-center border border-gray-300 bg-gray-200">
           <figure className="relative h-54 w-40">
-            <Image fill style={{ objectFit: 'contain' }} src="/defaultProfile.png" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt="" priority />
+            <Image fill style={{ objectFit: 'contain' }} src={profileImage} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt="프로필 이미지" priority />
           </figure>
         </div>
         <div className="flex h-18 flex-col border border-t-0 border-gray-300 bg-white px-5 py-3">
-          <span className="text-base">성현의 블로그</span>
-          <span className="text-sm text-gray-400">sunghyeon@gmail.com</span>
+          <span className="text-base">{blogNickname}</span>
+          <span className="text-sm text-gray-400">{userEmail}</span>
         </div>
       </div>
 

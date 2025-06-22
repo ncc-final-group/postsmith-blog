@@ -46,6 +46,11 @@ export default function BlogLayout({ blogId, html, css }: BlogLayoutProps) {
     if (document.readyState !== 'loading') {
       document.dispatchEvent(new Event('DOMContentLoaded'));
     }
+
+    // 추가: 스크립트 실행 후 잠시 대기 후 다시 DOMContentLoaded 이벤트 발생
+    setTimeout(() => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+    }, 100);
   }, [html, mounted]);
 
   if (!mounted) {

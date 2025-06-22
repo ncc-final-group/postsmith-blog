@@ -157,6 +157,147 @@ interface TemplateData {
 const T3_SCRIPT = `<script type=""></script>
 <div style="margin:0; padding:0; border:none; background:none; float:none; clear:none; z-index:0"></div>`;
 
+// PostSmith 테마 JavaScript 코드
+const POSTSMITH_THEME_SCRIPT = `
+<script>
+/**
+ * PostSmith White Theme JavaScript
+ * 모바일 메뉴 및 댓글 기능을 제공합니다.
+ */
+(function() {
+  'use strict';
+
+  let isInitialized = false;
+
+  /**
+   * 모바일 사이드바 토글 기능
+   */
+  function initMobileSidebar() {
+    const toggleBtn = document.querySelector('.mobile-menu');
+    const menu = document.querySelector('.menu');
+    const overlay = document.querySelector('.menu-overlay');
+
+    if (!toggleBtn || !menu || !overlay) return;
+
+    const toggleSidebar = () => {
+      menu.classList.toggle('active');
+      overlay.classList.toggle('active');
+      toggleBtn.classList.toggle('open');
+
+      if (menu.classList.contains('active')) {
+        const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        document.body.style.paddingRight = scrollBarWidth + 'px';
+      } else {
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      }
+    };
+
+    toggleBtn.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+  }
+
+  /**
+   * 댓글 기능 초기화
+   */
+  function initCommentFunctions() {
+    // 답글 버튼 이벤트 리스너
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('reply-btn')) {
+        const replyId = e.target.getAttribute('data-reply-id');
+        if (replyId) {
+          toggleReplyForm(replyId);
+        }
+      }
+      
+      if (e.target.classList.contains('reply-cancel-btn')) {
+        const replyId = e.target.getAttribute('data-reply-id');
+        if (replyId) {
+          toggleReplyForm(replyId);
+        }
+      }
+    });
+
+    // 답글 폼 제출 이벤트 리스너
+    document.addEventListener('submit', function(e) {
+      if (e.target.classList.contains('reply-form')) {
+        const replyId = e.target.getAttribute('data-reply-id');
+        if (replyId) {
+          handleReplySubmit(e, replyId);
+        }
+      }
+    });
+  }
+
+  /**
+   * 댓글 답글 폼 토글 함수
+   */
+  function toggleReplyForm(replyId) {
+    const replyForm = document.getElementById('reply-form-' + replyId);
+    if (replyForm) {
+      replyForm.classList.toggle('hidden');
+      if (!replyForm.classList.contains('hidden')) {
+        const textarea = replyForm.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+        }
+      }
+    }
+  }
+
+  /**
+   * 답글 제출 핸들러
+   */
+  function handleReplySubmit(event, parentId) {
+    event.preventDefault();
+    const form = event.target;
+    const content = form.querySelector('textarea').value.trim();
+
+    if (!content) {
+      alert('답글 내용을 입력해주세요.');
+      return;
+    }
+
+    // 실제 답글 제출 로직은 서버사이드에서 처리
+    // 여기서는 UI 피드백만 제공
+    const submitBtn = form.querySelector('.reply-submit-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '제출 중...';
+    submitBtn.disabled = true;
+
+    // 실제 구현시에는 fetch API나 form 제출을 사용
+    setTimeout(() => {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+      toggleReplyForm(parentId);
+      form.reset();
+      // 페이지 새로고침 또는 댓글 목록 업데이트
+      window.location.reload();
+    }, 1000);
+  }
+
+  /**
+   * 초기화 함수
+   */
+  function init() {
+    if (isInitialized) return;
+    
+    initMobileSidebar();
+    initCommentFunctions();
+    isInitialized = true;
+  }
+
+  // DOM이 로드되면 초기화
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+`;
+
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString('ko-KR', {
@@ -1343,6 +1484,9 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   // 티스토리 공통 JS 삽입 블록 치환
   result = result.replace(/<s_t3>[\s\S]*?<\/s_t3>/g, T3_SCRIPT);
 
+  // PostSmith 테마 JavaScript 주입 치환자
+  result = result.replace(/\[##_theme_script_##\]/g, POSTSMITH_THEME_SCRIPT);
+
   return result;
 }
 
@@ -1355,8 +1499,8 @@ function normalizeHtml(html: string): string {
       .replace(/<\/html>/g, '')
       // head 태그와 내용 제거
       .replace(/<head[^>]*>[\s\S]*?<\/head>/g, '')
-      // body 태그 제거 (id 속성 유지)
-      .replace(/<body[^>]*>/g, '<div>')
+      // body 태그의 속성을 div로 이전하여 CSS 선택자 유지
+      .replace(/<body([^>]*)>/g, '<div$1>')
       .replace(/<\/body>/g, '</div>')
       // 앞뒤 공백만 제거 (HTML 구조는 유지)
       .trim()
