@@ -567,7 +567,7 @@ img {
   color: #374151;
   font-size: 0.75rem;
   padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
+  border-radius: 0.375rem; /* 9999px에서 수정 */
   margin-left: 0.25rem;
   font-weight: 500;
 }
@@ -665,152 +665,6 @@ img {
 
   .next-post {
     text-align: left;
-  }
-}
-
-/* ----------------------------------------------------------------
-   다크 모드
----------------------------------------------------------------- */
-@media (prefers-color-scheme: dark) {
-  html {
-    color: #e5e7eb;
-    background: #111827;
-  }
-
-  body {
-    background: #111827;
-  }
-
-  a {
-    color: #f9fafb;
-  }
-
-  .site-header,
-  .site-footer,
-  .widget,
-  .single-post,
-  .post-card {
-    border-color: #374151;
-    background: #1f2937;
-  }
-
-  .site-nav li a:hover,
-  .site-nav > a:hover,
-  .post-card:hover {
-    background: #374151;
-  }
-
-  .post-title,
-  .widget-title,
-  .prose h1,
-  .prose h2,
-  .prose h3,
-  .prose h4,
-  .prose h5,
-  .prose h6 {
-    color: #f9fafb;
-  }
-
-  .prose {
-    color: #d1d5db;
-  }
-
-  .prose a {
-    color: #60a5fa;
-  }
-
-  .prose a:hover {
-    color: #3b82f6;
-  }
-
-  .prose strong {
-    color: #f9fafb;
-  }
-
-  .prose code {
-    color: #f9fafb;
-    background-color: #374151;
-  }
-
-  .prose blockquote {
-    color: #f9fafb;
-    border-left-color: #374151;
-  }
-
-  .post-meta,
-  .text-gray-500 {
-    color: #9ca3af;
-  }
-
-  .text-gray-400 {
-    color: #6b7280;
-  }
-
-  .text-gray-700 {
-    color: #d1d5db;
-  }
-
-  .text-blue-600 {
-    color: #60a5fa;
-  }
-
-  .cnt {
-    background: #374151;
-    color: #f9fafb;
-  }
-
-  .widget li a {
-    color: #d1d5db;
-  }
-
-  .widget li a:hover {
-    color: #60a5fa;
-  }
-
-  /* 전체 글 보기 위젯 다크 모드 스타일 */
-  .all-posts-link a {
-    background-color: #1e3a8a;
-    border-color: #1e40af;
-  }
-
-  .all-posts-link a:hover {
-    background-color: #1e40af;
-    border-color: #60a5fa;
-    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.25);
-  }
-
-  .all-posts-link .text-lg {
-    color: #93c5fd;
-  }
-
-  .all-posts-link .text-sm {
-    color: #d1d5db;
-  }
-
-  /* 이전/다음 글 버튼 다크 모드 스타일 추가 */
-  .prev-post a,
-  .next-post a {
-    border-color: #4b5563;
-    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-    color: #e5e7eb;
-  }
-
-  .prev-post a:hover,
-  .next-post a:hover {
-    border-color: #60a5fa;
-    background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
-    color: #f9fafb;
-    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.25);
-  }
-
-  .prev-post a::before,
-  .next-post a::after {
-    color: #9ca3af;
-  }
-
-  .prev-post a:hover::before,
-  .next-post a:hover::after {
-    color: #f9fafb;
   }
 }
 
@@ -954,54 +808,6 @@ img {
   margin: 2em 0;
 }
 
-/* 다크 모드에서 에디터 콘텐츠 */
-@media (prefers-color-scheme: dark) {
-  .editor-content {
-    color: #e5e7eb;
-  }
-
-  .editor-content h1,
-  .editor-content h2,
-  .editor-content h3,
-  .editor-content h4,
-  .editor-content h5,
-  .editor-content h6 {
-    color: #f9fafb;
-  }
-
-  .editor-content a {
-    color: #60a5fa;
-  }
-
-  .editor-content a:hover {
-    color: #3b82f6;
-  }
-
-  .editor-content blockquote {
-    border-left-color: #374151;
-    background: #1f2937;
-    color: #d1d5db;
-  }
-
-  .editor-content code {
-    background: #374151;
-    color: #f9fafb;
-  }
-
-  .editor-content th,
-  .editor-content td {
-    border-color: #374151;
-  }
-
-  .editor-content th {
-    background: #1f2937;
-  }
-
-  .editor-content hr {
-    border-top-color: #374151;
-  }
-}
-
 /* ----------------------------------------------------------------
    모바일 사이드바
 ---------------------------------------------------------------- */
@@ -1096,22 +902,6 @@ img {
 .mobile-sidebar-overlay.active {
   opacity: 1;
   visibility: visible;
-}
-
-/* 다크 모드에서 모바일 사이드바 */
-@media (prefers-color-scheme: dark) {
-  .mobile-sidebar {
-    background: #1f2937;
-    border-right: 1px solid #374151;
-  }
-
-  .mobile-sidebar-header {
-    border-bottom-color: #374151;
-  }
-
-  .mobile-sidebar-nav a:hover {
-    color: #60a5fa;
-  }
 }
 
 /* ----------------------------------------------------------------
@@ -1243,16 +1033,6 @@ img {
 .menu-overlay.active {
   opacity: 1;
   visibility: visible;
-}
-
-@media (prefers-color-scheme: dark) {
-  .menu {
-    background: #1f2937;
-    border-right: 1px solid #374151;
-  }
-  .social-link a:hover {
-    color: #60a5fa;
-  }
 }
 
 /* 아이콘 전환 */
@@ -1428,6 +1208,14 @@ img {
   align-items: center;
 }
 
+/* 컨테이너 내 모든 버튼의 스타일을 통일하여 4px 차이 문제 해결 */
+.comment-actions button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
 .comment-actions a {
   font-size: 0.75rem;
   color: #6b7280;
@@ -1496,6 +1284,13 @@ img {
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* 템플릿 엔진이 생성하는 p 태그에 직접 스타일 적용 */
+.comment-content p {
+  color: inherit; /* 부모(.comment-content)의 색상을 상속받음 */
+  margin: 0;
+  padding: 0;
 }
 
 /* 댓글 개수 표시 */
@@ -1610,7 +1405,7 @@ img {
   }
 
   .comment-content {
-    color: #d1d5db;
+    color: #e5e7eb;
   }
 
   .comment-count {
@@ -2105,5 +1900,70 @@ img {
     color: #9ca3af;
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ----------------------------------------------------------------
+   파일 노드 스타일
+---------------------------------------------------------------- */
+.postsmith-file-node {
+  position: relative;
+  display: block;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.postsmith-file-card {
+  display: inline-block;
+  padding: 16px 20px;
+  border: 2px solid #e5e5e5;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: 300px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.postsmith-file-card:hover {
+  border-color: #3b82f6;
+  background-color: #f0f9ff;
+}
+
+.postsmith-file-download-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.postsmith-file-download-btn:hover {
+  background-color: #2563eb;
+}
+
+/* 다크 모드에서 파일 노드 스타일 */
+@media (prefers-color-scheme: dark) {
+  .postsmith-file-card {
+    border-color: #374151;
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+
+  .postsmith-file-card:hover {
+    border-color: #60a5fa;
+    background-color: #1e3a8a;
+  }
+
+  .postsmith-file-download-btn {
+    background-color: #3b82f6;
+  }
+
+  .postsmith-file-download-btn:hover {
+    background-color: #2563eb;
   }
 }

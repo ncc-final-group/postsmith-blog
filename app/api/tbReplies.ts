@@ -21,7 +21,7 @@ export const getRepliesByContentId = async (contentId: number): Promise<Reply[]>
     FROM replies r
     LEFT JOIN users u ON r.user_id = u.id
     LEFT JOIN contents c ON r.content_id = c.id
-    WHERE r.content_id = ? AND r.deleted_at IS NULL
+    WHERE r.content_id = ?
     ORDER BY r.created_at ASC
   `;
 

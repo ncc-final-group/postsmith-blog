@@ -120,6 +120,8 @@ export default async function NoticeByTitlePage({ params }: NoticeProps) {
       address: String(blog.address),
       author: undefined, // NOTICE 타입에서는 작성자 정보 표시하지 않음
     },
+    // API 서버 URL 추가
+    apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
     categories: categories.map((category) => ({
       id: Number(category.id),
       name: String(category.name),

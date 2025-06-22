@@ -138,7 +138,7 @@ export const getRecentContents = async (blogId: number, limit: number = 5, userI
       (SELECT COUNT(*) FROM replies r WHERE r.content_id = c.id AND r.deleted_at IS NULL) as reply_count
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.blog_id = ? ${publicCondition} AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' ${publicCondition} AND c.is_temp = 0
     ORDER BY c.created_at DESC
     LIMIT ?
   `;
@@ -383,7 +383,7 @@ export const getPopularContentsByBlogId = async (blogId: number, userId?: number
       WHERE cv.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
       GROUP BY cv.content_id
     ) recent_visits ON c.id = recent_visits.content_id
-    WHERE c.blog_id = ? ${userId !== undefined ? '' : 'AND c.is_public = 1'}
+    WHERE c.blog_id = ? AND c.type = 'POSTS' ${userId !== undefined ? '' : 'AND c.is_public = 1'}
     ORDER BY popularity_score DESC, c.created_at DESC
     LIMIT 20
   `;
@@ -403,7 +403,7 @@ export const getRecentContentsForAdmin = async (blogId: number, limit: number = 
       (SELECT COUNT(*) FROM replies r WHERE r.content_id = c.id AND r.deleted_at IS NULL) as reply_count
     FROM contents c
     LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.blog_id = ? AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' AND c.is_temp = 0
     ORDER BY c.created_at DESC
     LIMIT ?
   `;
@@ -455,7 +455,7 @@ export const getPopularContentsByBlogIdForAdmin = async (blogId: number): Promis
       WHERE cv.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
       GROUP BY cv.content_id
     ) recent_visits ON c.id = recent_visits.content_id
-    WHERE c.blog_id = ? AND c.is_temp = 0
+    WHERE c.blog_id = ? AND c.type = 'POSTS' AND c.is_temp = 0
     ORDER BY popularity_score DESC, c.created_at DESC
     LIMIT 20
   `;

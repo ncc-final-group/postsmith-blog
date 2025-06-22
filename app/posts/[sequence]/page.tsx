@@ -16,10 +16,11 @@ import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbRepl
 interface HierarchicalReply extends Reply {
   children: HierarchicalReply[];
   depth: number;
+  action_buttons: string;
 }
 
 // 댓글을 계층 구조로 변환하는 함수
-function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
+function buildReplyHierarchy(replies: (Reply & { action_buttons: string })[]): HierarchicalReply[] {
   const replyMap = new Map<number, HierarchicalReply>();
   const rootReplies: HierarchicalReply[] = [];
 
@@ -29,6 +30,7 @@ function buildReplyHierarchy(replies: Reply[]): HierarchicalReply[] {
       ...reply,
       children: [],
       depth: 0,
+      action_buttons: reply.action_buttons,
     });
   });
 
@@ -135,8 +137,53 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
   // 10. 해당 글의 댓글 조회
   const contentReplies = await getRepliesByContentId(content.id);
 
-  // 10-1. 댓글을 계층 구조로 변환
-  const hierarchicalReplies = buildReplyHierarchy(contentReplies);
+  // 10-1. 댓글을 계층 구조로 변환 후 렌더링 데이터 가공
+  const processedReplies = contentReplies.map((reply) => {
+    const isOwner = currentUser && currentUser.id === reply.user_id;
+    const isDeleted = !!reply.deleted_at;
+
+    // 모든 액션 버튼 HTML 생성 (page.tsx에서 통합 관리)
+    let actionButtons = '';
+
+    if (!isDeleted) {
+      // 답글 버튼 (삭제되지 않은 모든 댓글에 표시)
+      actionButtons += `
+        <button 
+          data-reply-id="${reply.id}" 
+          class="reply-btn cursor-pointer border-none bg-transparent text-xs text-blue-500 hover:underline"
+        >
+          답글
+        </button>
+      `;
+
+      // 수정 및 삭제 버튼 (로그인 사용자이고, 본인 댓글일 경우에만 표시)
+      if (isOwner) {
+        actionButtons += `
+          <button 
+            onclick="editReply(${reply.id})" 
+            class="edit-btn text-xs text-blue-500 hover:underline border-none bg-transparent p-0"
+          >
+            수정
+          </button>
+          <button 
+            onclick="deleteReply(${reply.id})" 
+            class="delete-btn text-xs text-red-500 hover:underline border-none bg-transparent p-0"
+          >
+            삭제
+          </button>
+        `;
+      }
+    }
+
+    return {
+      ...reply,
+      content: isDeleted ? '<p class="text-gray-500 italic">삭제된 메시지입니다.</p>' : reply.content,
+      user_nickname: isDeleted ? '' : reply.user_nickname,
+      action_buttons: actionButtons, // edit_delete_buttons 대신 새로운 속성 사용
+    };
+  });
+
+  const hierarchicalReplies = buildReplyHierarchy(processedReplies as any); // 타입 캐스팅
   const flattenedReplies = flattenReplies(hierarchicalReplies);
 
   // 11. 메뉴 정보 조회
@@ -186,6 +233,8 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
       address: String(blog.address),
       author: '블로그 관리자',
     },
+    // API 서버 URL 추가
+    apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
     categories: categories.map((category) => ({
       id: Number(category.id),
       name: String(category.name),
@@ -261,7 +310,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
             title: String(nextContent.title),
           }
         : undefined,
-      total_views: totalViews,
+      total_views: Number(totalViews),
     },
     recentReplies: recentReplies.map((reply) => ({
       id: Number(reply.id),
@@ -270,22 +319,34 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
       created_at: String(reply.created_at),
       content_sequence: Number(reply.content_sequence),
       user: {
+        id: Number(reply.user_id),
         nickname: String(reply.user_nickname ?? '익명'),
         profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
       },
     })),
-    replies: flattenedReplies.map((reply) => ({
-      id: Number(reply.id),
-      content_id: Number(reply.content_id),
-      reply_id: reply.reply_id,
-      content: String(reply.content),
-      created_at: String(reply.created_at),
-      depth: reply.depth,
-      user: {
-        nickname: String(reply.user_nickname ?? '익명'),
-        profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
-      },
-    })),
+    replies: flattenedReplies.map((reply) => {
+      const isDeleted = !!reply.deleted_at;
+      return {
+        id: Number(reply.id),
+        content_id: Number(reply.content_id),
+        reply_id: reply.reply_id,
+        content: String(reply.content),
+        created_at: String(reply.created_at),
+        date: new Date(reply.created_at).toLocaleString(),
+        depth: reply.depth,
+        depth_class: `depth-${reply.depth}`,
+        action_buttons: reply.action_buttons,
+        user: isDeleted
+          ? { id: 0, nickname: '', profile_image: null }
+          : {
+              id: Number(reply.user_id),
+              nickname: String(reply.user_nickname ?? '익명'),
+              profile_image: reply.user_profile_image ? String(reply.user_profile_image) : null,
+            },
+        name: isDeleted ? '' : String(reply.user_nickname ?? '익명'),
+      };
+    }),
+    is_owner: isOwner,
   };
 
   // 15. 블로그 정보 구성

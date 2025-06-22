@@ -55,6 +55,8 @@ export default async function UncategorizedPage({ searchParams }: { searchParams
       address: String(blog.address),
       author: undefined,
     },
+    // API 서버 URL 추가
+    apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
     categories: categories.map((category) => ({
       id: Number(category.id),
       name: String(category.name),

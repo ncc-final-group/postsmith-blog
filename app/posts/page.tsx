@@ -44,6 +44,8 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
         address: String(blog.address),
         author: undefined, // 전체 글 목록 페이지에서는 작성자 정보 불필요
       },
+      // API 서버 URL 추가
+      apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
       categories: categories.map((category) => ({
         id: Number(category.id),
         name: String(category.name),

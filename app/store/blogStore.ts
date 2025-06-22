@@ -34,6 +34,7 @@ interface BlogState {
   setError: (error: string | null) => void;
   clearBlog: () => void;
   fetchCurrentTheme: (blogId: number) => Promise<void>;
+  refreshCurrentTheme: () => Promise<void>;
 }
 
 export const useBlogStore = create<BlogState>()(
@@ -91,6 +92,12 @@ export const useBlogStore = create<BlogState>()(
           set({ error: error instanceof Error ? error.message : '테마 조회 실패' });
         } finally {
           set({ isLoading: false });
+        }
+      },
+      refreshCurrentTheme: async () => {
+        const currentBlogId = get().blogId;
+        if (currentBlogId) {
+          await get().fetchCurrentTheme(currentBlogId);
         }
       },
     }),

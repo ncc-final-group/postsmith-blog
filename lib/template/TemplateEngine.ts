@@ -12,6 +12,8 @@ interface TemplateData {
     address: string;
     author?: string; // 블로그 작성자 추가
   };
+  // API 서버 URL 추가
+  apiServerUrl?: string;
   categories: Array<{
     id: number;
     name: string;
@@ -139,6 +141,7 @@ interface TemplateData {
     created_at: string;
     content_sequence: number;
     user: {
+      id: number;
       nickname: string;
       profile_image?: string | null;
     };
@@ -151,6 +154,7 @@ interface TemplateData {
     created_at: string;
     depth?: number;
     user: {
+      id: number;
       nickname: string;
       profile_image?: string | null;
     };
@@ -171,6 +175,59 @@ const POSTSMITH_THEME_SCRIPT = `
   'use strict';
 
   let isInitialized = false;
+
+  /**
+   * 파일 노드 다운로드 기능
+   */
+  function initFileNodes() {
+    const fileCards = document.querySelectorAll('.postsmith-file-card');
+    
+    fileCards.forEach(fileCard => {
+      const downloadBtn = fileCard.querySelector('.postsmith-file-download-btn');
+      if (downloadBtn) {
+        downloadBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const fileName = fileCard.getAttribute('data-file-name');
+          const fileData = fileCard.getAttribute('data-file-data');
+          
+          if (fileName && fileData) {
+            downloadFile(fileName, fileData);
+          }
+        });
+      }
+      
+      // 호버 효과 재적용 (CSS가 적용되지 않은 경우를 위해)
+      fileCard.addEventListener('mouseenter', function() {
+        this.style.borderColor = '#3b82f6';
+        this.style.backgroundColor = '#f0f9ff';
+      });
+      
+      fileCard.addEventListener('mouseleave', function() {
+        this.style.borderColor = '#e5e5e5';
+        this.style.backgroundColor = '#f9f9f9';
+      });
+    });
+  }
+
+  /**
+   * 파일 다운로드 함수
+   */
+  function downloadFile(fileName, fileData) {
+    try {
+      const link = document.createElement('a');
+      link.href = fileData;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('파일 다운로드 중 오류가 발생했습니다:', error);
+      alert('파일 다운로드 중 오류가 발생했습니다.');
+    }
+  }
 
   /**
    * 모바일 사이드바 토글 기능
@@ -322,6 +379,7 @@ const POSTSMITH_THEME_SCRIPT = `
     
     initMobileSidebar();
     initCommentFunctions();
+    initFileNodes();
     isInitialized = true;
   }
 
@@ -797,8 +855,16 @@ function replacePlaceholders(template: string, data: TemplateData): string {
       // 답글 버튼 HTML 생성 (depth 3 이하일 때만 표시)
       const replyButtonHtml =
         depth < 3
-          ? `<button onclick="replyToComment(${reply.id})" style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px;">답글</button>`
+          ? `<button onclick="replyToComment(${reply.id})" style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 8px;">답글</button>`
           : '';
+
+      // 수정/삭제 버튼 HTML 생성 (로그인한 사용자와 댓글 작성자가 일치할 때만 표시)
+      const editDeleteButtonsHtml = `
+        <span class="comment-actions" data-user-id="${reply.user.id}" style="display: none;">
+          <button onclick="editComment(${reply.id})" style="background: #28a745; border: 1px solid #28a745; color: white; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 4px;">수정</button>
+          <button onclick="deleteComment(${reply.id})" style="background: #dc3545; border: 1px solid #dc3545; color: white; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">삭제</button>
+        </span>
+      `;
 
       // 프로필 이미지 HTML 생성
       const profileImageHtml =
@@ -819,6 +885,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
         .replace(/\[##_rp_rep_depth_class_##\]/g, depthClass)
         .replace(/\[##_rp_rep_indent_style_##\]/g, indentStyle)
         .replace(/\[##_rp_rep_reply_button_##\]/g, replyButtonHtml)
+        .replace(/\[##_rp_rep_edit_delete_buttons_##\]/g, editDeleteButtonsHtml)
         .replace(/\[##_rp_rep_profile_image_##\]/g, profileImageHtml);
 
       // 기존 템플릿에도 ID와 data 속성 추가
@@ -847,10 +914,11 @@ function replacePlaceholders(template: string, data: TemplateData): string {
                    <span style="font-weight: bold; color: #374151;">${reply.user.nickname}</span>
                    <span>${formatSimpleDate(reply.created_at)}</span>
                  </div>
-                 <div style="line-height: 1.6; word-wrap: break-word; margin-bottom: 8px;">${reply.content}
+                 <div id="comment-content-${reply.id}" style="line-height: 1.6; word-wrap: break-word; margin-bottom: 8px;">${reply.content}
 </div>
                  <div style="display: flex; align-items: center;">
                    ${replyButtonHtml}
+                   ${editDeleteButtonsHtml}
                  </div>
                </div>
              </div>
@@ -1115,6 +1183,9 @@ function replacePlaceholders(template: string, data: TemplateData): string {
             // 사용자 프로필 정보 업데이트
             updateUserProfile(user);
             
+            // 댓글 수정/삭제 버튼 표시/숨김 처리
+            updateCommentActions(user);
+            
             return user;
           }
           
@@ -1239,11 +1310,14 @@ function replacePlaceholders(template: string, data: TemplateData): string {
             return;
           }
 
-          // 이미 열린 답글 폼이 있으면 닫기
-          const existingForm = document.querySelector('.reply-form-container');
-          if (existingForm) {
-            existingForm.remove();
-          }
+          // 이미 열린 모든 폼이 있으면 닫기
+          const existingEditForm = document.querySelector('.edit-form-container');
+          const existingReplyForm = document.querySelector('.reply-form-container');
+          const existingDeleteConfirm = document.querySelector('.delete-confirm-container');
+          
+          if (existingEditForm) existingEditForm.remove();
+          if (existingReplyForm) existingReplyForm.remove();
+          if (existingDeleteConfirm) existingDeleteConfirm.remove();
 
           // 부모 댓글 요소 찾기
           const parentElement = document.querySelector(\`[data-reply-id="\${parentReplyId}"], #reply-\${parentReplyId}\`);
@@ -1274,6 +1348,19 @@ function replacePlaceholders(template: string, data: TemplateData): string {
           const textarea = document.getElementById(\`reply-content-\${parentReplyId}\`);
           if (textarea) {
             textarea.focus();
+            
+            // 키보드 단축키 추가 (Ctrl+Enter 또는 Cmd+Enter로 답글 작성)
+            textarea.addEventListener('keydown', function(e) {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                submitReply(parentReplyId);
+              }
+              // ESC 키로 취소
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelReply(parentReplyId);
+              }
+            });
           }
         }
 
@@ -1334,7 +1421,350 @@ function replacePlaceholders(template: string, data: TemplateData): string {
           }
         }
 
+        // 댓글 수정/삭제 버튼 표시/숨김 함수
+        function updateCommentActions(user) {
+          if (!user || !user.id) return;
+          
+          // 모든 댓글의 액션 버튼을 확인
+          const commentActions = document.querySelectorAll('.comment-actions');
+          commentActions.forEach(action => {
+            const commentUserId = parseInt(action.getAttribute('data-user-id'));
+            if (commentUserId === user.id) {
+              action.style.display = 'inline';
+            } else {
+              action.style.display = 'none';
+            }
+          });
+        }
+
+        // 댓글 수정 폼 생성 함수
+        function createEditForm(replyId, currentContent, user) {
+          return \`
+            <div id="edit-form-\${replyId}" class="edit-form-container" style="margin-top: 12px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 3px solid #ffc107;">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <!-- 사용자 프로필 -->
+                <div style="flex-shrink: 0;">
+                  \${user.profile_image 
+                    ? \`<img src="\${user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">\`
+                    : \`<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-weight: bold; font-size: 14px;">\${user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}</span>
+                       </div>\`
+                  }
+                </div>
+                
+                <!-- 수정 입력 영역 -->
+                <div style="flex: 1;">
+                  <div style="margin-bottom: 8px;">
+                    <span style="font-size: 12px; color: #856404;">댓글 수정 중...</span>
+                  </div>
+                  <textarea 
+                    id="edit-content-\${replyId}" 
+                    placeholder="댓글을 수정하세요..." 
+                    rows="3"
+                    style="width: 100%; padding: 10px; border: 1px solid #ffc107; border-radius: 6px; resize: vertical; font-family: inherit; font-size: 14px; color: #333333 !important; background-color: #ffffff !important;"
+                  >\${currentContent}</textarea>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    <button 
+                      onclick="cancelEdit(\${replyId})"
+                      style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                    >
+                      취소
+                    </button>
+                    <button 
+                      onclick="submitEdit(\${replyId})"
+                      style="background: #ffc107; color: #212529; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;"
+                    >
+                      수정 완료
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          \`;
+        }
+
+        // 댓글 수정 함수 (인라인 편집으로 변경)
+        function editComment(replyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
+
+          // 이미 열린 수정/답글 폼이 있으면 닫기
+          const existingEditForm = document.querySelector('.edit-form-container');
+          const existingReplyForm = document.querySelector('.reply-form-container');
+          const existingDeleteConfirm = document.querySelector('.delete-confirm-container');
+          
+          if (existingEditForm) existingEditForm.remove();
+          if (existingReplyForm) existingReplyForm.remove();
+          if (existingDeleteConfirm) existingDeleteConfirm.remove();
+
+          const contentElement = document.getElementById(\`comment-content-\${replyId}\`);
+          if (!contentElement) {
+            alert('댓글을 찾을 수 없습니다.');
+            return;
+          }
+
+          const currentContent = contentElement.textContent.trim();
+          
+          // 댓글 요소 찾기 (수정/삭제 버튼의 부모 요소에서 댓글 컨테이너 찾기)
+          const editButton = event.target;
+          const commentItem = editButton.closest('.comment-item') || editButton.closest('div[style*="flex"]');
+          
+          if (!commentItem) {
+            alert('댓글을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+            return;
+          }
+
+          // 수정 폼 HTML 생성 및 삽입
+          const editFormHtml = createEditForm(replyId, currentContent, user);
+          commentItem.insertAdjacentHTML('afterend', editFormHtml);
+
+          // 수정 입력창에 포커스 및 전체 선택
+          const textarea = document.getElementById(\`edit-content-\${replyId}\`);
+          if (textarea) {
+            textarea.focus();
+            textarea.select();
+            
+            // 키보드 단축키 추가 (Ctrl+Enter 또는 Cmd+Enter로 수정 완료)
+            textarea.addEventListener('keydown', function(e) {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                submitEdit(replyId);
+              }
+              // ESC 키로 취소
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEdit(replyId);
+              }
+            });
+          }
+        }
+
+        // 댓글 수정 취소 함수
+        function cancelEdit(replyId) {
+          const editForm = document.getElementById(\`edit-form-\${replyId}\`);
+          if (editForm) {
+            editForm.remove();
+          }
+        }
+
+        // 댓글 수정 제출 함수
+        async function submitEdit(replyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
+
+          const textarea = document.getElementById(\`edit-content-\${replyId}\`);
+          const editedContent = textarea ? textarea.value.trim() : '';
+          
+          if (!editedContent) {
+            alert('댓글 내용을 입력해주세요.');
+            return;
+          }
+
+          const contentElement = document.getElementById(\`comment-content-\${replyId}\`);
+          const currentContent = contentElement ? contentElement.textContent.trim() : '';
+          
+          if (editedContent === currentContent) {
+            // 변경사항 없음 - 폼만 닫기
+            cancelEdit(replyId);
+            return;
+          }
+
+          const submitBtn = event.target;
+          const originalText = submitBtn.textContent;
+          submitBtn.disabled = true;
+          submitBtn.textContent = '수정 중...';
+
+          try {
+            const apiServerUrl = '${data.apiServerUrl || 'http://localhost:8080'}';
+            // PUT 메서드 대신 POST로 우회 (Gateway 제한 때문)
+            const response = await fetch(\`\${apiServerUrl}/api/replies/\${replyId}/update\`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                contentText: editedContent
+              })
+            });
+
+            if (response.ok) {
+              // 댓글 수정 성공
+              if (contentElement) {
+                contentElement.textContent = editedContent;
+              }
+              cancelEdit(replyId); // 수정 폼 닫기
+              
+              // 성공 메시지를 더 부드럽게 표시
+              const successMsg = document.createElement('div');
+              successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #d4edda; color: #155724; padding: 12px 20px; border-radius: 6px; border: 1px solid #c3e6cb; z-index: 1000; font-size: 14px;';
+              successMsg.textContent = '댓글이 수정되었습니다.';
+              document.body.appendChild(successMsg);
+              
+              setTimeout(() => {
+                if (successMsg.parentNode) {
+                  successMsg.parentNode.removeChild(successMsg);
+                }
+              }, 3000);
+            } else {
+              const errorData = await response.json();
+              alert('댓글 수정에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
+            }
+          } catch (error) {
+            alert('댓글 수정 중 오류가 발생했습니다.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+        }
+
+        // 댓글 삭제 확인 폼 생성 함수
+        function createDeleteConfirmForm(replyId, user) {
+          return \`
+            <div id="delete-confirm-\${replyId}" class="delete-confirm-container" style="margin-top: 12px; padding: 15px; background: #f8d7da; border-radius: 8px; border-left: 3px solid #dc3545;">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <!-- 사용자 프로필 -->
+                <div style="flex-shrink: 0;">
+                  \${user.profile_image 
+                    ? \`<img src="\${user.profile_image}" alt="프로필" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">\`
+                    : \`<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-weight: bold; font-size: 14px;">\${user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}</span>
+                       </div>\`
+                  }
+                </div>
+                
+                <!-- 삭제 확인 영역 -->
+                <div style="flex: 1;">
+                  <div style="margin-bottom: 12px;">
+                    <div style="font-size: 14px; color: #721c24; font-weight: 500; margin-bottom: 4px;">댓글 삭제</div>
+                    <div style="font-size: 13px; color: #721c24;">정말로 이 댓글을 삭제하시겠습니까?</div>
+                    <div style="font-size: 12px; color: #856404; margin-top: 4px;">삭제된 댓글은 복구할 수 없습니다.</div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button 
+                      onclick="cancelDelete(\${replyId})"
+                      style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                    >
+                      취소
+                    </button>
+                    <button 
+                      onclick="confirmDelete(\${replyId})"
+                      style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          \`;
+        }
+
+        // 댓글 삭제 함수 (확인 폼으로 변경)
+        function deleteComment(replyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
+
+          // 이미 열린 수정/답글/삭제 폼이 있으면 닫기
+          const existingEditForm = document.querySelector('.edit-form-container');
+          const existingReplyForm = document.querySelector('.reply-form-container');
+          const existingDeleteConfirm = document.querySelector('.delete-confirm-container');
+          
+          if (existingEditForm) existingEditForm.remove();
+          if (existingReplyForm) existingReplyForm.remove();
+          if (existingDeleteConfirm) existingDeleteConfirm.remove();
+
+          // 댓글 요소 찾기 (삭제 버튼의 부모 요소에서 댓글 컨테이너 찾기)
+          const deleteButton = event.target;
+          const commentItem = deleteButton.closest('.comment-item') || deleteButton.closest('div[style*="flex"]');
+          
+          if (!commentItem) {
+            alert('댓글을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+            return;
+          }
+
+          // 삭제 확인 폼 HTML 생성 및 삽입
+          const deleteConfirmHtml = createDeleteConfirmForm(replyId, user);
+          commentItem.insertAdjacentHTML('afterend', deleteConfirmHtml);
+        }
+
+        // 댓글 삭제 취소 함수
+        function cancelDelete(replyId) {
+          const deleteConfirm = document.getElementById(\`delete-confirm-\${replyId}\`);
+          if (deleteConfirm) {
+            deleteConfirm.remove();
+          }
+        }
+
+        // 댓글 삭제 확정 함수
+        async function confirmDelete(replyId) {
+          const user = checkLoginStatus();
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
+
+          const submitBtn = event.target;
+          const originalText = submitBtn.textContent;
+          submitBtn.disabled = true;
+          submitBtn.textContent = '삭제 중...';
+
+          try {
+            const apiServerUrl = '${data.apiServerUrl || 'http://localhost:8080'}';
+            // DELETE 메서드 대신 POST로 우회 (Gateway 제한 때문)
+            const response = await fetch(\`\${apiServerUrl}/api/replies/\${replyId}/delete\`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: user.id
+              })
+            });
+
+            if (response.ok) {
+              // 댓글 삭제 성공 - 페이지 새로고침
+              
+              // 성공 메시지를 더 부드럽게 표시
+              const successMsg = document.createElement('div');
+              successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #d4edda; color: #155724; padding: 12px 20px; border-radius: 6px; border: 1px solid #c3e6cb; z-index: 1000; font-size: 14px;';
+              successMsg.textContent = '댓글이 삭제되었습니다.';
+              document.body.appendChild(successMsg);
+              
+              setTimeout(() => {
+                location.reload();
+              }, 1000);
+            } else {
+              const errorData = await response.json();
+              alert('댓글 삭제에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
+            }
+          } catch (error) {
+            alert('댓글 삭제 중 오류가 발생했습니다.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+        }
+
         // 전역 함수로 등록 (템플릿에서 사용할 수 있도록)
+        window.submitComment = submitComment;
+        window.updateUserProfile = updateUserProfile;
+        window.updateCommentActions = updateCommentActions;
+        window.editComment = editComment;
+        window.cancelEdit = cancelEdit;
+        window.submitEdit = submitEdit;
+        window.deleteComment = deleteComment;
+        window.cancelDelete = cancelDelete;
+        window.confirmDelete = confirmDelete;
         window.replyToComment = replyToComment;
         window.cancelReply = cancelReply;
         window.submitReply = submitReply;

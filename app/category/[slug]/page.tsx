@@ -49,6 +49,8 @@ export default async function CategoryPage({ params, searchParams }: { params: P
       address: String(blog.address),
       author: undefined,
     },
+    // API 서버 URL 추가
+    apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
     categories: categories.map((cat) => ({
       id: Number(cat.id),
       name: String(cat.name),

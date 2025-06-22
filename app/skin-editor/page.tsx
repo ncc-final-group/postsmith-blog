@@ -69,6 +69,7 @@ interface HomeData {
 function SkinEditorContent() {
   const searchParams = useSearchParams();
   const blogId = useBlogStore.getState().blogId;
+  const { refreshCurrentTheme } = useBlogStore();
   const [activeTab, setActiveTab] = useState<'html' | 'css'>('html');
   const [themeContent, setThemeContent] = useState<ThemeContent | null>(null);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
@@ -92,6 +93,8 @@ function SkinEditorContent() {
         logo_image: realData.blog.logo_image,
         address: realData.blog.address,
       },
+      // API 서버 URL 추가
+      apiServerUrl: process.env.NEXT_PUBLIC_API_SERVER,
       categories: realData.categories,
       uncategorizedCount: realData.uncategorizedCount,
       totalContentsCount: realData.totalContentsCount,
@@ -186,26 +189,37 @@ function SkinEditorContent() {
     try {
       setSaving(true);
 
-      // 먼저 변경사항을 적용
-      if (isModified) {
-        applyChanges();
-      }
+      // Spring API에 저장 요청 (현재 편집 중인 값으로)
+      const requestBody = {
+        blogId: themeContent.blogId,
+        themeHtml: editableHtml,
+        themeCss: editableCss,
+      };
 
-      // Spring API에 저장 요청 (BlogDto 형태로)
       const response = await fetch('/api/blog/update-theme', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          blogId: themeContent.blogId,
-          themeHtml: editableHtml,
-          themeCss: editableCss,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
 
       if (result.success) {
         alert('스킨이 성공적으로 저장되었습니다!');
+        // 저장 성공 후 변경사항을 미리보기에 적용
+        if (isModified) {
+          applyChanges();
+        }
+        // 저장된 데이터로 테마 컨텐츠 업데이트
+        if (result.data) {
+          setThemeContent({
+            ...themeContent,
+            themeHtml: result.data.themeHtml || editableHtml,
+            themeCss: result.data.themeCss || editableCss,
+          });
+        }
+        // 블로그 스토어의 테마 정보도 새로고침
+        await refreshCurrentTheme();
         setIsModified(false);
       } else {
         alert(`저장 실패: ${result.error}`);

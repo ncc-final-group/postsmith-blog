@@ -41,6 +41,7 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     container.style.display = 'block';
     container.style.margin = '20px 0';
     container.style.textAlign = 'center';
+    container.className = 'postsmith-file-node';
 
     const fileCard = document.createElement('div');
     fileCard.style.display = 'inline-block';
@@ -52,6 +53,13 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     fileCard.style.transition = 'all 0.2s ease';
     fileCard.style.maxWidth = '300px';
     fileCard.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+
+    // 파일 정보를 데이터 속성으로 추가
+    fileCard.setAttribute('data-file-name', this.__fileName);
+    fileCard.setAttribute('data-file-size', this.__fileSize.toString());
+    fileCard.setAttribute('data-file-type', this.__fileType);
+    fileCard.setAttribute('data-file-data', this.__fileData);
+    fileCard.className = 'postsmith-file-card';
 
     // 파일 아이콘
     const icon = document.createElement('div');
@@ -83,6 +91,7 @@ export class CustomFileNode extends DecoratorNode<React.ReactElement> {
     downloadBtn.style.fontSize = '12px';
     downloadBtn.style.cursor = 'pointer';
     downloadBtn.textContent = '다운로드';
+    downloadBtn.className = 'postsmith-file-download-btn';
 
     // 호버 효과
     fileCard.addEventListener('mouseenter', () => {

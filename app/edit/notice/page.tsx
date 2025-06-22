@@ -16,7 +16,6 @@ import { $getRoot, $getSelection, $isRangeSelection } from 'lexical';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { BLOG_API_URL } from '../../../lib/constants';
 import { useBlogStore } from '../../store/blogStore';
 import { useUserStore } from '../../store/userStore';
 

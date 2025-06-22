@@ -18,15 +18,17 @@ export async function PUT(request: NextRequest) {
     }
 
     // Spring API에 테마 콘텐츠 수정 요청
+    const requestBody = { themeHtml, themeCss };
+
     const response = await fetch(`${API_BASE_URL}/api/manage/blog-themes/blog/${blogId}/content`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ themeHtml, themeCss }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      assert(false, 'Failed to update theme');
+      return NextResponse.json({ success: false, error: `Spring API error: ${errorText}` }, { status: response.status });
     }
 
     const result = await response.json();
@@ -37,7 +39,6 @@ export async function PUT(request: NextRequest) {
       data: result,
     });
   } catch (error) {
-    assert(false, 'Failed to update theme');
     return NextResponse.json(
       {
         success: false,

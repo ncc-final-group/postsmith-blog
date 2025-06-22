@@ -30,7 +30,7 @@ export interface SidebarData {
     created_at: string;
     content_sequence: number;
     content_title: string;
-    user: { nickname: string; profile_image?: string | null };
+    user: { id: number; nickname: string; profile_image?: string | null };
   }>;
 }
 
@@ -78,6 +78,7 @@ export async function getSidebarData(blogId: number, userId?: number): Promise<S
         content_sequence: Number(reply.content_sequence),
         content_title: String(reply.content_title ?? '제목 없음'),
         user: {
+          id: Number(reply.user_id),
           nickname: String(reply.user_nickname ?? '익명'),
           profile_image: reply.user_profile_image || null,
         },
@@ -137,6 +138,7 @@ export async function getAdminSidebarData(blogId: number, blogOwnerId: number, u
         content_sequence: Number(reply.content_sequence),
         content_title: String(reply.content_title ?? '제목 없음'),
         user: {
+          id: Number(reply.user_id),
           nickname: String(reply.user_nickname ?? '익명'),
           profile_image: reply.user_profile_image || null,
         },
