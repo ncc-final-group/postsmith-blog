@@ -16,7 +16,8 @@ import { $getRoot, $getSelection, $isRangeSelection } from 'lexical';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { BLOG_API_URL } from '../../../lib/constants';
+import { useBlogStore } from '../../store/blogStore';
+import { useUserStore } from '../../store/userStore';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import DraftContentsList from '@components/DraftContentsList';
@@ -75,17 +76,37 @@ const theme = {
   characterStyles: { colored: 'styled-text' },
 };
 
-function EditorForm({ category, setCategory, title, setTitle }: { category: string; setCategory: (value: string) => void; title: string; setTitle: (value: string) => void }) {
+function EditorForm({
+  category,
+  setCategory,
+  title,
+  setTitle,
+  thumbnail,
+  setThumbnail,
+}: {
+  category: string;
+  setCategory: (value: string) => void;
+  title: string;
+  setTitle: (value: string) => void;
+  thumbnail: string;
+  setThumbnail: (value: string) => void;
+}) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const { blogInfo } = useBlogStore();
 
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoadingCategories(true);
-      // API Route를 통해 카테고리 가져오기 (subdomain 기반으로 자동 감지)
-      const response = await fetch('/api/categories');
 
-      // 블로그가 존재하지 않는 경우 404 처리
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+        return;
+      }
+
+      // blogStore에서 가져온 블로그 ID로 카테고리 조회
+      const response = await fetch(`/api/categories?blogId=${blogInfo.id}`);
+
       if (response.status === 404) {
         alert('블로그를 찾을 수 없습니다. 올바른 블로그 주소인지 확인해주세요.');
         return;
@@ -101,16 +122,16 @@ function EditorForm({ category, setCategory, title, setTitle }: { category: stri
     } catch (error) {
       // 에러 발생시 기본 카테고리 사용
       const fallbackCategories = [
-        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: 1 },
-        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: 1 },
-        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: 1 },
-        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: 1 },
+        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: blogInfo?.id || 1 },
       ];
       setCategories(fallbackCategories);
     } finally {
       setIsLoadingCategories(false);
     }
-  }, []);
+  }, [blogInfo]);
 
   useEffect(() => {
     fetchCategories();
@@ -145,16 +166,36 @@ function EditorForm({ category, setCategory, title, setTitle }: { category: stri
           required
         />
       </div>
+      <div className="mb-4">
+        <label htmlFor="thumbnail" className="mb-2 block text-sm font-medium text-gray-700">
+          썸네일 이미지 URL
+        </label>
+        <input
+          type="url"
+          id="thumbnail"
+          value={thumbnail}
+          onChange={(e) => setThumbnail(e.target.value)}
+          className="w-full rounded-md border border-gray-300 p-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+          placeholder="썸네일 이미지 URL을 입력하세요 (에디터에서 첫 번째 이미지가 자동 설정됩니다)"
+        />
+        {thumbnail && (
+          <div className="mt-2">
+            <img src={thumbnail} alt="썸네일 미리보기" className="h-20 w-32 rounded object-cover" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function SaveButtons({ category, title }: { category: string; title: string }) {
+function SaveButtons({ category, title, thumbnail }: { category: string; title: string; thumbnail: string }) {
   const [editor] = useLexicalComposerContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+  const { blogInfo } = useBlogStore();
+  const { userInfo } = useUserStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,12 +203,10 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
+      // blogStore에서 블로그 정보 가져오기
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+        setIsLoading(false);
         return;
       }
 
@@ -194,27 +233,12 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
         return;
       }
 
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-
       const requestBody = {
-        blogId,
+        blogId: blogInfo.id,
         category: parseInt(category) || 0,
         title,
         content: html,
+        thumbnail: thumbnail || null, // 썸네일 추가
         isPublic: !isPrivate, // 비공개 설정 반영
       };
 
@@ -257,27 +281,9 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
+      // blogStore에서 블로그 정보 가져오기
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
         setIsLoading(false);
         return;
       }
@@ -297,7 +303,7 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
       }
 
       const requestBody = {
-        blogId: blogId,
+        blogId: blogInfo.id,
         category: parseInt(category) || null,
         title: title || '제목 없음',
         content: html,
@@ -372,6 +378,31 @@ function SaveButtons({ category, title }: { category: string; title: string }) {
   );
 }
 
+// 썸네일 자동 설정 컴포넌트
+function ThumbnailAutoSetter({ setThumbnail }: { setThumbnail: (url: string) => void }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const removeListener = editor.registerUpdateListener(() => {
+      editor.getEditorState().read(() => {
+        const html = $generateHtmlFromNodes(editor, null);
+
+        // HTML에서 첫 번째 이미지 태그 찾기
+        const imgMatch = html.match(/<img[^>]+src="([^"]+)"[^>]*>/);
+        if (imgMatch && imgMatch[1]) {
+          setThumbnail(imgMatch[1]);
+        }
+      });
+    });
+
+    return () => {
+      removeListener();
+    };
+  }, [editor, setThumbnail]);
+
+  return null;
+}
+
 function ContentSizeMonitor() {
   const [editor] = useLexicalComposerContext();
   const [contentSize, setContentSize] = useState(0);
@@ -436,6 +467,7 @@ function ContentSizeMonitor() {
 export default function PostEditor() {
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
+  const [thumbnail, setThumbnail] = useState('');
 
   const initialConfig = {
     namespace: 'PostEditor',
@@ -463,12 +495,13 @@ export default function PostEditor() {
     <div className="min-h-screen bg-gray-50">
       <LexicalComposer initialConfig={initialConfig}>
         <ContentSizeMonitor />
+        <ThumbnailAutoSetter setThumbnail={setThumbnail} />
         <EditHeader />
         <div className="mx-auto max-w-4xl px-4 py-8 pb-20">
           <div className="overflow-hidden rounded-lg bg-white shadow-lg">
-            <EditorForm category={category} setCategory={setCategory} title={title} setTitle={setTitle} />
+            <EditorForm category={category} setCategory={setCategory} title={title} setTitle={setTitle} thumbnail={thumbnail} setThumbnail={setThumbnail} />
             <Editor />
-            <SaveButtons category={category} title={title} />
+            <SaveButtons category={category} title={title} thumbnail={thumbnail} />
           </div>
         </div>
       </LexicalComposer>

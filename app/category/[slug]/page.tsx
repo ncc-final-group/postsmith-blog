@@ -1,28 +1,27 @@
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import BlogLayout from '../../../components/BlogLayout';
-import SafeBlogProvider from '../../../components/SafeBlogProvider';
+import BlogProvider from '../../../components/BlogProvider';
+import BlogRenderer from '../../../components/BlogRenderer';
 import { getCurrentUser } from '../../../lib/auth';
-import { renderTemplate } from '../../../lib/template/TemplateEngine';
-import { getThemeByBlogId } from '../../../lib/themeService';
+import { getBlogAddress } from '../../../lib/blogUtils';
+import { getSidebarData } from '../../api/sidebarData';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getContentsByCategoryNameWithPaging } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
-import { getRecentReplies } from '../../api/tbReplies';
-
-import { getBlogAddress } from '@lib/blogUtils';
 
 export default async function CategoryPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const page = parseInt(resolvedSearchParams.page || '1', 10);
-  const sub = await getBlogAddress();
-  const blog = await getBlogByAddress(sub);
-  if (!blog) notFound();
-  const themeData = await getThemeByBlogId(blog.id);
-  if (!themeData) notFound();
+
+  // 현재 블로그와 사용자 정보 가져오기 (app/page.tsx와 동일한 방식)
+  const subdomain = await getBlogAddress();
+  const blog = await getBlogByAddress(subdomain);
+
+  if (!blog) {
+    notFound();
+  }
 
   // 현재 로그인한 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
@@ -37,8 +36,10 @@ export default async function CategoryPage({ params, searchParams }: { params: P
 
   const allContents = await getContentsByBlogId(blog.id, ownerUserId);
   const paginatedContents = await getContentsByCategoryNameWithPaging(blog.id, decodeURIComponent(slug), page, 10, ownerUserId);
-  const recentReplies = await getRecentReplies(blog.id);
   const menus = await getMenusByBlogId(blog.id);
+
+  // 사이드바 데이터 불러오기 (app/page.tsx와 동일)
+  const sidebarData = await getSidebarData(blog.id, ownerUserId);
 
   const templateData = {
     blog: {
@@ -59,7 +60,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
       name: String(menu.name),
       type: String(menu.type),
       uri: String(menu.uri),
-      is_blank: Boolean(menu.is_blank),
+      is_blank: Boolean(menu.is_blank ?? false),
     })),
     // 전체 글 목록을 포함 (최근 글, 인기글 표시용)
     contents: allContents.map((content) => ({
@@ -83,54 +84,37 @@ export default async function CategoryPage({ params, searchParams }: { params: P
       category: content.category ? { id: Number(content.category.id), name: String(content.category.name) } : undefined,
       reply_count: Number(content.reply_count ?? 0),
     })),
-    recentReplies: recentReplies.map((r) => ({
-      id: Number(r.id),
-      content_id: Number(r.content_id),
-      content: String(r.content),
-      created_at: String(r.created_at),
-      content_sequence: Number(r.content_sequence),
-      user: { nickname: String(r.user_nickname ?? '익명') },
-    })),
+    recentReplies: sidebarData.recentReplies,
     replies: [],
-    pagination: paginatedContents.pagination, // 페이지네이션 정보 추가
+    pagination: paginatedContents.pagination,
+    // 사이드바 데이터 추가 (app/page.tsx와 동일)
+    recentContents: sidebarData.recentContents,
+    popularContents: sidebarData.popularContents.map((item) => ({
+      ...item,
+      created_at: '',
+      content_html: '',
+      content_plain: '',
+      thumbnail: undefined,
+      category: undefined,
+    })),
+    // 카테고리 페이지 전용 데이터
+    currentCategoryName: category.name,
+    isCategoryPage: true,
   };
 
-  const html = renderTemplate(themeData.themeHtml, themeData.themeCss, templateData);
-
-  // 카테고리 헤더 삽입
-  const headerBlock = `
-    <section class="category-header container mx-auto py-8">
-      <h1 class="text-3xl font-bold mb-2">${category.name}</h1>
-      <p class="text-gray-600">${paginatedContents.pagination.totalContents}개의 글</p>
-    </section>
-  `;
-
-  // 첫 <main> 태그 앞에 헤더 블록 추가
-  const finalHtml = html.replace('<main', `${headerBlock}<main`);
-
-  const blogInfo = {
-    id: blog.id,
-    nickname: blog.nickname,
-    description: blog.description,
-    logo_image: blog.logo_image,
-    address: blog.address,
-  };
-
-  // 사용자 정보를 IUserSession 형태로 변환
-  const session = currentUser
-    ? {
-        accessToken: undefined,
-        userId: String(currentUser.id),
-        email: currentUser.email,
-        role: currentUser.role,
-        userNickname: currentUser.nickname,
-        profileImage: undefined,
-      }
-    : undefined;
-
+  // BlogProvider로 감싸서 blogStore에 blog 정보 저장 (app/page.tsx와 동일)
   return (
-    <SafeBlogProvider blogId={blog.id} blogInfo={blogInfo}>
-      <BlogLayout blogId={blog.id} html={String(finalHtml)} css={String(themeData.themeCss)} />
-    </SafeBlogProvider>
+    <BlogProvider
+      blogInfo={{
+        id: blog.id,
+        nickname: blog.nickname,
+        description: blog.description,
+        logo_image: blog.logo_image,
+        address: blog.address,
+      }}
+      sidebarData={sidebarData}
+    >
+      <BlogRenderer blogId={blog.id} templateData={templateData} />
+    </BlogProvider>
   );
 }

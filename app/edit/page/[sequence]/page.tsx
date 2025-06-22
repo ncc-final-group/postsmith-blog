@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable no-console */
+
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
@@ -510,9 +510,7 @@ export default function PageEditPage({ params }: { params: Promise<{ sequence: s
       CustomImageNode,
       CustomVideoNode,
     ],
-    onError: (error: Error) => {
-      console.error('Lexical error:', error);
-    },
+    onError: (error: Error) => {},
   };
 
   if (isLoading) {

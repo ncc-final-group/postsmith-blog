@@ -1,18 +1,16 @@
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
+import BlogRenderer from '../../../components/BlogRenderer';
 import ContentStats from '../../../components/ContentStats';
-import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
-import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getBlogAddress } from '../../../lib/blogUtils';
 import { getSidebarData } from '../../api/sidebarData';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getContentsByBlogId, getNextPost, getPopularContentsByBlogId, getPostBySequence, getPrevPost, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
 import { getRecentReplies, getRepliesByContentId, Reply } from '../../api/tbReplies';
-import { getActiveThemeByBlogId } from '../../api/tbThemes';
 
 // 댓글 계층 구조 인터페이스
 interface HierarchicalReply extends Reply {
@@ -80,28 +78,6 @@ function flattenReplies(hierarchicalReplies: HierarchicalReply[]): HierarchicalR
   return result;
 }
 
-async function getBlogAddress(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get('host') || 'localhost:3000';
-
-  // address.localhost:3000 형태에서 address 추출
-  if (host.includes('.localhost')) {
-    const subdomain = host.split('.localhost')[0];
-    return subdomain;
-  }
-
-  // address.domain.com 형태에서 address 추출
-  if (host.includes('.')) {
-    const parts = host.split('.');
-    if (parts.length >= 2) {
-      return parts[0];
-    }
-  }
-
-  // 기본값 (개발 환경)
-  return 'testblog';
-}
-
 export default async function PostPage({ params }: { params: Promise<{ sequence: string }> }) {
   // 1. 파라미터 검증
   const resolvedParams = await params;
@@ -121,13 +97,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     notFound();
   }
 
-  // 4. 테마 정보 조회
-  const theme = await getActiveThemeByBlogId(blog.id);
-  if (!theme) {
-    notFound();
-  }
-
-  // 4.5. 현재 로그인한 사용자 정보 가져오기
+  // 4. 현재 로그인한 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
 
   // 블로그 소유자인지 확인
@@ -318,10 +288,7 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     })),
   };
 
-  // 15. 템플릿 렌더링
-  const html = renderTemplate(theme.html, theme.css, templateData);
-
-  // 16. 블로그 정보 구성
+  // 15. 블로그 정보 구성
   const blogInfo = {
     id: blog.id,
     nickname: blog.nickname,
@@ -330,22 +297,10 @@ export default async function PostPage({ params }: { params: Promise<{ sequence:
     address: blog.address,
   };
 
-  // 사용자 정보를 IUserSession 형태로 변환
-  const session = currentUser
-    ? {
-        accessToken: undefined,
-        userId: String(currentUser.id),
-        email: currentUser.email,
-        role: currentUser.role,
-        userNickname: currentUser.nickname,
-        profileImage: undefined,
-      }
-    : undefined;
-
   return (
-    <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+    <BlogProvider blogInfo={blogInfo} sidebarData={sidebarData}>
       <ContentStats contentId={content.id} userId={currentUser?.id} />
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
-    </SafeBlogProvider>
+      <BlogRenderer blogId={blog.id} templateData={templateData} />
+    </BlogProvider>
   );
 }

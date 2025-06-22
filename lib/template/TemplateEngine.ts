@@ -120,6 +120,9 @@ interface TemplateData {
   };
   // 페이지 타입 구분 (전체 글 목록 페이지인지 확인)
   isAllPostsPage?: boolean;
+  // 카테고리 페이지 관련 정보
+  isCategoryPage?: boolean;
+  currentCategoryName?: string;
   // 페이징 정보
   pagination?: {
     currentPage: number;
@@ -173,16 +176,48 @@ const POSTSMITH_THEME_SCRIPT = `
    * 모바일 사이드바 토글 기능
    */
   function initMobileSidebar() {
+
     const toggleBtn = document.querySelector('.mobile-menu');
     const menu = document.querySelector('.menu');
     const overlay = document.querySelector('.menu-overlay');
 
-    if (!toggleBtn || !menu || !overlay) return;
+
+
+    if (!toggleBtn || !menu || !overlay) {
+      // 대안: 더 넓은 선택자로 시도
+      const allButtons = document.querySelectorAll('button');
+      const mobileMenuBtn = Array.from(allButtons).find(btn => 
+        btn.classList.contains('mobile-menu') || 
+        btn.getAttribute('aria-label')?.includes('메뉴')
+      );
+      
+      if (mobileMenuBtn) {
+        // 임시로 직접 이벤트 추가
+        mobileMenuBtn.addEventListener('click', () => {
+        });
+      }
+      
+      return;
+    }
 
     const toggleSidebar = () => {
+      
       menu.classList.toggle('active');
       overlay.classList.toggle('active');
       toggleBtn.classList.toggle('open');
+      
+      // CSS가 제대로 적용되지 않는 경우 강제로 스타일 적용
+      if (menu.classList.contains('active')) {
+        if (window.getComputedStyle(menu).left === '-300px') {
+          menu.style.left = '0px';
+          overlay.style.opacity = '1';
+          overlay.style.visibility = 'visible';
+        }
+      } else {
+        menu.style.left = '';
+        overlay.style.opacity = '';
+        overlay.style.visibility = '';
+      }
 
       if (menu.classList.contains('active')) {
         const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -281,7 +316,9 @@ const POSTSMITH_THEME_SCRIPT = `
    * 초기화 함수
    */
   function init() {
-    if (isInitialized) return;
+    if (isInitialized) {
+      return;
+    }
     
     initMobileSidebar();
     initCommentFunctions();
@@ -294,6 +331,15 @@ const POSTSMITH_THEME_SCRIPT = `
   } else {
     init();
   }
+
+  // 추가 안전장치: 다양한 시점에서 초기화 재시도
+  setTimeout(() => {
+    if (!isInitialized) init();
+  }, 1000);
+
+  setTimeout(() => {
+    if (!isInitialized) init();
+  }, 2000);
 })();
 </script>
 `;
@@ -491,6 +537,22 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   categoryRepHtml = buildCategoryRepList(null);
   result = result.replace(categoryRepPattern, categoryRepHtml);
 
+  // 모바일 메뉴용 카테고리 목록
+  const buildMobileCategoryList = (parentId: number | null, depth = 0): string => {
+    return data.categories
+      .filter((cat) => (cat.category_id ?? null) == parentId)
+      .map((cat) => {
+        const prefix = depth > 0 ? '&nbsp;&nbsp;- ' : '';
+        const current = `<li><a href="/category/${encodeURIComponent(cat.name)}" class="block py-1${depth > 0 ? ' sub-cat' : ''}">${prefix}${cat.name} (${cat.post_count})</a></li>`;
+        const children = buildMobileCategoryList(cat.id, depth + 1);
+        return current + children;
+      })
+      .join('');
+  };
+
+  const mobileCategoriesHtml = buildMobileCategoryList(null);
+  result = result.replace(/\[##_mobile_categories_##\]/g, mobileCategoriesHtml);
+
   // 모바일 메뉴용 분류 없음 링크
   const mobileUncategorizedHtml =
     data.uncategorizedCount && data.uncategorizedCount > 0
@@ -508,8 +570,19 @@ function replacePlaceholders(template: string, data: TemplateData): string {
   result = result.replace(/\[##_mobile_menu_##\]/g, mobileMenuHtml);
 
   // 전체 글 개수 치환자 추가
-  const totalCount = data.totalContentsCount || data.contents.length;
+  const totalCount = data.pagination?.totalContents || data.totalContentsCount || data.contents.length;
   result = result.replace(/\[##_count_total_##\]/g, String(totalCount));
+
+  // 카테고리 페이지 관련 치환자
+  if (data.isCategoryPage && data.currentCategoryName) {
+    result = result.replace(/\[##_current_category_name_##\]/g, data.currentCategoryName);
+    result = result.replace(/\[##_category_page_title_##\]/g, `${data.currentCategoryName} 카테고리`);
+    result = result.replace(/\[##_page_header_title_##\]/g, `${data.currentCategoryName} <span class="text-lg text-gray-600">(${totalCount})</span>`);
+  } else {
+    result = result.replace(/\[##_current_category_name_##\]/g, '');
+    result = result.replace(/\[##_category_page_title_##\]/g, '');
+    result = result.replace(/\[##_page_header_title_##\]/g, `전체 글 <span class="text-lg text-gray-600">(${totalCount})</span>`);
+  }
 
   // 글 목록 반복 블록 처리 - 개별 글 페이지가 아닐 때만 처리
   if (!data.currentArticle) {
@@ -1001,7 +1074,7 @@ function replacePlaceholders(template: string, data: TemplateData): string {
               userAvatar.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             }
             
-            console.log('사용자 프로필 업데이트됨:', user.nickname);
+
           }
         }
 
@@ -1012,28 +1085,20 @@ function replacePlaceholders(template: string, data: TemplateData): string {
           let user = null;
           let isAuthenticated = false;
           
-          console.log('댓글 로그인 체크 시작 - localStorage 확인'); // 디버깅용
-          
           const storageData = window.localStorage.getItem(storageKey);
-          console.log('키 확인:', storageKey, '데이터:', storageData); // 디버깅용
           
           if (storageData) {
             try {
               const storage = JSON.parse(storageData);
-              console.log('파싱된 스토리지:', storage); // 디버깅용
               
               // Zustand persist 구조 확인
               if (storage.state && storage.state.userInfo && storage.state.userInfo.id) {
                 user = storage.state.userInfo;
                 isAuthenticated = storage.state.isAuthenticated || false;
-                console.log('찾음 (persist 구조):', user, isAuthenticated);
               }
             } catch (error) {
-              console.error('localStorage 파싱 오류:', error);
             }
           }
-          
-          console.log('최종 결과 - 사용자:', user, '인증됨:', isAuthenticated); // 디버깅용
           
           if (user && user.id && isAuthenticated) {
             // 로그인된 상태 - 댓글 폼 표시 및 사용자 프로필 업데이트
@@ -1042,11 +1107,9 @@ function replacePlaceholders(template: string, data: TemplateData): string {
             
             if (commentForm) {
               commentForm.style.display = 'block';
-              console.log('댓글 폼 표시');
             }
             if (loginMessage) {
               loginMessage.style.display = 'none';
-              console.log('로그인 메시지 숨김');
             }
             
             // 사용자 프로필 정보 업데이트
@@ -1061,11 +1124,9 @@ function replacePlaceholders(template: string, data: TemplateData): string {
           
           if (commentForm) {
             commentForm.style.display = 'none';
-            console.log('댓글 폼 숨김');
           }
           if (loginMessage) {
             loginMessage.style.display = 'block';
-            console.log('로그인 메시지 표시');
           }
           
           return null;
@@ -1114,7 +1175,6 @@ function replacePlaceholders(template: string, data: TemplateData): string {
                alert('댓글 작성에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
              }
           } catch (error) {
-            console.error('댓글 작성 오류:', error);
             alert('댓글 작성 중 오류가 발생했습니다.');
           } finally {
             submitBtn.disabled = false;
@@ -1267,7 +1327,6 @@ function replacePlaceholders(template: string, data: TemplateData): string {
               alert('답글 작성에 실패했습니다: ' + (errorData.message || '알 수 없는 오류'));
             }
           } catch (error) {
-            console.error('답글 작성 오류:', error);
             alert('답글 작성 중 오류가 발생했습니다.');
           } finally {
             submitBtn.disabled = false;
@@ -1470,8 +1529,8 @@ function replacePlaceholders(template: string, data: TemplateData): string {
     result = result.replace(/<s_comment_form>[\s\S]*?<\/s_comment_form>/g, '');
   }
 
-  // s_index_article_rep 블록 처리 (전체 글 목록 페이지에서만 표시)
-  if (data.isAllPostsPage && data.currentArticle === undefined) {
+  // s_index_article_rep 블록 처리 (글 목록 페이지에서 표시)
+  if ((data.isAllPostsPage || data.isCategoryPage) && data.currentArticle === undefined) {
     result = result.replace(/<s_index_article_rep>([\s\S]*?)<\/s_index_article_rep>/g, '$1');
   } else {
     result = result.replace(/<s_index_article_rep>[\s\S]*?<\/s_index_article_rep>/g, '');
