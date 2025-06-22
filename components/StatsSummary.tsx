@@ -83,8 +83,6 @@ export default function StatsSummary() {
 
         setError(null);
       } catch (err) {
-        //eslint-disable-next-line no-console
-        console.error(err);
         setError(err instanceof Error ? err.message : '통계 데이터를 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);

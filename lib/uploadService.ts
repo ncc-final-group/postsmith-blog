@@ -66,15 +66,6 @@ export const uploadVideoToServer = async (file: File, altText?: string, userId?:
       };
     }
 
-    // eslint-disable-next-line no-console
-    console.log('=== 비디오 업로드 시작 ===');
-    // eslint-disable-next-line no-console
-    console.log('API_BASE_URL:', API_BASE_URL);
-    // eslint-disable-next-line no-console
-    console.log('파일 정보:', { name: file.name, size: file.size, type: file.type });
-    // eslint-disable-next-line no-console
-    console.log('요청 URL:', `${API_BASE_URL}/api/upload/video`);
-
     const formData = new FormData();
     formData.append('file', file);
     if (altText) {

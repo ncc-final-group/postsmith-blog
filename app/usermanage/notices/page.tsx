@@ -103,10 +103,7 @@ export default function BoardSitePage() {
           totalPages,
         });
       })
-      .catch((err) => {
-        //eslint-disable-next-line no-console
-        console.error('게시글을 불러오는 중 오류 발생:', err);
-      })
+      .catch((err) => {})
       .finally(() => {
         setIsLoading(false);
       });
@@ -123,8 +120,6 @@ export default function BoardSitePage() {
     }
 
     if (!subdomain) {
-      //eslint-disable-next-line no-console
-      console.error('유효한 서브도메인을 찾을 수 없습니다:', hostname);
       throw new Error('서브도메인을 찾을 수 없습니다.');
     }
 
@@ -142,8 +137,6 @@ export default function BoardSitePage() {
         fetchPosts(data.blogId);
       })
       .catch((err) => {
-        //eslint-disable-next-line no-console
-        console.error(err);
         alert('블로그 정보를 불러오는 데 실패했습니다.');
       });
   }, []);

@@ -50,10 +50,7 @@ export default function EachStatsChart({ contentId }: Props) {
         const res = await fetch(url);
         const data: StatsData[] = await res.json();
         setStatsData(data);
-      } catch (e) {
-        //eslint-disable-next-line no-console
-        console.error('Failed to fetch stats', e);
-      }
+      } catch (e) {}
     };
 
     fetchStats();

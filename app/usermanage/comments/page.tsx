@@ -63,8 +63,6 @@ export default function CommentsData() {
         totalPages: 1,
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('댓글을 불러오는 중 오류 발생:', error);
     } finally {
       setIsLoading(false);
     }
@@ -81,8 +79,6 @@ export default function CommentsData() {
     }
 
     if (!subdomain) {
-      //eslint-disable-next-line no-console
-      console.error('유효한 서브도메인을 찾을 수 없습니다:', hostname);
       throw new Error('서브도메인을 찾을 수 없습니다.');
     }
 
@@ -100,8 +96,6 @@ export default function CommentsData() {
         fetchComments(data.blogId); // 즉시 댓글 불러오기
       })
       .catch((err) => {
-        //eslint-disable-next-line no-console
-        console.error(err);
         alert('블로그 정보를 불러오는 데 실패했습니다.');
       });
   }, []);
@@ -182,13 +176,6 @@ export default function CommentsData() {
       alert('답글 내용을 입력하세요.');
       return;
     }
-    // eslint-disable-next-line no-console
-    console.log('보내는 데이터:', {
-      userId: 1,
-      contentId: replyTarget.contentId,
-      replyId: replyTarget.repliesId,
-      contentText: replyContent,
-    });
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER}/api/replies/submitReply`, {
@@ -213,8 +200,6 @@ export default function CommentsData() {
       setReplyContent('');
       fetchComments(blogId); // 댓글 목록 새로고침
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
       alert('답글 등록에 실패했습니다.');
     }
   };

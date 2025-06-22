@@ -76,6 +76,7 @@ export async function POST(request: Request) {
         category: body.category,
         title: body.title,
         content: body.content,
+        thumbnail: body.thumbnail || null, // 썸네일 추가
         postType: body.postType ?? 'POSTS', // 기본값
         isTemp: body.isTemp ?? false,
         isPublic: body.isPublic ?? true,

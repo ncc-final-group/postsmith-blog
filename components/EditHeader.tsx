@@ -213,8 +213,8 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="mb-1 block text-sm font-medium text-gray-700">텍스트</label>
           <input
             type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            value={text || ''}
+            onChange={(e) => setText(e.target.value || '')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="링크에 표시될 텍스트"
           />
@@ -223,8 +223,8 @@ const LinkForm = ({ onSubmit, onClose, position }: LinkFormProps) => {
           <label className="mb-1 block text-sm font-medium text-gray-700">URL</label>
           <input
             type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            value={url || ''}
+            onChange={(e) => setUrl(e.target.value || '')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="https://example.com"
           />
@@ -587,8 +587,8 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
         const result = await uploadImageToServer(file, fileName, undefined, blogId);
 
         if (result.success && result.url) {
-          setImageUrl(result.url);
-          setAltText(result.altText || fileName);
+          setImageUrl(String(result.url || ''));
+          setAltText(String(result.altText || fileName || ''));
           setMediaId(result.mediaId);
           // 업로드 성공 후 Object URL 해제
           URL.revokeObjectURL(objectUrl);
@@ -669,9 +669,9 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
             <label className="mb-1 block text-sm font-medium text-gray-700">이미지 URL</label>
             <input
               type="url"
-              value={imageUrl}
+              value={imageUrl || ''}
               onChange={(e) => {
-                const url = e.target.value;
+                const url = e.target.value || '';
                 setImageUrl(url);
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -696,8 +696,8 @@ const ImageForm = ({ onSubmit, onClose, position, blogId }: ImageFormProps) => {
           <label className="mb-1 block text-sm font-medium text-gray-700">대체 텍스트</label>
           <input
             type="text"
-            value={altText}
-            onChange={(e) => setAltText(e.target.value)}
+            value={altText || ''}
+            onChange={(e) => setAltText(e.target.value || '')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="이미지 설명"
           />
@@ -1161,8 +1161,8 @@ const FileForm = ({ onSubmit, onClose, position, blogId }: FileFormProps) => {
           <label className="mb-1 block text-sm font-medium text-gray-700">표시 이름</label>
           <input
             type="text"
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
+            value={fileName || ''}
+            onChange={(e) => setFileName(e.target.value || '')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="파일 이름"
           />
@@ -1255,8 +1255,8 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
         const result = await uploadVideoToServer(file, fileName, undefined, blogId);
 
         if (result.success && result.url) {
-          setVideoUrl(result.url || '');
-          setAltText(result.altText || fileName || '비디오');
+          setVideoUrl(String(result.url || ''));
+          setAltText(String(result.altText || fileName || '비디오'));
           setSelectedVideo(file);
         } else {
           alert(`파일 업로드 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`);
@@ -1264,6 +1264,10 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
           setVideoUrl('');
           setAltText('');
           setSelectedVideo(null);
+          // 파일 입력 초기화
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         }
       } catch (error) {
         alert('비디오 업로드 중 오류가 발생했습니다.');
@@ -1271,6 +1275,10 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
         setVideoUrl('');
         setAltText('');
         setSelectedVideo(null);
+        // 파일 입력 초기화
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     }
   };
@@ -1322,8 +1330,8 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
             <label className="mb-1 block text-sm font-medium text-gray-700">비디오 URL</label>
             <input
               type="url"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
+              value={videoUrl || ''}
+              onChange={(e) => setVideoUrl(e.target.value || '')}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="https://example.com/video.mp4"
             />
@@ -1345,8 +1353,8 @@ const VideoForm = ({ onSubmit, onClose, position, blogId }: VideoFormProps) => {
           <label className="mb-1 block text-sm font-medium text-gray-700">설명</label>
           <input
             type="text"
-            value={altText}
-            onChange={(e) => setAltText(e.target.value)}
+            value={altText || ''}
+            onChange={(e) => setAltText(e.target.value || '')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="비디오 설명"
           />
