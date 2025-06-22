@@ -38,6 +38,9 @@ spec:
 
     stages {
         stage('Initialize environment') {
+            when {
+                anyOf { branch 'main'; branch 'PR-*' }
+            }
             steps {
                 script {
                     env.STAGE_SEQUENCE = 0
@@ -51,6 +54,9 @@ spec:
             }
         }
         stage('CodeStyle Check') {
+            when {
+                anyOf { branch 'main'; branch 'PR-*' }
+            }
             steps {
                 script {
                     github.setCommitStatus("Running Code Style Check", "CI / StyleCheck ", "PENDING")
@@ -61,6 +67,9 @@ spec:
             }
         }
         stage('Eslint Check') {
+            when {
+                anyOf { branch 'main'; branch 'PR-*' }
+            }
             steps {
                 script {
                     github.setCommitStatus("Running ESLint Check", "CI / ESLint", "PENDING")
@@ -71,6 +80,9 @@ spec:
             }
         }
         stage('Build npm') {
+            when {
+                anyOf { branch 'main'; branch 'PR-*' }
+            }
             steps {
                 script {
                     github.setCommitStatus("Building Next.JS application", "CI / npm build", "PENDING")

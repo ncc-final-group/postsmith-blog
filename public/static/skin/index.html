@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>[##_page_title_##] | [##_title_##]</title>
+    <meta name="description" content="[##_desc_##]" />
+    <meta property="og:title" content="[##_page_title_##]" />
+    <meta property="og:description" content="[##_desc_##]" />
+    <meta property="og:image" content="[##_image_##]" />
+    <link rel="stylesheet" href="/static/skin/basic.css" />
+  </head>
+
+  <!-- 페이지 타입에 따라 body id 가 치환됩니다 -->
+  <body id="[##_body_id_##]">
+    <s_t3></s_t3>
+
+    <!-- 모바일 사이드바 -->
+    <div class="menu-overlay"></div>
+    <div class="menu">
+      <!-- 전체 글 보기 추가 -->
+      <div class="category">
+        <a href="[##_blog_link_##]" class="link">전체 글 보기 ([##_count_total_##])</a>
+      </div>
+      [##_category_##]
+      <p class="powered-by">POWERED BY POSTSMITH</p>
+    </div>
+
+    <!-- 헤더 영역 -------------------------------------------------------- -->
+    <header class="site-header">
+      <div class="container mx-auto flex items-center justify-between py-6">
+        <div class="flex items-center gap-4">
+          <button type="button" class="mobile-menu" aria-label="메뉴 열기">
+            <span class="icon-ham">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </span>
+            <span class="icon-close">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </span>
+          </button>
+          <h1 class="text-5xl font-bold">
+            <a href="[##_blog_link_##]" class="flex items-center gap-3">
+              [##_blog_image_##]
+              <!-- `<img src="..." />` 로 치환 -->
+              <span>[##_title_##]</span>
+            </a>
+          </h1>
+        </div>
+
+        <!-- 메뉴는 관리화면에서 설정된 HTML 로 통째로 치환됩니다 -->
+        <nav class="site-nav">[##_blog_menu_##]</nav>
+      </div>
+    </header>
+
+    <!-- 본문 영역 -------------------------------------------------------- -->
+    <main class="container mx-auto flex gap-8 py-10">
+      <!-- 글 목록 / 글 본문 -->
+      <section class="flex-1">
+        <!-- 개별 글 페이지 섹션 (새로 추가) -->
+        <s_article_protected>
+          <div class="single-post">
+            <article class="post-content">
+              <header class="post-header mb-8">
+                <div class="post-category-top mb-2 text-sm text-blue-600">
+                  <span>[##_article_category_##]</span>
+                </div>
+                <h1 class="post-title editor-content mb-4 text-4xl font-bold">[##_article_title_##]</h1>
+                <div class="post-meta mb-4 text-sm text-gray-500">
+                  <span class="post-author">[##_article_author_##]</span>
+                  · <time datetime="[##_article_date_##]">[##_article_date_year_##].[##_article_date_month_##].[##_article_date_day_##] [##_article_time_##]</time> ·
+                  <span class="post-views">조회수 [##_article_total_views_##]</span>
+                </div>
+              </header>
+
+              <div class="post-body prose editor-content max-w-none">[##_article_content_##]</div>
+
+              <footer class="post-footer mt-8 border-t pt-8">
+                <div class="post-navigation flex justify-between">
+                  <div class="prev-post">[##_article_prev_##]</div>
+                  <div class="next-post">[##_article_next_##]</div>
+                </div>
+
+                <!-- 댓글 섹션 추가 (POSTS 타입에서만 표시) -->
+                <s_article_comments>
+                  <div class="comments-section mt-12">
+                    <h3 class="mb-6 text-xl font-semibold">댓글</h3>
+
+                    <!-- 댓글 입력 폼 (POSTS 타입에서만 표시) -->
+                    <s_comment_form>
+                      <div class="comment-form mb-8">[##_rp_input_form_##]</div>
+                    </s_comment_form>
+
+                    <!-- 댓글 목록 -->
+                    <div class="comments-list space-y-6">
+                      [##_rp_rep_##]
+                      <div class="comment-item [##_rp_rep_depth_class_##] border-b pb-4" id="reply-[##_rp_rep_id_##]">
+                        <div class="comment-header mb-2 flex items-center gap-2">
+                          <span class="font-medium">[##_rp_rep_name_##]</span>
+                          <span class="text-sm text-gray-500">[##_rp_rep_date_##]</span>
+                          <span class="text-xs text-gray-400">깊이: [##_rp_rep_depth_##]</span>
+                        </div>
+                        <div class="comment-content">[##_rp_rep_content_##]</div>
+                        <s_comment_form>
+                          <div class="comment-actions mt-2">
+                            <button onclick="toggleReplyForm([##_rp_rep_id_##])" class="reply-btn cursor-pointer border-none bg-transparent text-xs text-blue-500 hover:underline">
+                              답글
+                            </button>
+                          </div>
+                        </s_comment_form>
+                        <!-- 답글 작성 폼 (POSTS 타입에서만 표시) -->
+                        <s_comment_form>
+                          <div id="reply-form-[##_rp_rep_id_##]" class="reply-form mt-4 hidden">
+                            <div class="reply-form-inner rounded-lg border border-gray-200 bg-gray-50 p-4">
+                              <div class="reply-to-info mb-2 text-sm text-gray-600"><strong>[##_rp_rep_name_##]</strong>님에게 답글 작성</div>
+                              <form onsubmit="handleReplySubmit(event, [##_rp_rep_id_##])">
+                                <div class="form-group mb-3">
+                                  <textarea
+                                    id="reply-content-[##_rp_rep_id_##]"
+                                    name="content"
+                                    rows="3"
+                                    placeholder="답글을 입력해주세요..."
+                                    required
+                                    class="resize-vertical w-full rounded border border-gray-300 p-2 text-sm"
+                                  ></textarea>
+                                </div>
+                                <div class="form-actions flex gap-2">
+                                  <button type="submit" class="reply-submit-btn cursor-pointer rounded border-none bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
+                                    답글 작성
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onclick="toggleReplyForm([##_rp_rep_id_##])"
+                                    class="reply-cancel-btn cursor-pointer rounded border-none bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+                          </div>
+                        </s_comment_form>
+                      </div>
+                      [/##_rp_rep_##]
+                    </div>
+                  </div>
+                </s_article_comments>
+              </footer>
+            </article>
+          </div>
+        </s_article_protected>
+
+        <!-- 홈/카테고리/태그 등에서 글 카드 반복 -->
+        <s_index_article_rep>
+          <div class="posts-header mb-6">
+            <h2 class="text-2xl font-bold text-white">전체 글 ([##_count_total_##])</h2>
+          </div>
+        </s_index_article_rep>
+        <s_article_rep>
+          <article class="post-card border-b py-6">
+            <a href="[##_article_rep_link_##]" class="block hover:opacity-80">
+              <h2 class="mb-2 text-2xl font-semibold">[##_article_rep_title_##]</h2>
+
+              <!-- 대표 이미지가 있을 때만 썸네일 그룹 치환 -->
+              <s_article_rep_thumbnail>
+                <img src="[##_article_rep_thumbnail_url_##]" alt="thumbnail" class="h-56 w-full rounded object-cover" />
+              </s_article_rep_thumbnail>
+
+              <p class="mt-2 text-sm text-gray-500">
+                <time datetime="[##_article_rep_date_##]">[##_article_rep_date_year_##].[##_article_rep_date_month_##].[##_article_rep_date_day_##] [##_article_rep_time_##]</time>
+                · <a href="[##_article_rep_category_link_##]" class="text-blue-500">[##_article_rep_category_##]</a> · <s_rp_count>[##_article_rep_rp_cnt_##] 댓글</s_rp_count>
+              </p>
+
+              <p class="mt-4 line-clamp-3 text-gray-700">[##_article_rep_desc_##]</p>
+            </a>
+          </article>
+        </s_article_rep>
+
+        <!-- 페이지네이션 -->
+        <s_pagination>
+          <div class="pagination-container mt-12 flex justify-center">
+            <nav class="pagination flex items-center space-x-1">
+              <!-- 맨 앞 페이지 버튼 -->
+              <a href="[##_pagination_first_##]" class="pagination-btn first-btn" [##_pagination_first_disabled_##]>
+                <span>&laquo;</span>
+              </a>
+
+              <!-- 이전 10페이지 버튼 -->
+              <a href="[##_pagination_prev_block_##]" class="pagination-btn prev-block-btn" [##_pagination_prev_block_disabled_##]>
+                <span>&lt;</span>
+              </a>
+
+              <!-- 페이지 번호들 -->
+              [##_pagination_rep_##]
+              <a href="[##_pagination_rep_link_##]" class="pagination-btn page-btn [##_pagination_rep_class_##]"> [##_pagination_rep_number_##] </a>
+              [/##_pagination_rep_##]
+
+              <!-- 다음 10페이지 버튼 -->
+              <a href="[##_pagination_next_block_##]" class="pagination-btn next-block-btn" [##_pagination_next_block_disabled_##]>
+                <span>&gt;</span>
+              </a>
+
+              <!-- 맨 뒷 페이지 버튼 -->
+              <a href="[##_pagination_last_##]" class="pagination-btn last-btn" [##_pagination_last_disabled_##]>
+                <span>&raquo;</span>
+              </a>
+            </nav>
+          </div>
+        </s_pagination>
+      </section>
+
+      <!-- 사이드바 ------------------------------------------------------- -->
+      <aside id="sidebar" class="w-80 space-y-8">
+        <s_sidebar>
+          <s_sidebar_element>
+            <!-- 최근 글 -->
+            <div class="widget">
+              <h3 class="widget-title">최근 글</h3>
+              <ul class="space-y-2">
+                <s_rctps_rep>
+                  <li class="flex items-center gap-2">
+                    <s_rctps_rep_thumbnail>
+                      <img src="[##_rctps_rep_thumbnail_##]" class="h-12 w-12 rounded object-cover" />
+                    </s_rctps_rep_thumbnail>
+                    <a href="[##_rctps_rep_link_##]" class="line-clamp-1 flex-1">[##_rctps_rep_title_##]</a>
+                    <span class="text-sm text-gray-400">[##_rctps_rep_rp_cnt_##]</span>
+                  </li>
+                </s_rctps_rep>
+              </ul>
+            </div>
+          </s_sidebar_element>
+
+          <s_sidebar_element>
+            <!-- 인기 글 -->
+            <div class="widget">
+              <h3 class="widget-title">인기 글</h3>
+              <ul class="space-y-2">
+                <s_rctps_popular_rep>
+                  <li class="flex items-center gap-2">
+                    <s_rctps_rep_thumbnail>
+                      <img src="[##_rctps_rep_thumbnail_##]" class="h-12 w-12 rounded object-cover" />
+                    </s_rctps_rep_thumbnail>
+                    <a href="[##_rctps_rep_link_##]" class="line-clamp-1 flex-1">[##_rctps_rep_title_##]</a>
+                    <span class="text-sm text-gray-400">[##_rctps_rep_rp_cnt_##]</span>
+                  </li>
+                </s_rctps_popular_rep>
+              </ul>
+            </div>
+          </s_sidebar_element>
+
+          <s_sidebar_element>
+            <!-- 최근 댓글 -->
+            <div class="widget">
+              <h3 class="widget-title">최근 댓글</h3>
+              <ul class="space-y-2">
+                <s_rctrp_rep>
+                  <li>
+                    <a href="[##_rctrp_rep_link_##]" class="line-clamp-1 block">[##_rctrp_rep_desc_##]</a>
+                    <span class="text-xs text-gray-500">[##_rctrp_rep_name_##] · [##_rctrp_rep_time_##]</span>
+                  </li>
+                </s_rctrp_rep>
+              </ul>
+            </div>
+          </s_sidebar_element>
+        </s_sidebar>
+      </aside>
+    </main>
+
+    <!-- 푸터 ------------------------------------------------------------- -->
+    <footer class="site-footer py-8 text-center text-sm text-gray-500">&copy; [##_title_##] · Powered by PostSmith</footer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.querySelector('.mobile-menu');
+        const menu = document.querySelector('.menu');
+        const overlay = document.querySelector('.menu-overlay');
+
+        if (!toggleBtn || !menu || !overlay) return;
+
+        const toggleSidebar = () => {
+          menu.classList.toggle('active');
+          overlay.classList.toggle('active');
+          toggleBtn.classList.toggle('open');
+
+          if (menu.classList.contains('active')) {
+            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = scrollBarWidth + 'px';
+          } else {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+          }
+        };
+
+        toggleBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+      });
+
+      // 댓글 답글 폼 토글 함수
+      function toggleReplyForm(replyId) {
+        const replyForm = document.getElementById('reply-form-' + replyId);
+        if (replyForm) {
+          replyForm.classList.toggle('hidden');
+          if (!replyForm.classList.contains('hidden')) {
+            const textarea = replyForm.querySelector('textarea');
+            if (textarea) {
+              textarea.focus();
+            }
+          }
+        }
+      }
+
+      // 답글 제출 핸들러
+      function handleReplySubmit(event, parentId) {
+        event.preventDefault();
+        const form = event.target;
+        const content = form.querySelector('textarea').value.trim();
+
+        if (!content) {
+          alert('답글 내용을 입력해주세요.');
+          return;
+        }
+
+        // 실제 답글 제출 로직은 서버사이드에서 처리
+        // 여기서는 UI 피드백만 제공
+        const submitBtn = form.querySelector('.reply-submit-btn');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '제출 중...';
+        submitBtn.disabled = true;
+
+        // 실제 구현시에는 fetch API나 form 제출을 사용
+        setTimeout(() => {
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+          toggleReplyForm(parentId);
+          form.reset();
+          // 페이지 새로고침 또는 댓글 목록 업데이트
+          window.location.reload();
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>
