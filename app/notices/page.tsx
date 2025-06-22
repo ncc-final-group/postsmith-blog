@@ -1,44 +1,15 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
-import BlogLayout from '../../components/BlogLayout';
 import BlogProvider from '../../components/BlogProvider';
-import { renderTemplate } from '../../lib/template/TemplateEngine';
+import BlogRenderer from '../../components/BlogRenderer';
+import { getBlogAddress } from '../../lib/blogUtils';
 import { getSidebarData } from '../api/sidebarData';
 import { getBlogByAddress } from '../api/tbBlogs';
 import { getCategoriesByBlogId } from '../api/tbCategories';
 import { getNoticesByBlogId, getNoticesByBlogIdWithPaging } from '../api/tbContents';
 import { getMenusByBlogId } from '../api/tbMenu';
-import { getActiveThemeByBlogId } from '../api/tbThemes';
-
-async function getBlogAddress(): Promise<string> {
-  try {
-    const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3000';
-
-    // address.localhost:3000 형태에서 address 추출
-    if (host.includes('.localhost')) {
-      const subdomain = host.split('.localhost')[0];
-      return subdomain;
-    }
-
-    // address.domain.com 형태에서 address 추출
-    if (host.includes('.')) {
-      const parts = host.split('.');
-      if (parts.length >= 2) {
-        return parts[0];
-      }
-    }
-
-    // 기본값 (개발 환경)
-    return 'testblog';
-  } catch (error) {
-    // 서버 환경에서 headers를 읽을 수 없는 경우 기본값 반환
-    return 'testblog';
-  }
-}
 
 export default async function NoticesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   try {
@@ -54,25 +25,19 @@ export default async function NoticesPage({ searchParams }: { searchParams: Prom
       notFound();
     }
 
-    // 3. 테마 정보 조회
-    const theme = await getActiveThemeByBlogId(blog.id);
-    if (!theme) {
-      notFound();
-    }
-
-    // 4. 카테고리 정보 조회
+    // 3. 카테고리 정보 조회
     const categories = await getCategoriesByBlogId(blog.id);
 
-    // 5. 공지사항 목록 조회 (페이징)
+    // 4. 공지사항 목록 조회 (페이징)
     const paginatedNotices = await getNoticesByBlogIdWithPaging(blog.id, page, 10);
 
-    // 6. 사이드바 데이터 불러오기 (최근글, 인기글, 최근 댓글)
+    // 5. 사이드바 데이터 불러오기 (최근글, 인기글, 최근 댓글)
     const sidebarData = await getSidebarData(blog.id);
 
-    // 7. 메뉴 정보 조회
+    // 6. 메뉴 정보 조회
     const menus = await getMenusByBlogId(blog.id);
 
-    // 8. 템플릿 데이터 구성
+    // 7. 템플릿 데이터 구성
     const templateData = {
       blog: {
         nickname: String(blog.nickname),
@@ -126,10 +91,7 @@ export default async function NoticesPage({ searchParams }: { searchParams: Prom
       pagination: paginatedNotices.pagination, // 페이지네이션 정보 추가
     };
 
-    // 9. 템플릿 렌더링
-    const html = renderTemplate(theme.html, theme.css, templateData);
-
-    // 10. 블로그 정보 구성
+    // 8. 블로그 정보 구성
     const blogInfo = {
       id: blog.id,
       nickname: blog.nickname,
@@ -140,7 +102,7 @@ export default async function NoticesPage({ searchParams }: { searchParams: Prom
 
     return (
       <BlogProvider blogInfo={blogInfo} sidebarData={sidebarData}>
-        <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
+        <BlogRenderer blogId={blog.id} templateData={templateData} />
       </BlogProvider>
     );
   } catch (error) {

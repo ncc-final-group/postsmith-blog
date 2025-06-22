@@ -1,41 +1,17 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
-import BlogLayout from '../../../components/BlogLayout';
+import BlogProvider from '../../../components/BlogProvider';
+import BlogRenderer from '../../../components/BlogRenderer';
 import ContentStats from '../../../components/ContentStats';
-import SafeBlogProvider from '../../../components/SafeBlogProvider';
 import { getCurrentUser } from '../../../lib/auth';
-import { renderTemplate } from '../../../lib/template/TemplateEngine';
+import { getBlogAddress } from '../../../lib/blogUtils';
 import { getSidebarData } from '../../api/sidebarData';
 import { getBlogByAddress } from '../../api/tbBlogs';
 import { getCategoriesByBlogId } from '../../api/tbCategories';
 import { getPageByTitle, getPagesByBlogId, getUncategorizedCountByBlogId } from '../../api/tbContents';
 import { getMenusByBlogId } from '../../api/tbMenu';
-import { getActiveThemeByBlogId } from '../../api/tbThemes';
-
-async function getBlogAddress(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get('host') || 'localhost:3000';
-
-  // address.localhost:3000 형태에서 address 추출
-  if (host.includes('.localhost')) {
-    const subdomain = host.split('.localhost')[0];
-    return subdomain;
-  }
-
-  // address.domain.com 형태에서 address 추출
-  if (host.includes('.')) {
-    const parts = host.split('.');
-    if (parts.length >= 2) {
-      return parts[0];
-    }
-  }
-
-  // 기본값 (개발 환경)
-  return 'testblog';
-}
 
 interface PageProps {
   params: Promise<{
@@ -105,31 +81,22 @@ export default async function PagesByTitlePage({ params }: PageProps) {
     notFound();
   }
 
-  // 4. 테마 정보 조회
-  const theme = await getActiveThemeByBlogId(blog.id);
-  if (!theme) {
-    notFound();
-  }
-
-  // 5. 카테고리 정보 조회
+  // 4. 카테고리 정보 조회
   const categories = await getCategoriesByBlogId(blog.id);
 
-  // 6. 댓글 목록 조회 (PAGE 타입에서는 댓글 기능 비활성화)
-  const replies: any[] = [];
-
-  // 7. 사이드바 데이터 불러오기
+  // 5. 사이드바 데이터 불러오기
   const sidebarData = await getSidebarData(blog.id);
 
-  // 8. 메뉴 정보 조회
+  // 6. 메뉴 정보 조회
   const menus = await getMenusByBlogId(blog.id);
 
-  // 9. 분류 없음 글 개수 조회
+  // 7. 분류 없음 글 개수 조회
   const uncategorizedCount = await getUncategorizedCountByBlogId(blog.id);
 
-  // 10. 현재 사용자 정보 가져오기
+  // 8. 현재 사용자 정보 가져오기
   const currentUser = await getCurrentUser();
 
-  // 10.5. 실제 조회수 조회 (서버 사이드)
+  // 9. 실제 조회수 조회 (서버 사이드)
   let totalViews = 0;
   try {
     const viewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/content-stats/views/${pageContent.id}`, {
@@ -143,7 +110,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
     totalViews = 0;
   }
 
-  // 11. 템플릿 데이터 구성 (글 상세 페이지와 동일)
+  // 10. 템플릿 데이터 구성 (글 상세 페이지와 동일)
   const templateData = {
     blog: {
       nickname: String(blog.nickname),
@@ -201,10 +168,7 @@ export default async function PagesByTitlePage({ params }: PageProps) {
     isAllPostsPage: false, // 페이지 상세이므로 false
   };
 
-  // 11. 템플릿 렌더링
-  const html = renderTemplate(theme.html, theme.css, templateData);
-
-  // 12. 블로그 정보 구성
+  // 11. 블로그 정보 구성
   const blogInfo = {
     id: blog.id,
     nickname: blog.nickname,
@@ -213,23 +177,11 @@ export default async function PagesByTitlePage({ params }: PageProps) {
     address: blog.address,
   };
 
-  // 사용자 정보를 IUserSession 형태로 변환
-  const session = currentUser
-    ? {
-        accessToken: undefined,
-        userId: String(currentUser.id),
-        email: currentUser.email,
-        role: currentUser.role,
-        userNickname: currentUser.nickname,
-        profileImage: undefined,
-      }
-    : undefined;
-
   return (
-    <SafeBlogProvider blogId={Number(blog.id)} blogInfo={blogInfo} sidebarData={sidebarData}>
+    <BlogProvider blogInfo={blogInfo} sidebarData={sidebarData}>
       <ContentStats contentId={pageContent.id} userId={currentUser?.id} />
-      <BlogLayout blogId={Number(blog.id)} html={String(html)} css={String(theme.css)} />
-    </SafeBlogProvider>
+      <BlogRenderer blogId={blog.id} templateData={templateData} />
+    </BlogProvider>
   );
 }
 

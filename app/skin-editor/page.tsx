@@ -6,6 +6,8 @@ import React, { Suspense, useEffect, useRef, useState } from 'react';
 
 import { renderTemplate } from '../../lib/template/TemplateEngine';
 
+import { useBlogStore } from '@app/store/blogStore';
+
 interface ThemeContent {
   blogId: number;
   blogName: string;
@@ -66,7 +68,7 @@ interface HomeData {
 
 function SkinEditorContent() {
   const searchParams = useSearchParams();
-  const blogId = searchParams?.get('blogId') || ''; // 빈 문자열로 설정하여 API가 호스트에서 추출하도록 함
+  const blogId = useBlogStore.getState().blogId;
   const [activeTab, setActiveTab] = useState<'html' | 'css'>('html');
   const [themeContent, setThemeContent] = useState<ThemeContent | null>(null);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
@@ -233,7 +235,26 @@ function SkinEditorContent() {
       },
       {
         category: '카테고리',
-        items: [{ name: '[##_category_##]', description: '카테고리 목록 HTML (계층구조)', example: "<ul><li><a href='/category/개발'>개발 (15)</a></li></ul>" }],
+        items: [
+          { name: '[##_category_##]', description: '카테고리 목록 HTML (계층구조)', example: "<ul><li><a href='/category/개발'>개발 (15)</a></li></ul>" },
+          { name: '<s_category_rep>', description: '카테고리 반복 시작 태그', example: '' },
+          { name: '</s_category_rep>', description: '카테고리 반복 끝 태그', example: '' },
+          { name: '[##_category_name_##]', description: '카테고리명 (반복 블록 내)', example: '개발' },
+          { name: '[##_category_count_##]', description: '카테고리 글 수 (반복 블록 내)', example: '15' },
+          { name: '[##_category_link_##]', description: '카테고리 링크 (반복 블록 내)', example: '/category/개발' },
+          { name: '[##_current_category_name_##]', description: '현재 카테고리명 (카테고리 페이지에서)', example: '개발' },
+          { name: '[##_category_page_title_##]', description: '카테고리 페이지 제목', example: '개발 카테고리' },
+          { name: '[##_page_header_title_##]', description: '페이지 헤더 제목 (글 수 포함)', example: '전체 글 <span>(150)</span>' },
+        ],
+      },
+      {
+        category: '모바일 메뉴 관련',
+        items: [
+          { name: '[##_mobile_categories_##]', description: '모바일용 카테고리 목록 HTML', example: "<li><a href='/category/개발'>개발 (15)</a></li>" },
+          { name: '[##_mobile_uncategorized_##]', description: '모바일용 분류 없음 링크', example: "<li><a href='/category/uncategorized'>분류 없음 (5)</a></li>" },
+          { name: '[##_mobile_menu_##]', description: '모바일용 사용자 정의 메뉴', example: "<li><a href='/about'>소개</a></li>" },
+          { name: '[##_theme_script_##]', description: 'PostSmith 테마 JavaScript 코드', example: '<script>...</script>' },
+        ],
       },
       {
         category: '글 목록 반복',
@@ -295,6 +316,7 @@ function SkinEditorContent() {
           { name: '[##_rctps_rep_author_##]', description: '인기 글 작성자', example: '관리자' },
           { name: '[##_rctps_rep_category_##]', description: '인기 글 카테고리', example: '개발' },
           { name: '[##_rctps_rep_category_link_##]', description: '인기 글 카테고리 링크', example: '/category/개발' },
+          { name: '[##_rctps_rep_simple_date_##]', description: '인기 글 간단한 날짜', example: '1월 15일' },
         ],
       },
       {
@@ -350,6 +372,8 @@ function SkinEditorContent() {
       {
         category: '페이지네이션',
         items: [
+          { name: '<s_pagination>', description: '페이지네이션 블록 시작', example: '' },
+          { name: '</s_pagination>', description: '페이지네이션 블록 끝', example: '' },
           { name: '[##_pagination_first_##]', description: '첫 페이지 링크', example: '?page=1' },
           { name: '[##_pagination_first_disabled_##]', description: '첫 페이지 비활성 클래스', example: 'disabled' },
           { name: '[##_pagination_last_##]', description: '마지막 페이지 링크', example: '?page=10' },
@@ -689,9 +713,6 @@ function SkinEditorContent() {
             <div className="flex items-center space-x-3">
               <div>
                 <h1 className="text-xl font-bold text-gray-900">스킨 편집</h1>
-                <p className="text-sm text-gray-600">
-                  {themeContent.blogName} - {themeContent.themeName}
-                </p>
               </div>
               <button
                 onClick={() => setShowGuide(true)}
@@ -701,7 +722,7 @@ function SkinEditorContent() {
                 📚 가이드
               </button>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="mr-14 flex items-center space-x-4">
               <button
                 className={`rounded px-3 py-1.5 text-sm transition-colors ${
                   isModified ? 'bg-orange-600 text-white hover:bg-orange-700' : 'cursor-not-allowed bg-gray-300 text-gray-500'
