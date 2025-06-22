@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { BLOG_API_URL } from '../../../lib/constants';
+import { useBlogStore } from '../../store/blogStore';
+import { useUserStore } from '../../store/userStore';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import { SpanNode as CCSpanNode } from '@components/CustomSpanNode';
@@ -151,6 +153,8 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
   const [error, setError] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+  const { blogInfo } = useBlogStore();
+  const { userInfo } = useUserStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,27 +162,9 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
+      // blogStore에서 블로그 정보 가져오기
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
         setIsLoading(false);
         return;
       }
@@ -214,7 +200,7 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
       }
 
       const requestBody = {
-        blogId,
+        blogId: blogInfo.id,
         category: null,
         title,
         content: html,
@@ -253,7 +239,7 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
             isBlank: false,
             isDefault: false,
           };
-          const menuResponse = await fetch(`/api/menus/add?blogId=${blogId}`, {
+          const menuResponse = await fetch(`/api/menus/add?blogId=${blogInfo.id}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -289,27 +275,9 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
     setError(null);
 
     try {
-      // 서브도메인 가져오기
-      const hostname = window.location.hostname;
-      const subdomain = hostname.includes('.') ? hostname.split('.')[0] : null;
-
-      if (!subdomain) {
-        alert('블로그 주소를 찾을 수 없습니다. 올바른 블로그 주소로 접속해주세요.');
-        return;
-      }
-
-      // 서브도메인으로 블로그 정보 조회하여 blogId 확보
-      const blogResponse = await fetch(`/api/blog?address=${subdomain}`);
-      if (!blogResponse.ok) {
-        alert('블로그 정보를 가져올 수 없습니다.');
-        setIsLoading(false);
-        return;
-      }
-      const blogData = await blogResponse.json();
-      const blogId = blogData?.id || blogData?.data?.id;
-
-      if (!blogId) {
-        alert('블로그 ID를 찾을 수 없습니다.');
+      // blogStore에서 블로그 정보 가져오기
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
         setIsLoading(false);
         return;
       }
@@ -336,7 +304,7 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
       }
 
       const requestBody = {
-        blogId: blogId,
+        blogId: blogInfo.id,
         category: null,
         title: title || '제목 없음',
         content: html,

@@ -11,9 +11,8 @@ import { getCurrentUser } from '../lib/auth';
 import { getBlogAddress } from '../lib/blogUtils';
 // renderTemplate과 getThemeByBlogId는 이제 BlogThemeLoader에서 사용
 
-import BlogLayout from '@components/BlogLayout';
 import BlogProvider from '@components/BlogProvider';
-import BlogThemeLoader from '@components/BlogThemeLoader';
+import BlogRenderer from '@components/BlogRenderer';
 
 export async function generateMetadata(): Promise<Metadata> {
   // getBlogAddress 함수 사용으로 통일 (중복 제거)
@@ -35,15 +34,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // 현재 블로그와 사용자 정보 가져오기 (usermanage와 동일한 방식)
   const subdomain = await getBlogAddress();
-  // eslint-disable-next-line no-console
-  console.log('🔍 [DEBUG] subdomain:', subdomain);
   const blog = await getBlogByAddress(subdomain);
-  // eslint-disable-next-line no-console
-  console.log('🔍 [DEBUG] blog:', blog);
 
   if (!blog) {
-    // eslint-disable-next-line no-console
-    console.log('🚨 [DEBUG] Blog not found for subdomain:', subdomain);
     notFound();
   }
 
@@ -119,7 +112,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   };
 
   // BlogProvider로 감싸서 blogStore에 blog 정보 저장
-  // BlogThemeLoader가 BlogStore에서 테마를 불러와서 렌더링
+  // 이제 PreviewRenderer 방식을 기본으로 사용 (모바일 메뉴가 제대로 작동함)
   return (
     <BlogProvider
       blogInfo={{
@@ -131,7 +124,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       }}
       sidebarData={sidebarData}
     >
-      <BlogThemeLoader blogId={blog.id} templateData={templateData} />
+      <BlogRenderer blogId={blog.id} templateData={templateData} />
     </BlogProvider>
   );
 }

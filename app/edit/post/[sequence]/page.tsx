@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable no-console */
+
 /* eslint-disable object-curly-newline */
 
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
@@ -16,7 +16,8 @@ import { $getRoot, $parseSerializedNode, $setSelection } from 'lexical';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { BLOG_API_URL } from '../../../../lib/constants';
+import { useBlogStore } from '../../../store/blogStore';
+import { useUserStore } from '../../../store/userStore';
 
 import { CustomHRNode } from '@components/CustomHRNode';
 import DraftContentsList from '@components/DraftContentsList';
@@ -133,12 +134,19 @@ function EditorForm({
 }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const { blogInfo } = useBlogStore();
 
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoadingCategories(true);
-      // API Route를 통해 카테고리 가져오기 (subdomain 기반으로 자동 감지)
-      const response = await fetch('/api/categories');
+
+      if (!blogInfo) {
+        alert('블로그 정보를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+        return;
+      }
+
+      // blogStore에서 가져온 블로그 ID로 카테고리 조회
+      const response = await fetch(`/api/categories?blogId=${blogInfo.id}`);
 
       // 블로그가 존재하지 않는 경우 404 처리
       if (response.status === 404) {
@@ -156,16 +164,16 @@ function EditorForm({
     } catch (error) {
       // 에러 발생시 기본 카테고리 사용
       const fallbackCategories = [
-        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: 1 },
-        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: 1 },
-        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: 1 },
-        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: 1 },
+        { id: 1, name: '기술', description: '', parent_id: null, type: 'blog', sort_order: 1, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 2, name: '일상', description: '', parent_id: null, type: 'blog', sort_order: 2, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 3, name: '리뷰', description: '', parent_id: null, type: 'blog', sort_order: 3, post_count: 0, user_id: blogInfo?.id || 1 },
+        { id: 4, name: '기타', description: '', parent_id: null, type: 'blog', sort_order: 4, post_count: 0, user_id: blogInfo?.id || 1 },
       ];
       setCategories(fallbackCategories);
     } finally {
       setIsLoadingCategories(false);
     }
-  }, []);
+  }, [blogInfo]);
 
   useEffect(() => {
     fetchCategories();
@@ -210,6 +218,8 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
   const [error, setError] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const router = useRouter();
+  const { blogInfo } = useBlogStore();
+  const { userInfo } = useUserStore();
 
   // 컴포넌트 마운트 시 기존 글의 공개/비공개 상태를 가져오기
   useEffect(() => {
@@ -269,8 +279,6 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
       };
 
       // 디버깅을 위한 로그 추가
-      console.log('요청 URL:', `/api/contents/${sequence}`);
-      console.log('요청 데이터:', requestBody);
 
       // 수정 요청
       const response = await fetch(`/api/contents/${sequence}`, {
@@ -282,9 +290,7 @@ function SaveButtons({ category, title, sequence, isUpdate }: { category: string
       });
 
       // 응답 로깅
-      console.log('응답 상태:', response.status);
       const responseData = await response.text();
-      console.log('응답 데이터:', responseData);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status} - ${responseData}`);
@@ -539,7 +545,6 @@ export default function PostEditPage({ params }: { params: Promise<{ sequence: s
       CustomVideoNode,
     ],
     onError: (error: Error) => {
-      console.error('Lexical error:', error);
       // 에러를 던지지 않고 로그만 출력
     },
   };
