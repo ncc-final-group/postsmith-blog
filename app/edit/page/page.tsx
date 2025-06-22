@@ -89,12 +89,8 @@ function PageForm({
         .replace(/[^a-z0-9가-힣\s-]/g, '')
         // 연속된 공백을 하나로
         .replace(/\s+/g, ' ')
-        // 공백을 하이픈으로 변환
-        .replace(/\s/g, '-')
-        // 연속된 하이픈을 하나로
-        .replace(/-+/g, '-')
-        // 앞뒤 하이픈 제거
-        .replace(/^-+|-+$/g, '')
+        // 앞뒤 공백 제거
+        .trim()
     );
   };
 
@@ -126,8 +122,8 @@ function PageForm({
         <div className="mb-4">
           <label className="mb-2 block text-sm font-medium text-gray-700">페이지 URL 미리보기</label>
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-            <span className="text-sm text-gray-600">/page/</span>
-            <span className="text-sm font-medium text-gray-900">{slug}</span>
+            <span className="text-sm text-gray-600">/pages/</span>
+            <span className="text-sm font-medium text-gray-900">{slug.replace(/\s/g, '%20')}</span>
           </div>
           <p className="mt-1 text-xs text-gray-500">✨ 페이지 제목에서 자동으로 생성됩니다</p>
         </div>
@@ -242,7 +238,41 @@ function SaveButtons({ title, slug, showInMenu }: { title: string; slug: string;
         throw new Error(`HTTP error! status: ${response.status} - ${errorData}`);
       }
 
-      alert('페이지가 성공적으로 저장되었습니다.');
+      // 페이지 저장 완료
+      const savedPageData = await response.json();
+      const pageId = savedPageData.id || savedPageData.data?.id;
+
+      // 메뉴에 표시 옵션이 체크되어 있으면 메뉴에 추가
+      if (showInMenu) {
+        try {
+          const menuData = {
+            id: 0, // 새 메뉴이므로 0으로 설정
+            name: title,
+            type: 'PAGE',
+            uri: `/pages/${encodeURIComponent(slug)}`,
+            isBlank: false,
+            isDefault: false,
+          };
+          const menuResponse = await fetch(`/api/menus/add?blogId=${blogId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(menuData),
+          });
+          const responseText = await menuResponse.text();
+
+          if (!menuResponse.ok) {
+            alert('페이지가 저장되었지만 메뉴 추가에 실패했습니다. 수동으로 메뉴를 추가해주세요.');
+          } else {
+            alert('페이지가 성공적으로 저장되고 메뉴에 추가되었습니다.');
+          }
+        } catch (menuError) {
+          alert('페이지가 저장되었지만 메뉴 추가에 실패했습니다. 수동으로 메뉴를 추가해주세요.');
+        }
+      } else {
+        alert('페이지가 성공적으로 저장되었습니다.');
+      }
 
       // 저장 완료 후 페이지 목록으로 이동
       router.push(`/`);
